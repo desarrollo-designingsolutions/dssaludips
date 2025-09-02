@@ -1,0 +1,69 @@
+# Cache y archivos generados
+/.phpunit.cache
+backend/bootstrap/cache/
+backend/storage/
+backend/vendor/
+frontend/dist
+frontend/dist-ssr
+frontend/logs
+frontend/cypress/videos/
+frontend/cypress/screenshots/
+
+# Archivos de entorno
+backend/.env
+backend/.env.backup
+backend/.env.production
+frontend/.env*
+!frontend/.env.example
+
+# Dependencias
+backend/node_modules
+frontend/node_modules
+backend/.yarn
+frontend/.yarn
+
+# Logs
+backend/*.log
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+
+# Archivos del sistema
+backend/.DS_Store
+frontend/.DS_Store
+backend/.fleet
+backend/.idea
+backend/.nova
+backend/.vscode
+frontend/.vscode/*
+!frontend/.vscode/extensions.json
+!frontend/.vscode/settings.json
+!frontend/.vscode/*.code-snippets
+!frontend/.vscode/tours
+frontend/.idea
+frontend/*.suo
+frontend/*.ntvs*
+frontend/*.njsproj
+frontend/*.sln
+frontend/*.sw?
+
+# Configuraciones específicas
+backend/.phpactor.json
+backend.phpunit.result.cache
+backendHomestead.json
+backendHomestead.yaml
+backend/auth.json
+backend/.zed
+frontend/public/mockServiceWorker.js
+frontend/src/plugins/iconify/icons.css
+
+# Docker
+docker/mysql_data
+docker/redis_data_6379
+docker/redis_data_6380
+
+# Scripts
+deploy-local.sh
