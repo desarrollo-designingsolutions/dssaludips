@@ -77,6 +77,14 @@ class MenuSeeder extends Seeder
                 'icon' => 'tabler-users',
                 'requiredPermission' => 'menu.patient',
             ],
+            [
+                'id' => 9,
+                'order' => 90,
+                'title' => 'Rips',
+                'to' => 'Rips-List',
+                'icon' => 'tabler-file-zip',
+                'requiredPermission' => 'rips.list',
+            ],
         ];
 
         // Inicializar la barra de progreso

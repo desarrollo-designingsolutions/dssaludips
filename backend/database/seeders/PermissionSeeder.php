@@ -65,6 +65,12 @@ class PermissionSeeder extends Seeder
                 'description' => 'Visualizar Menú Pacientes',
                 'menu_id' => 8,
             ],
+            [
+                'id' => 9,
+                'name' => 'rips.list',
+                'description' => 'Visualizar Menú Rips',
+                'menu_id' => 9,
+            ],
         ];
 
         // Inicializar la barra de progreso
