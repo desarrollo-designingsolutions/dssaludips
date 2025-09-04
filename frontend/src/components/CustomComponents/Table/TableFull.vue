@@ -264,7 +264,7 @@ watch(() => route.query, (newQuery, oldQuery) => {
     delete options.params.page;
     delete options.params.perPage;
     delete options.params.sort;
-    fetchTableData(1, true);
+    fetchTableData(null, true);
   }
 }, { deep: true });
 
@@ -432,7 +432,10 @@ defineExpose({
         <VSkeletonLoader type="table-row@10, divider" />
       </template>
       <template #no-data>
-        <span>No se encontraron resultados</span>
+        <div class="d-flex flex-column justify-center align-center py-2">
+          <VIcon icon="tabler-alert-circle" color="grey" class="mb-2"></VIcon>
+          <span>No se encontraron resultados</span>
+        </div>
       </template>
     </VDataTable>
 

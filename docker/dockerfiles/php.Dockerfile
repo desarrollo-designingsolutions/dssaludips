@@ -17,7 +17,8 @@ RUN apk add --no-cache \
     freetype \
     icu \
     netcat-openbsd \
-    libxslt  # Asegúrate de que libxslt esté instalado
+    nano \
+    libxslt
 
 # Instalar dependencias para compilar extensiones
 RUN apk add --no-cache --virtual build-essentials \

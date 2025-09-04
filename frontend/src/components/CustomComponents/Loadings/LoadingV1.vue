@@ -50,10 +50,10 @@
             <v-icon icon="tabler-close" size="16" />
             Cancelar
           </button> -->
-          <button class="minimize-button" @click="minimize">
+          <!-- <button class="minimize-button" @click="minimize">
             <v-icon icon="tabler-window-minimize" size="16" />
             Minimizar
-          </button>
+          </button> -->
         </div>
       </div>
     </div>

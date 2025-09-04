@@ -67,7 +67,7 @@ class PermissionSeeder extends Seeder
             ],
             [
                 'id' => 9,
-                'name' => 'rips.list',
+                'name' => 'rips.index',
                 'description' => 'Visualizar Menú Rips',
                 'menu_id' => 9,
             ],

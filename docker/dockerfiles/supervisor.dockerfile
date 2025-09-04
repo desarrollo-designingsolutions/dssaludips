@@ -6,9 +6,19 @@ RUN apt-get update && \
     apt-get install -y supervisor && \
     rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y \
-    libpng-dev libjpeg-dev libonig-dev libxml2-dev zip unzip git curl \
-    && docker-php-ext-install pdo_mysql sockets pcntl
+# Instalar dependencias para extensiones de PHP
+RUN apt-get update && \
+    apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    git \
+    curl \
+    libzip-dev \
+    && docker-php-ext-install pdo_mysql sockets pcntl zip
 
 # Crear directorios necesarios para supervisor
 RUN mkdir -p /etc/supervisor/conf.d \
@@ -18,14 +28,8 @@ RUN mkdir -p /etc/supervisor/conf.d \
 # Copiar configuración de Supervisor principal
 COPY ./docker/supervisor/supervisord.conf /etc/supervisor/supervisord.conf
 
-# Copiar configuraciones específicas para cada tipo de contenedor
-# COPY ./docker/supervisor/laravel-worker-reverb.conf /etc/supervisor/conf.d/laravel-worker-reverb.conf
-# COPY ./docker/supervisor/laravel-worker-queue.conf /etc/supervisor/conf.d/laravel-worker-queue.conf
-
-
 # Definir directorio de trabajo
 WORKDIR /var/www/html
 
 # Supervisord será el proceso principal (importante el -n para no hacer daemonize)
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]
- 

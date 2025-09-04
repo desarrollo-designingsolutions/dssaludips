@@ -68,10 +68,10 @@
 
         <!-- Action Buttons (if needed) -->
         <div v-if="showActions" class="text-center mt-6">
-          <v-btn variant="text" :color="theme.current.value.colors.primary" @click="minimize">
+          <!-- <v-btn variant="text" :color="theme.current.value.colors.primary" @click="minimize">
             <v-icon start icon="tabler-window-minimize" />
             Minimizar
-          </v-btn>
+          </v-btn> -->
         </div>
       </v-card-text>
     </v-card>

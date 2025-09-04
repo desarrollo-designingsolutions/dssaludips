@@ -81,9 +81,9 @@ class MenuSeeder extends Seeder
                 'id' => 9,
                 'order' => 90,
                 'title' => 'Rips',
-                'to' => 'Rips-List',
+                'to' => 'Rips-Index',
                 'icon' => 'tabler-file-zip',
-                'requiredPermission' => 'rips.list',
+                'requiredPermission' => 'rips.index',
             ],
         ];
 
