@@ -72,6 +72,14 @@ return [
             'after_commit' => false,
         ],
 
+        'redis_6380' => [
+            'driver' => 'redis',
+            'connection' => 'redis_6380', // Apunta a la conexión en config/database.php
+            'queue' => env('QUEUE_NAME', 'import_rips'), // Cola específica
+            'retry_after' => 300, // Igual a tu timeout en Supervisor
+            'block_for' => null,
+        ],
+
     ],
 
     /*

@@ -97,6 +97,7 @@ services:
     volumes:
       - ./backend:/var/www/html
       - ./docker/supervisor/laravel-worker-reverb.conf:/etc/supervisor/conf.d/laravel-worker-reverb.conf
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
     depends_on:
       - php
       - mysql
@@ -119,6 +120,7 @@ services:
     volumes:
       - ./backend:/var/www/html
       - ./docker/supervisor/laravel-worker-queue.conf:/etc/supervisor/conf.d/laravel-worker-queue.conf
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
     depends_on:
       - php
       - mysql

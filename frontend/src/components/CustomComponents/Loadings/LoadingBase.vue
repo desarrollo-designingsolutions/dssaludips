@@ -1,6 +1,6 @@
 <template>
   <div>
-    <LoadingV2 v-model:isLoading="isLoading" :progress="progress" :show-actions="true" @minimized="minimized = true"
+    <LoadingV1 v-model:isLoading="isLoading" :progress="progress" :show-actions="true" @minimized="minimized = true"
       @restored="minimized = false" />
   </div>
 </template>

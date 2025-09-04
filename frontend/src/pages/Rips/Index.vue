@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
+import ModalUploadZip from '@/pages/Rips/Components/ModalUploadZip.vue';
 
 definePage({
   name: "Rips-Index",
@@ -11,26 +12,25 @@ definePage({
 });
 
 const authenticationStore = useAuthenticationStore();
- 
 
 //TABLE
 const refTableFull = ref()
 
 const optionsTable = {
-  url: "/rips/paginate",
+  url: "/rip/paginate",
   paramsGlobal: {
     company_id: authenticationStore.company.id,
   },
   headers: [ 
-    { key: 'type_description', title: 'Tipo' },
+    { key: 'type', title: 'Tipo' },
     { key: 'numInvoices', title: 'Facturas' },
     { key: 'successfulInvoices', title: 'Data Completa' },
     { key: 'failedInvoices', title: 'Data Incompleta' }, 
     { key: 'created_at', title: 'Fecha de creación' }, 
+    { key: 'status', title: 'Estado' },
     { key: 'actions', title: 'Acciones' },
   ],
 }
-
 
 //FILTER
 const optionsFilter = ref({
@@ -46,6 +46,14 @@ const refreshTable = () => {
     refTableFull.value.fetchTableData(null, false, true); // Forzamos la búsqueda
   }
 };
+
+
+//ModalUploadCsv
+const refModalUploadZip = ref()
+const openModalUploadZip = () => {
+  refModalUploadZip.value.openModal()
+}
+
 </script>
 
 <template>
@@ -65,7 +73,7 @@ const refreshTable = () => {
             </template>
 
             <VList>
-              <VListItem>
+              <VListItem @click="openModalUploadZip()">
                 Añadir ZIP
               </VListItem> 
             </VList>
@@ -80,6 +88,24 @@ const refreshTable = () => {
 
       <VCardText>
         <TableFull ref="refTableFull" :options="optionsTable" @update:loading="tableLoading = $event">
+          <template #item.type="{ item }">
+            <div>
+              <VChip>{{ item.type_description }}</VChip>
+            </div>
+          </template>
+
+          <template #item.successfulInvoices="{ item }">
+              <VChip color="success">
+                <span>{{ item.successfulInvoices }}</span>
+              </VChip>
+          </template>
+
+          <template #item.failedInvoices="{ item }">
+              <VChip color="error">
+                <span>{{ item.failedInvoices }}</span>
+              </VChip>
+          </template>
+
           <template #item.status="{ item }">
             <div>
               <VChip :color="item.status_backgroundColor">{{ item.status_description }}</VChip>
@@ -103,5 +129,8 @@ const refreshTable = () => {
         </TableFull>
       </VCardText>
     </VCard>  
+
+    <ModalUploadZip ref="refModalUploadZip" :maxFileSizeMB="200" />
+
   </div>
 </template>

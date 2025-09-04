@@ -16,11 +16,12 @@ return new class extends Migration
 
             $table->foreignUuid('company_id')->constrained();
             $table->foreignUuid('user_id')->constrained()->comment('Usuario que subio el zip');
-            $table->foreignUuid('batch_id')->constrained()->comment('id del proceso de importación');
+            $table->foreignUuid('process_batch_id')->constrained("process_batches")->comment('id del proceso de importación');
             $table->string('path_zip')->nullable()->comment('ruta del archivo zip');
             $table->bigInteger('numInvoices')->comment('cantidad de facturas');
             $table->integer('successfulInvoices')->default(0)->comment('cantidad de facturas completas');
             $table->integer('failedInvoices')->default(0)->comment('cantidad de facturas incompletas');
+            $table->string('type')->comment('Tipo y método de subida (manual, zip, etc)');
             $table->string('status');
 
             $table->timestamps();

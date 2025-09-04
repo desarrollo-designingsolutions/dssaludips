@@ -30,6 +30,7 @@ class RoutesApi
         'routes/furips1.php',
         'routes/furips2.php',
         'routes/furtran.php',
+        'routes/processBatch.php',
         'routes/rip.php',
     ];
 }

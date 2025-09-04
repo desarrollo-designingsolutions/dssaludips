@@ -5,7 +5,7 @@ use App\Http\Controllers\RipManualController;
 use Illuminate\Support\Facades\Route;
 
 //Rutas protegidas
-Route::middleware(['check.company:App\Repositories\RipRepository'])->group(function () {
+Route::middleware(['check.permission:rips.index'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
@@ -14,5 +14,7 @@ Route::middleware(['check.company:App\Repositories\RipRepository'])->group(funct
     */
 
     Route::get('/rip/paginate', [RipController::class, 'paginate']);
+
+    Route::post('/rip/uploadFileZip', [RipController::class, 'uploadFileZip']);
 
 });
