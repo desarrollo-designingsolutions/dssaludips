@@ -42,7 +42,7 @@ class ProcessLogController extends Controller
                 $metadata = json_decode($batch->metadata, true);
 
 
-                $progress = $batch->total_records > 0 ? ($metadata["processed_records"] / $batch->total_records) * 100 : 0;
+                $progress = $batch->total_records > 0 ? ($batch->total_records) * 100 : 0;
                 if ($batch->status == 'completed' || $batch->status == 'failed') { // Asegurar 100% para completados/fallidos
                     $progress = 100;
                 }

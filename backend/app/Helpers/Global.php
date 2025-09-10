@@ -345,3 +345,15 @@ function formatTimeToArray($time, string $format = 'Hi'): array
 
     return str_split($parsed->format($format));
 }
+
+function getTotalRowsExcel($filePath, $header = 1)
+{
+    $path = $filePath;
+    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+    $worksheet = $spreadsheet->getActiveSheet();
+
+    // Obtiene el índice de la última fila con datos
+    $highestRow = $worksheet->getHighestDataRow();
+
+    return $highestRow - $header; // Restar 1 para excluir la fila de encabezado
+}

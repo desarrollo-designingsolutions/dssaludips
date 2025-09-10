@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ModalUploadPatientFileExcel from '@/pages/Patient/components/ModalUploadPatientFileExcel.vue';
+import ModalUploadXlsx from '@/pages/Patient/components/ModalUploadXlsx.vue';
 import { router } from '@/plugins/1.router';
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 
@@ -123,12 +124,10 @@ const downloadExportFormat = async () => {
   loading.masive_excel = false;
 }
 
-//ModalUploadPatientFileExcel
-const refModalUploadPatientFileExcel = ref()
-const openModalUploadPatientFileExcel = () => {
-  refModalUploadPatientFileExcel.value.openModal({
-    user_id: authenticationStore.user.id,
-  })
+//ModalUploadXlsx
+const refModalUploadXlsx = ref()
+const openModalUploadXlsx = () => {
+  refModalUploadXlsx.value.openModal()
 }
 </script>
 
@@ -156,7 +155,7 @@ const openModalUploadPatientFileExcel = () => {
             Más Acciones
             <VMenu activator="parent" :loading="loading.masive_excel">
               <VList>
-                <VListItem @click="openModalUploadPatientFileExcel()">
+                <VListItem @click="openModalUploadXlsx()">
                   <template #prepend>
                     <VIcon start icon="tabler-file-upload" />
                   </template>
@@ -203,7 +202,7 @@ const openModalUploadPatientFileExcel = () => {
       </VCardText>
     </VCard>
 
-    <ModalUploadPatientFileExcel ref="refModalUploadPatientFileExcel" />
+    <ModalUploadXlsx ref="refModalUploadXlsx" :maxFileSizeMB="200" />
 
   </div>
 </template>

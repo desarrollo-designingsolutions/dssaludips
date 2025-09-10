@@ -27,7 +27,8 @@ class PatientUploadXlsxRequest extends FormRequest
 
         $rules = [
             'user_id' => 'required',
-            'archiveXlsx' => 'required|file|extensions:xlsx',
+            'company_id' => 'required',
+            'file' => 'required|file|extensions:xlsx',
         ];
 
         return $rules;
@@ -37,7 +38,8 @@ class PatientUploadXlsxRequest extends FormRequest
     {
         return [
             'user_id.required' => 'El campo es obligatorio',
-            'archiveXlsx.extensions' => 'El campo es archvio solo permite archivo de tipo xlsx',
+            'company_id.required' => 'El campo es obligatorio',
+            'file.extensions' => 'El campo es archvio solo permite archivo de tipo xlsx',
         ];
     }
 

@@ -54,6 +54,14 @@ class ErrorCollector
     }
 
     /**
+     * Devuelve la cantidad de errores recolectados.
+     */
+    public static function countErrors(string $batchId): int
+    {
+        return (int) Redis::connection('redis_6380')->llen("import_errors:{$batchId}");
+    }
+
+    /**
      * Limpia la lista de errores en Redis.
      */
     public static function clear(string $batchId): void
