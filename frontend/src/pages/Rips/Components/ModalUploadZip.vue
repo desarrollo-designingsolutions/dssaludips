@@ -194,8 +194,7 @@ const startUpload = async () => {
     const formData = new FormData();
     formData.append('file', file.file);
     formData.append('company_id', String(authenticationStore.company.id));
-    formData.append('user_id', String(authenticationStore.user.id));
-    formData.append('reconciliation_group_id', reconciliation_group_id.value);
+    formData.append('user_id', String(authenticationStore.user.id)); 
 
     try {
       file.status = 'uploading';
@@ -343,13 +342,11 @@ const isDialogVisible = ref<boolean>(false)
 const handleDialogVisible = () => {
   isDialogVisible.value = !isDialogVisible.value;
 };
-
-const reconciliation_group_id = ref<string>("")
-const openModal = async (reconciliationGroupId: string) => {
+ 
+const openModal = async () => {
   handleDialogVisible();
   resetState()
-
-  reconciliation_group_id.value = reconciliationGroupId
+ 
 };
 
 defineExpose({

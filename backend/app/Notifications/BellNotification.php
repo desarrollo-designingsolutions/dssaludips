@@ -33,6 +33,7 @@ class BellNotification extends Notification
             'title' => $this->data['title'],
             'subtitle' => $this->data['subtitle'],
             'action_url' => $this->getActionUrl(),
+            'openInNewTab' => $this->getOpenInNewTab(),
             'img' => $this->getImg($notifiable),
             'text' => $this->getText($notifiable),
         ];
@@ -50,6 +51,7 @@ class BellNotification extends Notification
             'title' => $this->data['title'],
             'subtitle' => $this->data['subtitle'],
             'action_url' => $this->getActionUrl(),
+            'openInNewTab' => $this->getOpenInNewTab(),
             'img' => $this->getImg($notifiable),
             'text' => $this->getText($notifiable),
         ]);
@@ -74,9 +76,14 @@ class BellNotification extends Notification
     {
         return $this->data['action_url'] ?? null;
     }
+    protected function getOpenInNewTab()
+    {
+        return $this->data['openInNewTab'] ?? false;
+    }
 
     protected function getImg($notifiable)
     {
+
         // Si img está presente y no está vacío, retornar img
         if (isset($this->data['img']) && ! empty($this->data['img'])) {
             return $this->data['img'];
@@ -85,6 +92,11 @@ class BellNotification extends Notification
         // Si no hay img, intentar retornar la photo del usuario
         if (isset($notifiable['photo']) && ! empty($notifiable['photo'])) {
             return $notifiable['photo'];
+        }
+
+        // Si no hay photo del usuario, intentar retornar la foto de la empresa
+        if (isset($notifiable->company) && isset($notifiable->company['logo']) && ! empty($notifiable->company['logo'])) {
+            return $notifiable->company['logo'];
         }
 
         // Si no hay photo, retornar null

@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
+const authenticationStore = useAuthenticationStore();
+
 const emit = defineEmits(["execute"])
 
 const titleModal = ref<string>("Listado de errores")
-const isDialogVisible = ref<boolean>(false)  
+const isDialogVisible = ref<boolean>(false)
 const handleDialogVisible = () => {
-  isDialogVisible.value = !isDialogVisible.value; 
+  isDialogVisible.value = !isDialogVisible.value;
 
 };
 
+const loading = reactive({ csv: false })
 
 //TABLE
 const refTableFull = ref()
@@ -52,7 +56,7 @@ const openModal = async (batchId: string) => {
   handleDialogVisible();
   console.log("batchId", batchId);
 
-  optionsTable.value.paramsGlobal.batch_id=batchId 
+  optionsTable.value.paramsGlobal.batch_id = batchId
 };
 
 defineExpose({
@@ -60,11 +64,28 @@ defineExpose({
 })
 
 
+const downloadErrorsCsv = async () => {
+  loading.csv = true;
+
+  try {
+    const { data, response } = await useAxios(`/processBatch/generateCsvReportErrors`).post({
+        user_id: authenticationStore.user.id,
+        batch_id: optionsTable.value.paramsGlobal.batch_id,
+    });
+  } catch (error) {
+    console.error("Error downloading CSV:", error);
+  } finally {
+    loading.csv = false;
+  }
+
+
+}
+
 </script>
 
 <template>
   <div>
-    <VDialog v-model="isDialogVisible" max-width="70rem" transition="dialog-transition" persistent>
+    <VDialog v-model="isDialogVisible" max-width="90rem" transition="dialog-transition" persistent>
       <DialogCloseBtn @click="handleDialogVisible" />
       <VCard class="w-100">
         <!-- Toolbar -->
@@ -75,13 +96,26 @@ defineExpose({
           </VToolbar>
         </div>
 
-        <VCardText> 
-          <FilterDialog :options-filter="optionsFilter" @force-search="handleForceSearch"
-            :table-loading="tableLoading" :disable-url-update="disableUrlUpdate">
+        <VCardText class="d-flex justify-space-between">
+
+          <div class="d-flex justify-end gap-3 flex-wrap ">
+            <VBtn :loading="loading.csv" :disabled="loading.csv" size="38" color="primary" icon
+              @click="downloadErrorsCsv">
+              <VIcon icon="tabler-file-spreadsheet"></VIcon>
+              <VTooltip location="top" transition="scale-transition" activator="parent"
+                text="Descargar errores en formato CSV">
+              </VTooltip>
+            </VBtn>
+          </div>
+        </VCardText>
+
+        <VCardText>
+          <FilterDialog :options-filter="optionsFilter" @force-search="handleForceSearch" :table-loading="tableLoading"
+            :disable-url-update="disableUrlUpdate">
           </FilterDialog>
         </VCardText>
 
-        <VCardText >
+        <VCardText>
           <TableFull ref="refTableFull" :options="optionsTable" @update:loading="tableLoading = $event"
             :disable-url-update="disableUrlUpdate">
           </TableFull>

@@ -22,10 +22,19 @@ class Constants
 
     public const DISK_FILES = 'public'; // sistema de archivos
 
-    public const CHUNKSIZE = 10;
+    public const CHUNKSIZE = 500;
 
-    // LLAVES PARA CONSTRUCCION Y VALIDACION DE FACTURAS
+    // Lista de colas disponibles para importacion de RIPS
+    // public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS = ['import_rips_1', 'import_rips_2', 'import_rips_3'];
+    public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS = ['import_rips_1'];
+
+
+    // LLAVES PARA CONSTRUCCION Y VALIDACION DE FACTURAS EN RIPS
     public const KEY_NUMFACT = 'numFactura';
+
+    public const KEY_NumDocumentoIdentificacion = 'numDocumentoIdentificacion';
+
+    public const KEY_VrServicio = 'vrServicio';
 
     // REGLAS O CODIGOS PARA LOS SELECECTS DEL FORMULARIO DEL SERVICIO
     public const CODS_SELECT_FORM_SERVICE_MEDICAL_CONSULTATION_CODCONSULTA = [

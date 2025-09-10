@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 
 function logMessage($message)
@@ -356,4 +357,22 @@ function getTotalRowsExcel($filePath, $header = 1)
     $highestRow = $worksheet->getHighestDataRow();
 
     return $highestRow - $header; // Restar 1 para excluir la fila de encabezado
+}
+
+function getLeastBusyQueue(array $queues)
+{
+    $redis = Redis::connection('redis_6380');
+    $minJobs = PHP_INT_MAX;
+    $selectedQueue = $queues[0]; // Default
+
+    foreach ($queues as $queue) {
+        $queueKey = "queues:{$queue}";
+        $jobsInQueue = $redis->llen($queueKey) ?? 0;
+        if ($jobsInQueue < $minJobs) {
+            $minJobs = $jobsInQueue;
+            $selectedQueue = $queue;
+        }
+    }
+
+    return $selectedQueue;
 }

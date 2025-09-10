@@ -24,13 +24,13 @@ class ValidateZipJob implements ShouldQueue
     public $userId;
     public $companyId;
 
-    public function __construct(string $filePath, string $batchId, string $userId, string $companyId)
+    public function __construct(string $filePath, string $batchId, string $userId, string $companyId, string $selectedQueue)
     {
         $this->filePath = $filePath;
         $this->batchId = $batchId;
         $this->userId = $userId;
         $this->companyId = $companyId;
-        $this->onQueue('import_rips');
+        $this->onQueue($selectedQueue);
     }
 
     public function handle(): void
@@ -41,8 +41,6 @@ class ValidateZipJob implements ShouldQueue
         event(new ImportProgressEvent($this->batchId, 0, 'Iniciando validación ZIP', 0, 'active', 'ZIP'));
 
         try {
-            $validationResult = ZipValidator::validateAll($this->filePath, $this->batchId);
-
             $zip = new ZipArchive();
             $numFiles = 0;
             if ($zip->open($this->filePath) === true) {
@@ -59,6 +57,10 @@ class ValidateZipJob implements ShouldQueue
                 'updated_at' => now(),
             ]);
 
+            //Validamos el archivo ZIP y los archivos TXT dentro de él (ESTRUCTURA)
+            $validationResult = ZipValidator::validateAll($this->filePath, $this->batchId);
+
+            // Obtener errores recolectados
             $errors = ErrorCollector::getErrors($this->batchId);
             $errorCount = count($errors);
 
@@ -73,8 +75,7 @@ class ValidateZipJob implements ShouldQueue
             }
 
             Log::info("Validación ZIP completada para batch {$this->batchId}", ['error_count' => $errorCount]);
-            $status = $errorCount > 0 ? 'failed' : 'completed';
-            event(new ImportProgressEvent($this->batchId, $numFiles, 'Validación ZIP completada', $errorCount, $status, 'ZIP'));
+            event(new ImportProgressEvent($this->batchId, $numFiles, 'Validación ZIP completada', $errorCount, "active", 'ZIP'));
 
             $redis->hmset("rip_batch:{$this->batchId}", [
                 'status' => 'zip_validated',

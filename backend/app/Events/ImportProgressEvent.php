@@ -88,7 +88,7 @@ class ImportProgressEvent implements ShouldBroadcastNow
             'active', 'finalizing' => 'active',
             'queued' => 'queued',
             'completed', 'completed_with_errors' => 'completed',
-            'failed' => 'error',
+            'failed' => 'failed',
             default => 'active',
         };
     }

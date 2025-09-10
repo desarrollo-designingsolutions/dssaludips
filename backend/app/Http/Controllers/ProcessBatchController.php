@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\ProcessBatchesError\ProcessBatchesErrorPaginateResource;
+use App\Jobs\ProcessBatch\CsvReportErrors;
 use App\Models\ProcessBatch;
 use App\Repositories\ProcessBatchesErrorRepository;
 use App\Traits\HttpResponseTrait;
 use Illuminate\Http\Request;
 
-class ProcessLogController extends Controller
+class ProcessBatchController extends Controller
 {
     use HttpResponseTrait;
 
@@ -42,7 +43,7 @@ class ProcessLogController extends Controller
                 $metadata = json_decode($batch->metadata, true);
 
 
-                $progress = $batch->total_records > 0 ? ($batch->total_records) * 100 : 0;
+                $progress = $batch->total_records > 0 ? ($batch->total_records / $batch->total_records) * 100 : 0;
                 if ($batch->status == 'completed' || $batch->status == 'failed') { // Asegurar 100% para completados/fallidos
                     $progress = 100;
                 }
@@ -100,8 +101,29 @@ class ProcessLogController extends Controller
             'active', 'finalizing' => 'active',
             'queued' => 'queued',
             'completed', 'completed_with_errors' => 'completed',
-            'failed' => 'error',
+            'failed' => 'failed',
             default => 'active', // Default to active if unknown
         };
+    }
+
+
+    public function generateCsvReportErrors(Request $request)
+    {
+        return $this->execute(function () use ($request) {
+            // Generar nombre único para el archivo
+            $batchId = $request->input("batch_id");
+            $userId = $request->input("user_id");
+
+            // Disparamos el job principal
+            CsvReportErrors::dispatch(
+                $batchId,
+                $userId,
+            );
+
+            return [
+                'code' => 200,
+                'message' => "El reporte se está generando en segundo plano. Se le notificará cuando esté listo.",
+            ];
+        });
     }
 }

@@ -93,6 +93,7 @@ class ErrorCollector
             return;
         }
 
+        $chunkSize = 500; // Configurable: adjust to 100 or other value as needed
         $errorRecords = array_map(function ($error) use ($batchId) {
             return [
                 'id' => Str::uuid(),
@@ -108,10 +109,24 @@ class ErrorCollector
             ];
         }, $errors);
 
-        ProcessBatchesError::insert($errorRecords);
+        // Insert errors in chunks
+        $totalErrors = count($errorRecords);
+        $chunks = array_chunk($errorRecords, $chunkSize);
+        Log::info("Inserting {$totalErrors} errors for batch {$batchId} in " . count($chunks) . " chunks of {$chunkSize}.");
+
+        foreach ($chunks as $index => $chunk) {
+            try {
+                ProcessBatchesError::insert($chunk);
+                Log::info("Inserted chunk " . ($index + 1) . " of " . count($chunks) . " for batch {$batchId} (" . count($chunk) . " records).");
+            } catch (\Exception $e) {
+                Log::error("Failed to insert chunk " . ($index + 1) . " for batch {$batchId}: {$e->getMessage()}");
+                // Optionally notify user here if needed
+                throw $e; // Re-throw to ensure the error is logged in the failed_jobs table
+            }
+        }
 
         ProcessBatch::where('batch_id', $batchId)->update([
-            'error_count' => count($errors),
+            'error_count' => $totalErrors,
             'status' => $status,
             'metadata' => json_encode($metadata),
             'updated_at' => now(),
@@ -120,7 +135,7 @@ class ErrorCollector
         $redis->hmset("batch:{$batchId}:metadata", $metadata);
         $redis->hmset("rip_batch:{$batchId}", ['status' => $status]);
 
-        Log::info("Saved " . count($errors) . " errors to process_batches_errors for batch {$batchId}");
+        Log::info("Saved {$totalErrors} errors to process_batches_errors for batch {$batchId}");
 
         self::clear($batchId);
     }

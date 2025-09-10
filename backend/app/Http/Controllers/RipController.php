@@ -7,11 +7,14 @@ use App\Helpers\Common\ErrorCollector;
 use App\Helpers\Constants;
 use App\Http\Requests\Rip\RipUploadFileZipRequest;
 use App\Http\Resources\Rip\RipPaginateResource;
+use App\Jobs\Rips\BuildJsonJob;
+use App\Jobs\Rips\ProcessZipFilesJob;
 use App\Jobs\Rips\SaveErrorsJob;
 use App\Jobs\Rips\ValidateZipJob;
 use App\Models\ProcessBatch;
 use App\Models\Rip;
 use App\Repositories\RipRepository;
+use App\Services\ProcessBatchService;
 use App\Traits\HttpResponseTrait;
 use Illuminate\Bus\Batch;
 use Illuminate\Http\Request;
@@ -69,6 +72,8 @@ class RipController extends Controller
                 'total_rows' => 0,
                 'total_sheets' => 1,
                 'current_sheet' => 1,
+                'user_id' => $user_id,
+                'company_id' => $company_id,
             ];
             $redis = Redis::connection('redis_6380');
             $redis->hmset("batch:{$batchId}:metadata", $metadata);
@@ -93,18 +98,29 @@ class RipController extends Controller
                 'metadata' => json_encode($metadata),
             ]);
 
-            Bus::chain([
-                new ValidateZipJob($fullPath, $batchId, $user_id, $company_id),
-                // new ProcessZipFilesJob($fullPath, $batchId),
-                new SaveErrorsJob($batchId),
-            ])
-                ->catch(function (\Throwable $e) use ($batchId) {
-                    Log::error("Validation failed for batch {$batchId}: {$e->getMessage()}");
-                    ErrorCollector::saveErrorsToDatabase($batchId, 'failed');
-                    event(new ImportProgressEvent($batchId, 0, 'Error en validación', count(ErrorCollector::getErrors($batchId)), 'failed', 'error'));
-                })
-                ->onQueue('import_rips')
-                ->dispatch();
+            try {
+                // Seleccionar una cola disponible
+                $selectedQueue = ProcessBatchService::selectAvailableQueueRoundRobin(Constants::AVAILABLE_QUEUES_TO_IMPORTS_RIPS);
+                logMessage("Selected queue for batch {$batchId}: {$selectedQueue}");
+
+                Bus::chain([
+                    new ValidateZipJob($fullPath, $batchId, $user_id, $company_id, $selectedQueue),
+                    new ProcessZipFilesJob($fullPath, $batchId, $selectedQueue),
+                    new SaveErrorsJob($batchId, $selectedQueue),
+                    new BuildJsonJob($batchId, $selectedQueue),
+                ])
+                    ->catch(function (\Throwable $e) use ($batchId, $selectedQueue) {
+                        Log::error("Validation failed for batch {$batchId}: {$e->getMessage()}");
+                        ErrorCollector::saveErrorsToDatabase($batchId, 'failed');
+                        event(new ImportProgressEvent($batchId, 0, 'Error en validación', count(ErrorCollector::getErrors($batchId)), 'failed', 'error'));
+                    })
+                    ->onQueue($selectedQueue)
+                    ->dispatch();
+            } catch (\Exception $e) {
+                Log::error("No se pudo seleccionar una cola disponible: " . $e->getMessage());
+                // Manejar el error (ej: reintentar o notificar al usuario)
+            }
+
 
             return [
                 'code' => 200,
