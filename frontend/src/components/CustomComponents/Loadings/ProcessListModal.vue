@@ -47,7 +47,7 @@
               'active-process': process.status === 'active',
               'queued-process': process.status === 'queued',
               'completed-process': process.status === 'completed',
-              'error-process': process.status === 'error'  
+              'error-process': process.status === 'failed'  
             }">
             <!-- Process Header -->
             <div class="d-flex align-center justify-space-between mb-3">
@@ -198,7 +198,7 @@
                 </v-card>
               </div>
               <!-- Información para procesos con error -->
-              <div v-else-if="process.status === 'error'" class="mt-3">
+              <div v-else-if="process.status === 'failed'" class="mt-3">
                 <v-card class="error-details pa-3" variant="tonal" color="error">
                   <div class="d-flex align-center justify-space-between">
                     <div class="d-flex align-center">
@@ -220,12 +220,12 @@
             </div>
             <!-- Actions -->
             <div class="d-flex justify-end mt-3">
-              <v-btn v-if="(process.status === 'completed' || process.status === 'error') && process.metadata?.errors_count > 0" icon size="small"
+              <v-btn v-if="(process.status === 'completed' || process.status === 'failed') && process.metadata?.errors_count > 0" icon size="small"
                 variant="text" color="warning" @click.stop="$emit('showDataProcess', process.batch_id)">
                 <v-icon icon="tabler-eye" />
                 <v-tooltip activator="parent" location="top">Visualizar errores</v-tooltip>
               </v-btn>
-              <v-btn v-if="(process.status === 'completed' || process.status === 'error')" icon size="small" variant="text" color="error"
+              <v-btn v-if="(process.status === 'completed' || process.status === 'failed')" icon size="small" variant="text" color="error"
                 @click.stop="$emit('removeProcess', process.batch_id)">
                 <v-icon icon="tabler-trash" />
                 <v-tooltip activator="parent" location="top">Eliminar proceso</v-tooltip>
@@ -292,7 +292,7 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case 'active': return 'primary';
     case 'completed': return 'success';
-    case 'error': return 'error';
+    case 'failed': return 'error';
     case 'queued': return 'warning';
     default: return 'secondary';
   }
@@ -302,7 +302,7 @@ const getStatusIcon = (status: string) => {
   switch (status) {
     case 'active': return 'tabler-loader-2';
     case 'completed': return 'tabler-circle-check-filled';
-    case 'error': return 'tabler-alert-circle';
+    case 'failed': return 'tabler-alert-circle';
     case 'queued': return 'tabler-clock';
     default: return 'tabler-help-circle';
   }
@@ -312,7 +312,7 @@ const getStatusText = (process: any) => { // Usar 'any' o la interfaz de useGlob
   switch (process.status) {
     case 'active': return 'Procesando';
     case 'completed': return 'Completado';
-    case 'error': return 'Error';
+    case 'failed': return 'Error';
     case 'queued': return 'En Cola';
     default: return 'Desconocido';
   }

@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\ProcessLogController;
+use App\Http\Controllers\ProcessBatchController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/processBatch/errorsPaginate', [ProcessLogController::class, 'paginate']);
+Route::get('/processBatch/errorsPaginate', [ProcessBatchController::class, 'paginate']);
 
-Route::get('/processBatch/getUserProcesses/{id}', [ProcessLogController::class, 'getUserProcesses']);
+Route::get('/processBatch/getUserProcesses/{id}', [ProcessBatchController::class, 'getUserProcesses']);
+
+Route::post('/processBatch/generateCsvReportErrors', [ProcessBatchController::class, 'generateCsvReportErrors']);
+
+

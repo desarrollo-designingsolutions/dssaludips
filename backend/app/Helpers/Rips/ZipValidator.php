@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Helpers\Rips;
 
 use App\Events\ImportProgressEvent;
@@ -26,8 +25,8 @@ class ZipValidator
     {
         $fileName = basename($filePath);
         $isCritical = false;
-        $errorMessages = [];
 
+        // Validaciones iniciales del ZIP
         if (!file_exists($filePath) || pathinfo($filePath, PATHINFO_EXTENSION) !== 'zip') {
             ErrorCollector::addError(
                 $batchId,
@@ -57,6 +56,7 @@ class ZipValidator
             return ['isCritical' => $isCritical];
         }
 
+        // Contar archivos y validaciones generales
         $fileCount = $zip->numFiles;
         $fileNames = [];
         $folderCount = 0;
@@ -84,6 +84,7 @@ class ZipValidator
             }
         }
 
+        // Validaciones de estructura del ZIP
         if ($folderCount > 0) {
             ErrorCollector::addError(
                 $batchId,
@@ -134,7 +135,6 @@ class ZipValidator
         }
 
         $hasACorSimilar = ($counts['AC'] >= 1 || $counts['AP'] >= 1 || $counts['AM'] >= 1 || $counts['AT'] >= 1);
-
         if ($counts['AF'] < 1) {
             ErrorCollector::addError(
                 $batchId,
@@ -183,11 +183,39 @@ class ZipValidator
             );
         }
 
+        // Evento: Inicio de validación de archivos TXT
+        event(new ImportProgressEvent(
+            $batchId,
+            '0',
+            $fileName,
+            count(ErrorCollector::getErrors($batchId)),
+            'active',
+            "Iniciando validación de " . count($fileNames) . " archivos TXT...",
+        ));
+
+        // Validar cada archivo TXT
         $processedFiles = 0;
         foreach ($fileNames as $name) {
             $processedFiles++;
             $prefix = strtoupper(substr(basename($name), 0, 2));
-            if (!array_key_exists($prefix, self::$allowedTypes)) continue;
+
+            // Log y evento: Archivo en validación
+            Log::info("Validando archivo {$processedFiles}/" . count($fileNames) . ": {$name} (Batch: {$batchId})");
+            event(new ImportProgressEvent(
+                $batchId,
+                (string) $processedFiles,
+                $name,
+                count(ErrorCollector::getErrors($batchId)),
+                'active',
+                "Validando archivo: {$name} ({$processedFiles}/" . count($fileNames) . ")",
+            ));
+
+            // Simular demora (1 segundo por archivo)
+            // sleep(5);
+
+            if (!array_key_exists($prefix, self::$allowedTypes)) {
+                continue;
+            }
 
             $contenido = $zip->getFromName($name);
             if (empty(trim($contenido))) {
@@ -210,17 +238,6 @@ class ZipValidator
 
             $dataArray = FormatDataTxt::execute($contenido);
             ValidarLongitudElementos::execute($dataArray, $name, self::$allowedTypes[$prefix], $batchId);
-
-            if ($processedFiles % 2 === 0 || $processedFiles === count($fileNames)) {
-                event(new ImportProgressEvent(
-                    $batchId,
-                    $processedFiles,
-                    'Validando archivo TXT',
-                    count(ErrorCollector::getErrors($batchId)),
-                    'active',
-                    $name
-                ));
-            }
         }
 
         $zip->close();

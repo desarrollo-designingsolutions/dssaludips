@@ -101,21 +101,26 @@ const markUnRead = async (notificationId: number[]) => {
 }
 
 const handleNotificationClick = (notification: Notification) => {
+  // 1. Marcar como leída si no lo está
   if (!notification.isSeen) {
-    markRead([notification.id])
+    markRead([notification.id]);
   }
 
-  // const targetUrl = notification.action_url;
-  // const currentUrl = router.currentRoute.value.fullPath;
+  console.log("notification", notification);
 
-  // Si la ruta y el parámetro cambian, forzar el cambio
-  // if (currentUrl !== targetUrl) {
-  //   router.push(targetUrl).then(() => {
 
-  //     // Puedes manejar otras cosas después de la navegación si es necesario
-  //     emit('reload-task', notification.id);
-  //   });
-  // }
+  
+  // 2. Verificar si hay URL y cómo abrirla
+  if (notification.action_url) {
+    if (notification.openInNewTab) {
+      // 3. Abrir en nueva pestaña
+      window.open(notification.action_url, '_blank');
+    } else {
+      // 2. Redirección normal
+      // router.push(notification.action_url);
+    }
+  }
+  // 4. Si no hay action_url, no hace nada
 }
 
 

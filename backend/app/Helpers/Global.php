@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 
 function logMessage($message)
@@ -344,4 +345,22 @@ function formatTimeToArray($time, string $format = 'Hi'): array
     $parsed = $time instanceof Carbon ? $time : Carbon::parse($time);
 
     return str_split($parsed->format($format));
+}
+
+
+function getLeastBusyQueue(array $queues) {
+    $redis = Redis::connection('redis_6380');
+    $minJobs = PHP_INT_MAX;
+    $selectedQueue = $queues[0]; // Default
+
+    foreach ($queues as $queue) {
+        $queueKey = "queues:{$queue}";
+        $jobsInQueue = $redis->llen($queueKey) ?? 0;
+        if ($jobsInQueue < $minJobs) {
+            $minJobs = $jobsInQueue;
+            $selectedQueue = $queue;
+        }
+    }
+
+    return $selectedQueue;
 }
