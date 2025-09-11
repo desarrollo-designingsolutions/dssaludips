@@ -11,7 +11,7 @@ const handleDialogVisible = () => {
 
 };
 
-const loading = reactive({ csv: false })
+const loading = reactive({ csv: false, excel: false })
 
 //TABLE
 const refTableFull = ref()
@@ -81,6 +81,23 @@ const downloadErrorsCsv = async () => {
 
 }
 
+const downloadDataExcel = async () => {
+  loading.excel = true;
+
+  try {
+    const { data, response } = await useAxios(`/processBatch/generateExcelReportData`).post({
+        user_id: authenticationStore.user.id,
+        batch_id: optionsTable.value.paramsGlobal.batch_id,
+    });
+  } catch (error) {
+    console.error("Error downloading XLSX:", error);
+  } finally {
+    loading.excel = false;
+  }
+
+
+}
+
 </script>
 
 <template>
@@ -104,6 +121,13 @@ const downloadErrorsCsv = async () => {
               <VIcon icon="tabler-file-spreadsheet"></VIcon>
               <VTooltip location="top" transition="scale-transition" activator="parent"
                 text="Descargar errores en formato CSV">
+              </VTooltip>
+            </VBtn>
+            <VBtn :loading="loading.excel" :disabled="loading.excel" size="38" color="primary" icon
+              @click="downloadDataExcel">
+              <VIcon icon="tabler-file-spreadsheet"></VIcon>
+              <VTooltip location="top" transition="scale-transition" activator="parent"
+                text="Descargar datos en formato excel">
               </VTooltip>
             </VBtn>
           </div>

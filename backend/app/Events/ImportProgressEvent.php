@@ -87,7 +87,8 @@ class ImportProgressEvent implements ShouldBroadcastNow
         return match ($backendStatus) {
             'active', 'finalizing' => 'active',
             'queued' => 'queued',
-            'completed', 'completed_with_errors' => 'completed',
+            'completed' => 'completed',
+            'completed_with_errors' => 'completed_with_errors',
             'failed' => 'failed',
             default => 'active',
         };

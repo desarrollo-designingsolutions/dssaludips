@@ -2,24 +2,15 @@
 
 namespace App\Helpers\Common;
 
-use App\Events\ProgressCircular;
 use App\Helpers\Common\ErrorCollector;
-use Illuminate\Support\Facades\Redis;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ImportXlsxValidator
 {
     /**
-     * Valida las columnas de un archivo XLSX.
-     *
-     * @param  string  $user_id
-     * @param  string  $keyErrorRedis
-     * @param  string  $filePath
-     * @param  int     $expectedColumns
-     * @param  string  $prefix
-     * @return bool
+     * Columnas esperadas (en el mismo idioma/forma que llegarán en el archivo).
+     * Se valida de forma flexible: trim, minúsculas y espacios colapsados.
      */
-
     protected static array $expectedHeaders = [
         'tipo de documento',
         'documento',
@@ -37,103 +28,96 @@ class ImportXlsxValidator
         'segundo apellido',
     ];
 
+    /**
+     * Valida únicamente la cabecera (primera fila) de un XLSX.
+     *
+     * @param  string $filePath       Ruta del archivo XLSX en disco.
+     * @param  string $keyErrorRedis  Clave para almacenar errores en Redis.
+     * @param  string $prefix         Prefijo opcional para mensajes o trazas.
+     * @return bool                   true si la cabecera es válida; false en caso contrario.
+     */
     public static function validate(
-        string $user_id,
-        string $keyErrorRedis,
+        string $batchId,
         string $filePath,
-        int $expectedColumns = 5,
-        string $prefix,
     ): bool {
-        Redis::del($keyErrorRedis);
-
         try {
             $spreadsheet = IOFactory::load($filePath);
             $sheet = $spreadsheet->getActiveSheet();
-            $rows = $sheet->toArray(null, false, false, false);
+
+            // Detectar última columna con datos (en la fila 1)
+            $lastCol = $sheet->getHighestColumn();
+            if (!$lastCol) {
+                ErrorCollector::addError(
+                    $batchId,
+                    0,
+                    null,
+                    'No se pudo detectar la cabecera. Verifique que la primera fila tenga columnas.',
+                    'PATIENT_ERROR_001',
+                    'No se pudo detectar la cabecera',
+                    null,
+                );
+                return false;
+            }
+
+            // Obtener solo la fila 1 (cabecera)
+            $headerRow = $sheet->rangeToArray('A1:' . $lastCol . '1', null, true, false)[0] ?? [];
         } catch (\Exception $e) {
             ErrorCollector::addError(
-                $keyErrorRedis,
-                'XLSX_ERROR_001',
-                'R',
+                $batchId,
+                0,
                 null,
-                basename($filePath),
+                'No se pudo leer el archivo Excel. Verifique que el archivo esté bien formado.',
+                'PATIENT_ERROR_002',
+                'No se pudo leer el archivo Excel',
                 null,
-                null,
-                null,
-                'No se pudo leer el archivo Excel. Verifique que el archivo esté bien formado.'
             );
             return false;
         }
 
-        // ✅ Validar encabezados antes de continuar
-        $headers = array_map(
-            fn($value) => is_string($value) ? trim(mb_strtolower($value)) : '',
-            $rows[0] ?? []
-        );
+        // Normalización: trim, minúsculas y colapso de espacios internos
+        $normalize = static function ($v): string {
+            if (!is_string($v)) return '';
+            $v = mb_strtolower(trim($v));
+            $v = str_replace(['_', '-'], ' ', $v);        // ← aquí aceptamos underscores
+            $v = preg_replace('/\s+/', ' ', $v);          // colapsa espacios
+            return $v ?? '';
+        };
 
-        $expected = self::$expectedHeaders;
-        $missingHeaders = array_diff($expected, $headers);
-        $extraHeaders = array_diff($headers, $expected);
+        $headers = array_map($normalize, $headerRow);
+        // Remover columnas vacías al final, si las hay
+        $headers = array_values(array_filter($headers, fn($h) => $h !== ''));
+
+        $expected = array_map($normalize, self::$expectedHeaders);
+
+        // Detectar faltantes y desconocidos (orden no importa)
+        $missingHeaders = array_values(array_diff($expected, $headers));
+        $extraHeaders   = array_values(array_diff($headers, $expected));
 
         if (!empty($missingHeaders) || !empty($extraHeaders)) {
             $errorMessage = '';
-
+            $columnName = null;
             if (!empty($missingHeaders)) {
                 $errorMessage .= 'Faltan las siguientes columnas: ' . implode(', ', $missingHeaders) . '. ';
+                $columnName = implode(',', $missingHeaders);
             }
             if (!empty($extraHeaders)) {
                 $errorMessage .= 'Estas columnas no son reconocidas: ' . implode(', ', $extraHeaders) . '.';
+                $columnName = ($columnName ? $columnName . ';' : '') . implode(',', $extraHeaders);
             }
 
             ErrorCollector::addError(
-                $keyErrorRedis,
-                'XLSX_ERROR_003',
-                'R',
-                null,
-                basename($filePath),
+                $batchId,
                 1,
-                implode(';', $headers),
                 null,
-                trim($errorMessage)
+                trim($errorMessage),
+                'PATIENT_ERROR_003',
+                'Las columnas no coinciden con el formato esperado',
+                null,
             );
             return false;
         }
 
-        $totalLines = count($rows) - 1;
-        $processedLines = 0;
-        $hasError = false;
-
-        foreach (array_slice($rows, 1) as $index => $row) {
-            $rowNum = $index + 1;
-            // Saltar filas vacías completamente
-            if (count(array_filter($row, fn($value) => trim($value) !== '')) === 0) {
-                continue;
-            }
-
-            // Normalizar el array a la longitud esperada
-            $row = array_pad($row, $expectedColumns, null);
-
-            // Si tiene más columnas de las esperadas, es un error
-            if (count($row) > $expectedColumns) {
-                ErrorCollector::addError(
-                    $keyErrorRedis,
-                    'XLSX_ERROR_002',
-                    'R',
-                    null,
-                    basename($filePath),
-                    $rowNum + 1,
-                    implode(';', $row),
-                    null,
-                    "Se esperaban máximo {$expectedColumns} columnas, pero se encontraron " . count($row) . "."
-                );
-                $hasError = true;
-            }
-
-            $processedLines++;
-            $progress = ($processedLines / $totalLines) * 100;
-            ProgressCircular::dispatch("xlsx_import_progress_{$prefix}.{$user_id}", $progress);
-        }
-
-        return !$hasError;
+        // Si llegamos aquí, la cabecera es válida
+        return true;
     }
 }

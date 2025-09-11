@@ -15,4 +15,6 @@ Route::get('/processBatch/getUserProcesses/{id}', [ProcessBatchController::class
 
 Route::post('/processBatch/generateCsvReportErrors', [ProcessBatchController::class, 'generateCsvReportErrors']);
 
+Route::post('/processBatch/generateExcelReportData', [ProcessBatchController::class, 'generateExcelReportData']);
+
 

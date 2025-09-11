@@ -12,11 +12,12 @@
         <div class="d-flex align-center gap-2">
           <v-chip :color="getOverallStatusColor()" size="large" variant="elevated">
             <v-icon start icon="tabler-files" />
-            {{ globalLoading.allProcesses.value.length }} proceso{{ globalLoading.allProcesses.value.length !== 1 ? 's' : '' }}
+            {{ globalLoading.allProcesses.value.length }} proceso{{ globalLoading.allProcesses.value.length !== 1 ? 's'
+            : '' }}
           </v-chip>
           <!-- ✅ BOTÓN PARA LIMPIAR COMPLETADOS -->
-          <v-btn v-if="globalLoading.completedProcesses.value.length > 0" variant="outlined" color="warning" size="small"
-            @click="clearCompleted">
+          <v-btn v-if="globalLoading.completedProcesses.value.length > 0" variant="outlined" color="warning"
+            size="small" @click="clearCompleted">
             <v-icon start icon="tabler-trash" />
             Limpiar ({{ globalLoading.completedProcesses.value.length }})
           </v-btn>
@@ -34,8 +35,10 @@
           </div>
           <v-progress-linear :model-value="overallProgress" height="12" rounded color="primary" class="mb-3" />
           <div class="d-flex justify-space-between text-body-2 text-medium-emphasis">
-            <span>{{ globalLoading.completedProcesses.value.length }} de {{ globalLoading.allProcesses.value.length }} procesos completados</span>
-            <span>{{ globalLoading.activeProcesses.value.length }} activo{{ globalLoading.activeProcesses.value.length !== 1 ? 's' : '' }}</span>
+            <span>{{ globalLoading.completedProcesses.value.length }} de {{ globalLoading.allProcesses.value.length }}
+              procesos completados</span>
+            <span>{{ globalLoading.activeProcesses.value.length }} activo{{ globalLoading.activeProcesses.value.length
+              !== 1 ? 's' : '' }}</span>
           </div>
         </v-card>
       </v-card-text>
@@ -47,7 +50,8 @@
               'active-process': process.status === 'active',
               'queued-process': process.status === 'queued',
               'completed-process': process.status === 'completed',
-              'error-process': process.status === 'failed'  
+              'error-process': process.status === 'failed',
+              'completed-with-errors-process': process.status === 'completed_with_errors'
             }">
             <!-- Process Header -->
             <div class="d-flex align-center justify-space-between mb-3">
@@ -198,7 +202,7 @@
                 </v-card>
               </div>
               <!-- Información para procesos con error -->
-              <div v-else-if="process.status === 'failed'" class="mt-3">
+              <div v-else-if="process.status === 'failed' || process.status === 'completed_with_errors'" class="mt-3">
                 <v-card class="error-details pa-3" variant="tonal" color="error">
                   <div class="d-flex align-center justify-space-between">
                     <div class="d-flex align-center">
@@ -220,13 +224,16 @@
             </div>
             <!-- Actions -->
             <div class="d-flex justify-end mt-3">
-              <v-btn v-if="(process.status === 'completed' || process.status === 'failed') && process.metadata?.errors_count > 0" icon size="small"
-                variant="text" color="warning" @click.stop="$emit('showDataProcess', process.batch_id)">
+              <v-btn
+                v-if="(process.status === 'completed' || process.status === 'failed' || process.status === 'completed_with_errors') && process.metadata?.errors_count > 0"
+                icon size="small" variant="text" color="warning"
+                @click.stop="$emit('showDataProcess', process.batch_id)">
                 <v-icon icon="tabler-eye" />
                 <v-tooltip activator="parent" location="top">Visualizar errores</v-tooltip>
               </v-btn>
-              <v-btn v-if="(process.status === 'completed' || process.status === 'failed')" icon size="small" variant="text" color="error"
-                @click.stop="$emit('removeProcess', process.batch_id)">
+              <v-btn
+                v-if="(process.status === 'completed' || process.status === 'failed' || process.status === 'completed_with_errors')"
+                icon size="small" variant="text" color="error" @click.stop="$emit('removeProcess', process.batch_id)">
                 <v-icon icon="tabler-trash" />
                 <v-tooltip activator="parent" location="top">Eliminar proceso</v-tooltip>
               </v-btn>
@@ -293,6 +300,7 @@ const getStatusColor = (status: string) => {
     case 'active': return 'primary';
     case 'completed': return 'success';
     case 'failed': return 'error';
+    case 'completed_with_errors': return 'warning';
     case 'queued': return 'warning';
     default: return 'secondary';
   }
@@ -303,6 +311,7 @@ const getStatusIcon = (status: string) => {
     case 'active': return 'tabler-loader-2';
     case 'completed': return 'tabler-circle-check-filled';
     case 'failed': return 'tabler-alert-circle';
+    case 'completed_with_errors': return 'tabler-circle-minus';
     case 'queued': return 'tabler-clock';
     default: return 'tabler-help-circle';
   }
@@ -313,6 +322,7 @@ const getStatusText = (process: any) => { // Usar 'any' o la interfaz de useGlob
     case 'active': return 'Procesando';
     case 'completed': return 'Completado';
     case 'failed': return 'Error';
+    case 'completed_with_errors': return 'Completado con Errores';
     case 'queued': return 'En Cola';
     default: return 'Desconocido';
   }
@@ -406,20 +416,30 @@ const formatEstimatedTime = (seconds?: number) => {
   border-color: rgba(255, 152, 0, 0.2);
 }
 
+.completed-with-errors-process {
+  background: rgba(255, 152, 0, 0.2);
+  border-color: rgba(245, 158, 11, 0.75);
+}
+
 /* ✅ NUEVO ESTILO PARA COMPLETADOS */
 .completed-process {
   background: rgba(76, 175, 80, 0.04);
   border-color: rgba(76, 175, 80, 0.2);
   opacity: 0.8;
 }
+
 /* ✅ NUEVO ESTILO PARA ERRORES */
 .error-process {
-  background: rgba(244, 67, 54, 0.04); /* Rojo */
-  border-color: rgba(244, 67, 54, 0.2); /* Borde rojo */
+  background: rgba(244, 67, 54, 0.04);
+  /* Rojo */
+  border-color: rgba(244, 67, 54, 0.2);
+  /* Borde rojo */
   opacity: 0.8;
 }
+
 .v-theme--dark .error-process {
-  background: rgba(244, 67, 54, 0.1); /* Rojo más oscuro para tema oscuro */
+  background: rgba(244, 67, 54, 0.1);
+  /* Rojo más oscuro para tema oscuro */
   border-color: rgba(244, 67, 54, 0.3);
 }
 

@@ -70,4 +70,4 @@ set -e
 echo "🎯 Iniciando PHP-FPM..."
 exec php-fpm
 
-echo "🎯 Finalizado..." 
+echo "🎯 Finalizado..."

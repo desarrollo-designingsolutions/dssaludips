@@ -7,7 +7,7 @@ interface ImportProcess {
   progress: number
   current_element: string
   current_action: string
-  status: "active" | "completed" | "error" | "queued" | "failed"
+  status: "active" | "completed" | "error" | "queued" | "failed" | "completed_with_errors"
   started_at?: string
   completed_at?: string
   websocket_channel?: any
@@ -198,7 +198,7 @@ export function useGlobalLoading() {
   })
 
   const completedProcesses = computed(() => {
-    return allProcesses.value.filter((p) => p.status === "completed" || p.status === "error" || p.status === "failed")
+    return allProcesses.value.filter((p) => p.status === "completed" || p.status === "error" || p.status === "failed" || p.status === "completed_with_errors")
   })
 
   const sortedProcesses = computed(() => {

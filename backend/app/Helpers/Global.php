@@ -347,8 +347,20 @@ function formatTimeToArray($time, string $format = 'Hi'): array
     return str_split($parsed->format($format));
 }
 
+function getTotalRowsExcel($filePath, $header = 1)
+{
+    $path = $filePath;
+    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+    $worksheet = $spreadsheet->getActiveSheet();
 
-function getLeastBusyQueue(array $queues) {
+    // Obtiene el índice de la última fila con datos
+    $highestRow = $worksheet->getHighestDataRow();
+
+    return $highestRow - $header; // Restar 1 para excluir la fila de encabezado
+}
+
+function getLeastBusyQueue(array $queues)
+{
     $redis = Redis::connection('redis_6380');
     $minJobs = PHP_INT_MAX;
     $selectedQueue = $queues[0]; // Default

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ProcessBatchesError\ProcessBatchesErrorPaginateResource;
 use App\Jobs\ProcessBatch\CsvReportErrors;
+use App\Jobs\ProcessBatch\ExcelReportData;
 use App\Models\ProcessBatch;
 use App\Repositories\ProcessBatchesErrorRepository;
 use App\Traits\HttpResponseTrait;
@@ -100,7 +101,8 @@ class ProcessBatchController extends Controller
         return match ($backendStatus) {
             'active', 'finalizing' => 'active',
             'queued' => 'queued',
-            'completed', 'completed_with_errors' => 'completed',
+            'completed' => 'completed',
+            'completed_with_errors' => 'completed_with_errors',
             'failed' => 'failed',
             default => 'active', // Default to active if unknown
         };
@@ -116,6 +118,26 @@ class ProcessBatchController extends Controller
 
             // Disparamos el job principal
             CsvReportErrors::dispatch(
+                $batchId,
+                $userId,
+            );
+
+            return [
+                'code' => 200,
+                'message' => "El reporte se está generando en segundo plano. Se le notificará cuando esté listo.",
+            ];
+        });
+    }
+
+    public function generateExcelReportData(Request $request)
+    {
+        return $this->execute(function () use ($request) {
+            // Generar nombre único para el archivo
+            $batchId = $request->input("batch_id");
+            $userId = $request->input("user_id");
+
+            // Disparamos el job principal
+            ExcelReportData::dispatch(
                 $batchId,
                 $userId,
             );

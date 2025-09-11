@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ImportProgressEvent;
 use App\Events\ModalError;
 use App\Events\ProgressCircular;
 use App\Exports\Patient\PatientExcelErrorsValidationExport;
@@ -18,6 +19,8 @@ use App\Http\Resources\Patient\PatientFormResource;
 use App\Http\Resources\Patient\PatientListResource;
 use App\Imports\Patient\PatientMasiveImport;
 use App\Jobs\BrevoProcessSendEmail;
+use App\Jobs\Patients\PatientJob;
+use App\Models\ProcessBatch;
 use App\Notifications\BellNotification;
 use App\Repositories\MunicipioRepository;
 use App\Repositories\PaisRepository;
@@ -30,8 +33,12 @@ use App\Repositories\UserRepository;
 use App\Repositories\ZonaVersion2Repository;
 use App\Traits\HttpResponseTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class PatientController extends Controller
 {
@@ -179,7 +186,7 @@ class PatientController extends Controller
             $request['typeData'] = 'all';
 
             $patient = $this->patientRepository->paginate($request->all());
-             $patient->load(["tipo_id_pisi", "rips_tipo_usuario_version2", "sexo", "pais_residency", "municipio_residency", "zona_version2", "pais_origin"]);
+            $patient->load(["tipo_id_pisi", "rips_tipo_usuario_version2", "sexo", "pais_residency", "municipio_residency", "zona_version2", "pais_origin"]);
 
             $excel = Excel::raw(new PatientExcelExport($patient), \Maatwebsite\Excel\Excel::XLSX);
 
@@ -191,7 +198,7 @@ class PatientController extends Controller
             ];
         });
     }
-    
+
     public function exportDataToPatientImportExcel(Request $request)
     {
         return $this->execute(function () use ($request) {
@@ -237,7 +244,7 @@ class PatientController extends Controller
             ];
         });
     }
-    
+
     public function exportFormatPatientImportExcel(Request $request)
     {
         return $this->execute(function () use ($request) {
@@ -252,88 +259,72 @@ class PatientController extends Controller
             ];
         });
     }
-    
-    public function uploadXlsxPatient(PatientUploadXlsxRequest $request)
+
+    public function uploadFileXlsx(PatientUploadXlsxRequest $request)
     {
         return $this->runTransaction(function () use ($request) {
 
-            $keyErrorRedis = 'paginate:patient_import_errors_' . $request->input('user_id');
-
             $user_id = $request->input('user_id');
             $company_id = $request->input('company_id');
+            $uploadedFile = $request->file('file');
+            $batchId = Str::uuid();
 
-            $tipoIdPisis = $this->tipoIdPisisRepository->paginate([
-                "typeData" => "all",
+            $fileNameWithExtension = strtolower($uploadedFile->getClientOriginalName());
+            $fileName = pathinfo($fileNameWithExtension, PATHINFO_FILENAME);
+            $fileExtension = strtolower($uploadedFile->getClientOriginalExtension());
+            $uniqueFileName = $fileName . '_' . time() . '.' . $fileExtension;
+            $tempSubfolder = 'temp/patient/' . $batchId;
+            $filePath = $uploadedFile->storeAs($tempSubfolder, $uniqueFileName, Constants::DISK_FILES);
+            $fullPath = storage_path('app/public/' . $filePath);
+
+            $totalRecords = getTotalRowsExcel($fullPath);
+
+            $metadata = [
+                'file_name' => $uniqueFileName,
+                'file_size' => $uploadedFile->getSize(),
+                'started_at' => now()->toDateTimeString(),
+                'total_rows' => $totalRecords,
+                'total_sheets' => 1,
+                'current_sheet' => 1,
+            ];
+            $redis = Redis::connection('redis_6380');
+            $redis->hmset("batch:{$batchId}:metadata", $metadata);
+
+            Log::info('$metadata', [$metadata]);
+
+            $redis->hmset("patient_batch:{$batchId}", [
+                'status' => 'uploaded',
+                'file_path' => $filePath,
+                'user_id' => $user_id,
+                'company_id' => $company_id,
+            ]);
+            $redis->expire("patient_batch:{$batchId}", 86400);
+
+            Log::info("ZIP uploaded for batch {$batchId}: Path {$filePath}");
+
+            ProcessBatch::create([
+                'id' => Str::uuid(),
+                'batch_id' => $batchId,
+                'company_id' => $company_id,
+                'user_id' => $user_id,
+                'total_records' => $totalRecords,
+                'error_count' => 0,
+                'status' => 'active',
+                'metadata' => json_encode($metadata),
             ]);
 
-            $ripsTipoUsuarioVersion2 = $this->ripsTipoUsuarioVersion2Repository->paginate([
-                "typeData" => "all",
-            ]);
+            PatientJob::dispatch($batchId, $fullPath, $company_id);
 
-            $sexos = $this->sexoRepository->paginate([
-                "typeData" => "all",
-            ]);
-
-            $paises = $this->paisRepository->paginate([
-                "typeData" => "all",
-            ]);
-
-            $municipios = $this->municipioRepository->paginate([
-                "typeData" => "all",
-            ]);
-
-            $zonaVersion2 = $this->zonaVersion2Repository->paginate([
-                "typeData" => "all",
-            ]);
-
-            $file = $request->file('archiveXlsx');
-
-            $file_path = $file->getRealPath();
-
-            if (!ImportXlsxValidator::validate($user_id, $keyErrorRedis, $file_path, 14, 'patient')) { 
-                ProgressCircular::dispatch("xlsx_import_progress_patient.{$user_id}", 100);
-                $errors = ErrorCollector::getErrors($keyErrorRedis);  // Obtener lista de errores
-
-                // Convert array to JSON
-                $routeJson = null;
-                if (count($errors) > 0) {
-                    $nameFile = 'error_' . $user_id . '.json';
-                    $routeJson = 'companies/company_' . $company_id . '/patient/errors/' . $nameFile; // Ruta donde se guardará la carpeta
-                    Storage::disk(Constants::DISK_FILES)->put($routeJson, json_encode($errors, JSON_PRETTY_PRINT));
-                }
-
-                // Enviar notificación al usuario
-                $title = 'Importación de pacientes';
-                $subtitle = 'Se encontraron errores en la estructura del archivo que esta intentando importar.';
-
-                $this->sendNotification(
-                    $user_id,
-                    [
-                        'title' => $title,
-                        'subtitle' => $subtitle,
-                        'data_import' => $errors,
-                    ]
-                );
-
-                // Emitir errores al front
-                ModalError::dispatch("patientStructureModalErrors.{$user_id}", $routeJson);
-
-                return [
-                    'code' => 422,
-                    'errors' => $errors,
-                ];
-            } else {
-                $xlsx = Excel::import(new PatientMasiveImport($user_id, $company_id, $tipoIdPisis, $ripsTipoUsuarioVersion2, $sexos, $paises, $municipios, $zonaVersion2), $request->file('archiveXlsx'));
-
-                return [
-                    'code' => 200,
-                    'xlsx' => $xlsx,
-                ];
-            }
+            return [
+                'code' => 200,
+                'message' => 'Archivo ZIP subido y encolado para validación.',
+                'batch_id' => $batchId,
+                'status' => 'success',
+            ];
         });
     }
 
-    
+
     private function sendNotification($userId, $data)
     {
         // Obtener el objeto User a partir del ID
@@ -363,7 +354,7 @@ class PatientController extends Controller
             );
         }
     }
-    
+
     public function getContentJson(Request $request)
     {
         return $this->execute(function () use ($request) {
@@ -376,7 +367,7 @@ class PatientController extends Controller
             ];
         });
     }
-    
+
     public function excelErrorsValidation(Request $request)
     {
         return $this->execute(function () use ($request) {
@@ -401,7 +392,7 @@ class PatientController extends Controller
             ];
         });
     }
-    
+
     public function exportExcelErrorsValidation(Request $request)
     {
         return $this->execute(function () use ($request) {

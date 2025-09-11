@@ -127,4 +127,4 @@ services:
     networks:
       - project_network
     # deploy:
-    #   replicas: 5   # <-- Solo funciona con Docker Swarm 
+    #   replicas: 5   # <-- Solo funciona con Docker Swarm
