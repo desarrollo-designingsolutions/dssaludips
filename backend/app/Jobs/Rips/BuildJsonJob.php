@@ -40,13 +40,12 @@ class BuildJsonJob implements ShouldQueue
         $totalErrors = ErrorCollector::countErrors($this->batchId);
 
         // Obtener metadatos del batch
-        $metadata = json_decode($redis->hget("rip_batch:{$this->batchId}", "metadata"), true) ?? [];
+        $metadata = $redis->hgetall("rip_batch:{$this->batchId}");
         Log::info("BuildJsonJob started for batch {$this->batchId} with metadata: ", [$metadata]);
 
-        return; // DEBUG: Desactivar temporalmente la ejecución del job
 
         $userId = $metadata['user_id'] ?? null;
-        $type = $metadata['type'] ?? 'zip'; // Tipo por defecto: zip
+        $type = $metadata['type'] ?? 'RIP_TYPE_001'; // Tipo por defecto: zip
         $companyId = $metadata['company_id'] ?? null;
         $pathZip = $metadata['file_path'] ?? null;
 
@@ -62,6 +61,7 @@ class BuildJsonJob implements ShouldQueue
         try {
             // Construir el JSON
             $jsonContents = BuildAllDataToJson::execute($this->batchId);
+            Log::info("BuildAllDataToJson started for batch {$this->batchId}", [$jsonContents]);
 
             if (empty($jsonContents)) {
                 throw new \Exception("El JSON generado está vacío o no se pudo construir.");

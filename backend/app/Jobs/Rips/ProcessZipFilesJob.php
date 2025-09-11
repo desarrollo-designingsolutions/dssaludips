@@ -35,7 +35,6 @@ class ProcessZipFilesJob implements ShouldQueue
     public function handle(): void
     {
         $redis = Redis::connection('redis_6380');
-
         try {
             $zip = new ZipArchive;
             if ($zip->open($this->filePath) !== true) {
@@ -134,9 +133,14 @@ class ProcessZipFilesJob implements ShouldQueue
                     'name' => $filename,
                     'extension' => $ext,
                     'rutaTemporal' => $rutaTemporal,
-                    'contentDataArray' => $contentDataArray,
+                    'contentData' => $contenido,
                     'count_rows' => $countRows,
                     'type' => substr($filename, 0, 2),
+                ];
+
+                $archivos2[] = [
+                    'name' => $filename,
+                    'contentDataArray' => $contentDataArray,
                 ];
 
                 // Evento: Archivo extraído
@@ -189,12 +193,13 @@ class ProcessZipFilesJob implements ShouldQueue
             $this->getDataFileAndSaveInRedis($archivos, 'AF');
 
             // Procesar cada archivo en chunks
-            foreach ($archivos as $file) {
+            foreach ($archivos2 as $file) {
                 $prefix = strtoupper(substr($file['name'], 0, 2));
-                $redis->set("rip_batch:{$this->batchId}:{$prefix}", json_encode($file['contentDataArray']));
-                $redis->expire("rip_batch:{$this->batchId}:{$prefix}", 86400);
+                // $redis->set("rip_batch:{$this->batchId}:{$prefix}", json_encode($file['contentDataArray']));
+                // $redis->expire("rip_batch:{$this->batchId}:{$prefix}", 86400);
 
                 $chunks = array_chunk($file['contentDataArray'], Constants::CHUNKSIZE);
+                Log::info("Processing {$file['name']} in " . count($chunks) . " chunks for batch {$this->batchId}");
                 foreach ($chunks as $index => $chunk) {
                     $startRow = ($index * Constants::CHUNKSIZE) + 1;
                     $endRow = $startRow + count($chunk) - 1;
@@ -223,7 +228,7 @@ class ProcessZipFilesJob implements ShouldQueue
     {
         $redis = Redis::connection('redis_6380');
 
-        $dataFile = array_filter($archivos, function ($file) use($type) {
+        $dataFile = array_filter($archivos, function ($file) use ($type) {
             return $file['type'] === $type;
         });
         $dataFile = reset($dataFile) ?: []; // Obtener el primer elemento o un array vacío si no hay CT

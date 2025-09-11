@@ -82,6 +82,7 @@ class RipController extends Controller
                 'file_path' => $filePath,
                 'user_id' => $user_id,
                 'company_id' => $company_id,
+                'type' => 'zip',
             ]);
             $redis->expire("rip_batch:{$batchId}", 86400);
 

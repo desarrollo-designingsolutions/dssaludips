@@ -13,8 +13,8 @@ services:
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
     networks:
       - project_network
-    deploy:
-      replicas: 5   # <-- Solo funciona con Docker Swarm
+    # deploy:
+    #   replicas: 5   # <-- Solo funciona con Docker Swarm
 
   vue:
     container_name: ${COMPOSE_PROJECT_NAME}_vue
@@ -127,4 +127,4 @@ services:
     networks:
       - project_network
     # deploy:
-    #   replicas: 5   # <-- Solo funciona con Docker Swarm 
+    #   replicas: 5   # <-- Solo funciona con Docker Swarm

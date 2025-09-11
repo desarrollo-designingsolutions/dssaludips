@@ -3,7 +3,9 @@
 namespace App\Helpers\Rips;
 
 use App\Helpers\Constants;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
 
 class BuildAllDataToJson
 {
@@ -16,7 +18,13 @@ class BuildAllDataToJson
 
     public static function execute($batchId)
     {
-        $files = json_decode(Redis::get("rip_batch:{$batchId}:files_txts"), 1);
+        Log::info("dentro de BuildAllDataToJson");
+        $redis = Redis::connection('redis_6380');
+
+        $files = json_decode($redis->get("rip_batch:{$batchId}:files_txts"), 1);
+
+        Log::info("files started for batch {$batchId}", [$files]);
+
 
         $instance = new self; // Crear instancia para acceder a métodos protegidos
 
@@ -36,16 +44,21 @@ class BuildAllDataToJson
         // Inicializar un array para almacenar los datos formateados
         $dataArrays = [];
 
+        Log::info("iniciacion de dataArrays started for batch {$batchId}");
+
         // Inicializar todas las claves con arrays vacíos
         foreach ($fileTypes as $type => $method) {
             $dataArrays[$type] = [];
         }
+        Log::info("dataArrays started for batch {$batchId}", [$dataArrays]);
 
         // Procesar los archivos
         foreach ($files as $file) {
             foreach ($fileTypes as $type => $method) {
                 if (stripos($file['name'], $type) !== false) {
-                    $dataArrays[$type] = FormatDataTxt::execute($file['contentDataArray'], [$instance, $method]);
+                    Log::info("file content started for batch {$batchId}", [$file['contentData']]);
+                    $dataArrays[$type] = FormatDataTxt::execute($file['contentData'], [$instance, $method]);
+                    Log::info("dataArrays[type] content started for batch {$batchId}", [$dataArrays[$type]]);
                     break; // Salir del bucle interno una vez que se encuentra el tipo
                 }
             }
@@ -128,7 +141,7 @@ class BuildAllDataToJson
     }
 
     // Funciones de formateo protegidas
-    protected function formatValueAT($datos): array
+    public function formatValueAT($datos): array
     {
         return [
             self::$keyNumFact => trim($datos[0]),
@@ -145,7 +158,7 @@ class BuildAllDataToJson
         ];
     }
 
-    protected function formatValueAN($datos): array
+    public function formatValueAN($datos): array
     {
         return [
             self::$keyNumFact => trim($datos[0]),
@@ -165,7 +178,7 @@ class BuildAllDataToJson
         ];
     }
 
-    protected function formatValueAH($datos): array
+    public function formatValueAH($datos): array
     {
         return [
             self::$keyNumFact => trim($datos[0]),
@@ -190,7 +203,7 @@ class BuildAllDataToJson
         ];
     }
 
-    protected function formatValueAM($datos): array
+    public function formatValueAM($datos): array
     {
         return [
             self::$keyNumFact => trim($datos[0]),
@@ -210,7 +223,7 @@ class BuildAllDataToJson
         ];
     }
 
-    protected function formatValueAU($datos): array
+    public function formatValueAU($datos): array
     {
         return [
             self::$keyNumFact => trim($datos[0]),
@@ -233,7 +246,7 @@ class BuildAllDataToJson
         ];
     }
 
-    protected function formatValueAP($datos): array
+    public function formatValueAP($datos): array
     {
         return [
             self::$keyNumFact => trim($datos[0]),
@@ -254,27 +267,24 @@ class BuildAllDataToJson
         ];
     }
 
-    protected function formatValueUS($datos): array
+    public function formatValueUS($datos): array
     {
         return [
-            'Tipo_de_identificacion_del_usuario' => trim($datos[0]),
-            self::$keyNumDocumentoIdentificacion => trim($datos[1]),
-            'Codigo_entidad_administradora' => trim($datos[2]),
-            'Tipo_de_usuario' => trim($datos[3]),
-            'Primer_apellido_del_usuario' => trim($datos[4]),
-            'Segundo_apellido_del_usuario' => trim($datos[5]),
-            'Primer_nombre_del_usuario' => trim($datos[6]),
-            'Segundo_nombre_del_usuario' => trim($datos[7]),
-            'Edad' => trim($datos[8]),
-            'Unidad_de_medida_de_la_edad' => trim($datos[9]),
-            'Sexo' => trim($datos[10]),
-            'Codigo_del_departamento_de_residencia_habitual' => trim($datos[11]),
-            'Codigo_del_municipio_de_residencia_habitual' => trim($datos[12]),
-            'Zona_de_residencia_habitual' => trim($datos[13]),
+            'tipoDocumentoIdentificacion' => trim($datos[0]),
+            'numDocumentoIdentificacion' => trim($datos[1]),
+            'tipoUsuario' => trim($datos[3]),
+            'fechaNacimiento' => null,
+            'codSexo' => trim($datos[10]),
+            'codPaisResidencia' => null,
+            'codMunicipioResidencia' => trim($datos[12]),
+            'codZonaTerritorialResidencia' => $this->transformCodZonaTerritorialResidencia(trim($datos[13])),
+            'incapacidad' => null,
+            'consecutivo' => null,
+            'codPaisOrigen' => null,
         ];
     }
 
-    protected function formatValueAC($datos): array
+    public function formatValueAC($datos): array
     {
         return [
             self::$keyNumFact => trim($datos[0]),
@@ -297,7 +307,7 @@ class BuildAllDataToJson
         ];
     }
 
-    protected function formatValueAF($datos): array
+    public function formatValueAF($datos): array
     {
         return [
             'Codigo_del_prestador_de_servicios_de_salud' => trim($datos[0]),
@@ -319,5 +329,19 @@ class BuildAllDataToJson
             'Valor_neto_a_pagar_por_la_entidad_contratante' => trim($datos[16]),
             'usuarios' => [],
         ];
+    }
+
+    public function transformCodZonaTerritorialResidencia($value)
+    {
+        $newValue = $value;
+
+        if (Str::upper($value) == 'R') {
+            $newValue = '01';
+        }
+        if (Str::upper($value) == 'U') {
+            $newValue = '02';
+        }
+
+        return $newValue;
     }
 }
