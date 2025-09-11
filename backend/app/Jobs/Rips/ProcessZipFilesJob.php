@@ -30,6 +30,7 @@ class ProcessZipFilesJob implements ShouldQueue
         $this->filePath = $filePath;
         $this->batchId = $batchId;
         $this->onQueue($selectedQueue);
+        Log::info("hola mundo desde ProcessZipFilesJob");
     }
 
     public function handle(): void
