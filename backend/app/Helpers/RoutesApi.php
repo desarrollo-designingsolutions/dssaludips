@@ -32,5 +32,6 @@ class RoutesApi
         'routes/furtran.php',
         'routes/processBatch.php',
         'routes/rip.php',
+        'routes/ripInvoice.php',
     ];
 }

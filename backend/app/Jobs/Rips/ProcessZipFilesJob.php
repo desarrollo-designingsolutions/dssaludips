@@ -35,7 +35,6 @@ class ProcessZipFilesJob implements ShouldQueue
     public function handle(): void
     {
         $redis = Redis::connection('redis_6380');
-
         try {
             $zip = new ZipArchive;
             if ($zip->open($this->filePath) !== true) {
@@ -58,7 +57,7 @@ class ProcessZipFilesJob implements ShouldQueue
             $basePath = storage_path('app/public/' . $tempDir);
             $redis->set("rip_batch:{$this->batchId}:tempZip", $basePath);
             $redis->expire("rip_batch:{$this->batchId}:tempZip", 86400);
-            Log::info("Created temporary directory {$basePath} for batch {$this->batchId}");
+            // Log::info("Created temporary directory {$basePath} for batch {$this->batchId}");
 
             // Evento: Inicio de extracción del ZIP
             event(new ImportProgressEvent(
@@ -128,16 +127,18 @@ class ProcessZipFilesJob implements ShouldQueue
                 $countRows = count($contentDataArray);
                 $totalRows += $countRows;
 
-                Log::info("Extracted {$filename} for batch {$this->batchId}: {$countRows} rows");
+                // Log::info("Extracted {$filename} for batch {$this->batchId}: {$countRows} rows");
 
                 $archivos[] = [
                     'name' => $filename,
                     'extension' => $ext,
                     'rutaTemporal' => $rutaTemporal,
+                    'contentData' => $contenido,
                     'contentDataArray' => $contentDataArray,
                     'count_rows' => $countRows,
                     'type' => substr($filename, 0, 2),
                 ];
+
 
                 // Evento: Archivo extraído
                 event(new ImportProgressEvent(
@@ -152,7 +153,8 @@ class ProcessZipFilesJob implements ShouldQueue
 
             $zip->close();
 
-            Log::info("Total rows for batch {$this->batchId}: {$totalRows}");
+            // Log::info("archivos {$this->batchId}:", [$archivos]);
+            // Log::info("Total rows for batch {$this->batchId}: {$totalRows}");
 
             // Guardar total_rows en los metadatos del batch
             $metadata = $redis->hgetall("batch:{$this->batchId}:metadata");
@@ -185,16 +187,15 @@ class ProcessZipFilesJob implements ShouldQueue
             $redis->expire("rip_batch:{$this->batchId}:files_txts", 86400);
 
 
-            $this->getDataFileAndSaveInRedis($archivos, 'CT');
-            $this->getDataFileAndSaveInRedis($archivos, 'AF');
 
             // Procesar cada archivo en chunks
             foreach ($archivos as $file) {
                 $prefix = strtoupper(substr($file['name'], 0, 2));
-                $redis->set("rip_batch:{$this->batchId}:{$prefix}", json_encode($file['contentDataArray']));
+                $redis->set("rip_batch:{$this->batchId}:{$prefix}", json_encode($file));
                 $redis->expire("rip_batch:{$this->batchId}:{$prefix}", 86400);
 
                 $chunks = array_chunk($file['contentDataArray'], Constants::CHUNKSIZE);
+
                 foreach ($chunks as $index => $chunk) {
                     $startRow = ($index * Constants::CHUNKSIZE) + 1;
                     $endRow = $startRow + count($chunk) - 1;
@@ -203,7 +204,7 @@ class ProcessZipFilesJob implements ShouldQueue
                 }
             }
 
-            Log::info("Temporary directory {$tempDir} will be cleaned up later for batch {$this->batchId}");
+            // Log::info("Temporary directory {$tempDir} will be cleaned up later for batch {$this->batchId}");
         } catch (\Throwable $e) {
             Log::error("Error in ProcessZipFilesJob for batch {$this->batchId}: {$e->getMessage()}");
             ErrorCollector::addError(
@@ -217,19 +218,5 @@ class ProcessZipFilesJob implements ShouldQueue
             );
             $this->fail($e);
         }
-    }
-
-    public function getDataFileAndSaveInRedis($archivos, string $type)
-    {
-        $redis = Redis::connection('redis_6380');
-
-        $dataFile = array_filter($archivos, function ($file) use($type) {
-            return $file['type'] === $type;
-        });
-        $dataFile = reset($dataFile) ?: []; // Obtener el primer elemento o un array vacío si no hay CT
-        $redis->set("rip_batch:{$this->batchId}:{$type}", json_encode($dataFile));
-        $redis->expire("rip_batch:{$this->batchId}:{$type}", 86400);
-        $dataFile = json_decode($redis->get("rip_batch:{$this->batchId}:{$type}"), true) ?? [];
-        Log::info("Contenido del archivo {$type} para batch {$this->batchId}: ", [$dataFile]);
     }
 }

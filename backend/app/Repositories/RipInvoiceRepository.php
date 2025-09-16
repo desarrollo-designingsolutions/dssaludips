@@ -2,19 +2,14 @@
 
 namespace App\Repositories;
 
-use App\Enums\Rip\RipStatusEnum;
-use App\Enums\Rip\RipTypeEnum;
 use App\Helpers\Constants;
-use App\Models\Rip;
-use App\QueryBuilder\Filters\QueryFilters;
-use App\QueryBuilder\Sort\DynamicJoinConcatSort;
+use App\Models\RipInvoice;
 use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class RipRepository extends BaseRepository
+class RipInvoiceRepository extends BaseRepository
 {
-    public function __construct(Rip $modelo)
+    public function __construct(RipInvoice $modelo)
     {
         parent::__construct($modelo);
     }
@@ -28,39 +23,19 @@ class RipRepository extends BaseRepository
                 ->allowedFilters([
                     AllowedFilter::callback('inputGeneral', function ($query, $value) {
                         $query->where(function ($subQuery) use ($value) {
-                            $subQuery->orWhere('numInvoices', 'like', "%$value%");
-                            $subQuery->orWhere('successfulInvoices', 'like', "%$value%");
-                            $subQuery->orWhere('failedInvoices', 'like', "%$value%");
-
-                            QueryFilters::filterByText($subQuery, $value, 'type', [
-                                RipTypeEnum::RIP_TYPE_001->description() => RipTypeEnum::RIP_TYPE_001,
-                            ]);
-
-                            QueryFilters::filterByText($subQuery, $value, 'status', [
-                                RipStatusEnum::RIP_STATUS_001->description() => RipStatusEnum::RIP_STATUS_001,
-                            ]);
-
-                            QueryFilters::filterByDMYtoYMD($subQuery, $value, 'created_at');
+                            // $subQuery->orWhere('numInvoices', 'like', "%$value%");
 
                         });
                     }),
                 ])
                 ->allowedSorts([
-                    'numInvoices',
-                    'successfulInvoices',
-                    'failedInvoices',
-                    'type',
-                    'status',
-                    'created_at',
-                    AllowedSort::custom('user_full_name', new DynamicJoinConcatSort(
-                        concat: "users.name, ' ', users.surname",
-                        relatedTable: 'users',
-                        foreignKey: 'user_id'
-                    )),
                 ])
                 ->where(function ($query) use ($request) {
                     if (!empty($request['company_id'])) {
                         $query->where('company_id', $request['company_id']);
+                    }
+                    if (!empty($request['rip_id'])) {
+                        $query->where('rip_id', $request['rip_id']);
                     }
                 });
 

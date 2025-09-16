@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 import ModalUploadZip from '@/pages/Rips/Components/ModalUploadZip.vue';
+import { router } from "@/plugins/1.router";
 
 definePage({
   name: "Rips-Index",
@@ -12,6 +13,7 @@ definePage({
 });
 
 const authenticationStore = useAuthenticationStore();
+const loading = reactive({ downloadFile: false })
 
 //TABLE
 const refTableFull = ref()
@@ -54,6 +56,39 @@ const openModalUploadZip = () => {
   refModalUploadZip.value.openModal()
 }
 
+const goView = (item: any) => {
+  router.push({ name: "Rips-ListInvoices", params: { id: item.id } })
+}
+
+//descarga de archivos
+const downloadFileData = async (obj: any, type: string) => {
+  loading.downloadFile = true;
+
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0'); // Meses van de 0 a 11
+  const year = today.getFullYear();
+  const formattedDate = `${day}${month}${year}`; // ddmmyyyy
+
+  let api = ""
+  let ext = ""
+  let nameFile = ""
+
+  if(type === "excel"){
+    api = `/ripInvoice/downloadExcel/${obj.id}`
+    ext = "xlsx"
+    nameFile = `Invoice_${obj.id}_${formattedDate}.xlsx`
+  } else {
+    api = `/ripInvoice/downloadJson/${obj.id}`
+    ext = "json"
+    nameFile = `Invoice_${obj.id}_${formattedDate}.json`
+  }
+  
+  await downloadBlob(api, nameFile, ext)
+
+  loading.downloadFile = false;
+};
+ 
 </script>
 
 <template>
@@ -118,6 +153,10 @@ const openModalUploadZip = () => {
                 <VIcon icon="tabler-square-rounded-chevron-down"></VIcon>
                 <VMenu activator="parent">
                   <VList>
+                    <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
+                    </VListItem>
+                    <VListItem v-if="item.path_excel" @click="downloadFileData(item, 'excel')">Descargar Excel
+                    </VListItem>
                     <VListItem @click="goView(item)">
                       Ingresar
                     </VListItem>

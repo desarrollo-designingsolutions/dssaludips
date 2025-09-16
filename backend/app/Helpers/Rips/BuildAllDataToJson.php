@@ -3,28 +3,31 @@
 namespace App\Helpers\Rips;
 
 use App\Helpers\Constants;
+use DateTime;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
 
 class BuildAllDataToJson
 {
-    // variables claves para crear el json
-    protected static $keyNumFact = Constants::KEY_NUMFACT;
-
-    protected static $keyNumDocumentoIdentificacion = Constants::KEY_NumDocumentoIdentificacion;
-
-    protected static $keyVrServicio = Constants::KEY_VrServicio;
 
     public static function execute($batchId)
     {
-        $files = json_decode(Redis::get("rip_batch:{$batchId}:files_txts"), 1);
+        Log::info("dentro de BuildAllDataToJson");
+        $redis = Redis::connection('redis_6380');
+
+        $files = json_decode($redis->get("rip_batch:{$batchId}:files_txts"), 1);
+
+        // Log::info("files started for batch {$batchId}", [$files]);
+
 
         $instance = new self; // Crear instancia para acceder a métodos protegidos
 
         // Mapeo de tipos de archivos y sus respectivos métodos de formato
         $fileTypes = [
             'AF' => 'formatValueAF',
-            'AC' => 'formatValueAC',
             'US' => 'formatValueUS',
+            'AC' => 'formatValueAC',
             'AP' => 'formatValueAP',
             'AM' => 'formatValueAM',
             'AU' => 'formatValueAU',
@@ -36,16 +39,21 @@ class BuildAllDataToJson
         // Inicializar un array para almacenar los datos formateados
         $dataArrays = [];
 
+        // Log::info("iniciacion de dataArrays started for batch {$batchId}");
+
         // Inicializar todas las claves con arrays vacíos
         foreach ($fileTypes as $type => $method) {
             $dataArrays[$type] = [];
         }
+        // Log::info("dataArrays started for batch {$batchId}", [$dataArrays]);
 
         // Procesar los archivos
         foreach ($files as $file) {
             foreach ($fileTypes as $type => $method) {
                 if (stripos($file['name'], $type) !== false) {
-                    $dataArrays[$type] = FormatDataTxt::execute($file['contentDataArray'], [$instance, $method]);
+                    // Log::info("file content started for batch {$batchId}", [$file['contentData']]);
+                    $dataArrays[$type] = FormatDataTxt::execute($file['contentData'], [$instance, $method]);
+                    // Log::info("dataArrays[type] content started for batch {$batchId}", [$dataArrays[$type]]);
                     break; // Salir del bucle interno una vez que se encuentra el tipo
                 }
             }
@@ -91,19 +99,20 @@ class BuildAllDataToJson
      */
     protected function invoiceUserServices($dataArray, $dataArrayUS, &$invoice, $keyService): void
     {
-
         $registers = $dataArray->filter(function ($atItem) use ($invoice) {
-            return $atItem[self::$keyNumFact] == $invoice[self::$keyNumFact];
+            return $atItem['numFEVPagoModerador'] == $invoice['numFactura'];
         })->values();
 
         $i = 0;
         foreach ($registers as $key => $value) {
+            // Agregar los elementos encontrados a la subcolección 'usuarios'
+
             $usuario = $dataArrayUS->filter(function ($acItem) use ($value) {
-                return $acItem[self::$keyNumDocumentoIdentificacion] == $value[self::$keyNumDocumentoIdentificacion];
+                return $acItem['numDocumentoIdentificacion'] == $value['numDocumentoIdentificacion'];
             })->first();
 
             $user = collect($invoice['usuarios'])->filter(function ($value) use ($usuario) {
-                return $value[self::$keyNumDocumentoIdentificacion] == $usuario[self::$keyNumDocumentoIdentificacion];
+                return $value['numDocumentoIdentificacion'] == $usuario['numDocumentoIdentificacion'];
             })->values();
 
             if (count($user) == 0) {
@@ -111,12 +120,12 @@ class BuildAllDataToJson
                 $invoice['usuarios'][$i]['servicios'] = [];
             }
 
-            if (isset($invoice['usuarios'][$i]['servicios']) && ! isset($invoice['usuarios'][$i]['servicios'][$keyService])) {
+            if (isset($invoice['usuarios'][$i]['servicios']) && !isset($invoice['usuarios'][$i]['servicios'][$keyService])) {
                 $invoice['usuarios'][$i]['servicios'][$keyService] = [];
             }
 
             $dataService = $dataArray->filter(function ($atItem) use ($invoice, $usuario) {
-                return $atItem[self::$keyNumFact] == $invoice[self::$keyNumFact] && $atItem[self::$keyNumDocumentoIdentificacion] == $usuario[self::$keyNumDocumentoIdentificacion];
+                return $atItem['numFEVPagoModerador'] == $invoice['numFactura'] && $atItem['numDocumentoIdentificacion'] == $usuario['numDocumentoIdentificacion'];
             })->values();
 
             if (isset($invoice['usuarios'][$i]['servicios'][$keyService]) && count($invoice['usuarios'][$i]['servicios'][$keyService]) == 0) {
@@ -128,196 +137,230 @@ class BuildAllDataToJson
     }
 
     // Funciones de formateo protegidas
-    protected function formatValueAT($datos): array
+    public function formatValueAT($datos): array
     {
         return [
-            self::$keyNumFact => trim($datos[0]),
-            'Codigo_del_prestador_de_servicios_de_salud' => trim($datos[1]),
-            'Tipo_de_identificacion_del_usuario' => trim($datos[2]),
-            self::$keyNumDocumentoIdentificacion => trim($datos[3]),
-            'Numero_de_autorizacion' => trim($datos[4]),
-            'Tipo_de_servicio' => trim($datos[5]),
-            'Codigo_del_servicio' => trim($datos[6]),
-            'Nombre_del_servicio' => trim($datos[7]),
-            'Cantidad' => trim($datos[8]),
-            'Valor_unitario_del_material_e_insumo' => trim($datos[9]),
-            self::$keyVrServicio => trim($datos[10]),
+            'codPrestador' => trim($datos[1]),
+            'numAutorizacion' => trim($datos[4]),
+            'idMIPRES' => null,
+            'fechaSuministroTecnologia' => null,
+            'tipoOS' => trim($datos[5]),
+            'codTecnologiaSalud' => trim($datos[6]),
+            'nomTecnologiaSalud' => trim($datos[7]),
+            'cantidadOS' => trim($datos[8]),
+            'tipoDocumentoIdentificacion' => trim($datos[2]),
+            'numDocumentoIdentificacion' => trim($datos[3]),
+            'vrUnitOS' => trim($datos[9]),
+            'vrServicio' => trim($datos[10]),
+            'valorPagoModerador' => null,
+            'numFEVPagoModerador' => trim($datos[0]),
+            'consecutivo' => null,
+            'conceptoRecaudo' => null,
         ];
     }
 
-    protected function formatValueAN($datos): array
+    public function formatValueAN($datos): array
     {
         return [
-            self::$keyNumFact => trim($datos[0]),
-            'Codigo_del_prestador_de_servicios_de_salud' => trim($datos[1]),
-            'Tipo_de_identificacion_de_la_madre' => trim($datos[2]),
-            self::$keyNumDocumentoIdentificacion => trim($datos[3]),
-            'Fecha_de_nacimiento_del_recien_nacido' => trim($datos[4]),
-            'Hora_de_nacimiento' => trim($datos[5]),
-            'Edad_gestacional' => trim($datos[6]),
-            'Control_prenatal' => trim($datos[7]),
-            'Sexo' => trim($datos[8]),
-            'Peso' => trim($datos[9]),
-            'Diagnostico_del_recien_nacido' => trim($datos[10]),
-            'Causa_basica_de_muerte' => trim($datos[11]),
-            'Fecha_de_muerte_del_recien_nacido' => trim($datos[12]),
-            'Hora_de_muerte_del_recien_nacido' => trim($datos[13]),
+            'codPrestador' => trim($datos[1]),
+            'tipoDocumentoIdentificacion' => trim($datos[2]),
+            'numDocumentoIdentificacion' => trim($datos[3]),
+            'fechaNacimiento' => $this->transformDate(trim($datos[4])),
+            'edadGestacional' => trim($datos[6]),
+            'numConsultasCPrenatal' => trim($datos[7]),
+            'codSexoBiologico' => trim($datos[8]),
+            'peso' => trim($datos[9]),
+            'codDiagnosticoPrincipal' => trim($datos[10]),
+            'condicionDestinoUsuarioEgreso' => null,
+            'codDiagnosticoCausaMuerte' => trim($datos[11]),
+            'fechaEgreso' => null,
+            'consecutivo' => null,
+            'numFEVPagoModerador' => trim($datos[0]),
         ];
     }
 
-    protected function formatValueAH($datos): array
+    public function formatValueAH($datos): array
     {
         return [
-            self::$keyNumFact => trim($datos[0]),
-            'Codigo_del_prestador_de_servicios_de_salud' => trim($datos[1]),
-            'Tipo_de_identificacion_del_usuario' => trim($datos[2]),
-            self::$keyNumDocumentoIdentificacion => trim($datos[3]),
-            'Via_de_ingreso_a_la_institucion' => trim($datos[4]),
-            'Fecha_de_ingreso_del_usuario_a_la_institucion' => trim($datos[5]),
-            'Hora_de_ingreso_del_usuario_a_la_Institucion' => trim($datos[6]),
-            'Numero_de_autorizacion' => trim($datos[7]),
-            'Causa_externa' => trim($datos[8]),
-            'Diagnostico_principal_de_ingreso' => trim($datos[9]),
-            'Diagnostico_principal_de_egreso' => trim($datos[10]),
-            'Diagnostico_relacionado_Nro_1_de_egreso' => trim($datos[11]),
-            'Diagnostico_relacionado_Nro_2_de_egreso' => trim($datos[12]),
-            'Diagnostico_relacionado_Nro_3_de_egreso' => trim($datos[13]),
-            'Diagnostico_de_la_complicacion' => trim($datos[14]),
-            'Estado_a_la_salida' => trim($datos[15]),
-            'Diagnostico_de_la_causa_basica_de_muerte' => trim($datos[16]),
-            'Fecha_de_egreso_del_usuario_a_la_institucion' => trim($datos[17]),
-            'Hora_de_egreso_del_usuario_de_la_institucion' => trim($datos[18]),
+            'codPrestador' => trim($datos[1]),
+            'viaIngresoServicioSalud' => trim($datos[4]),
+            'fechaInicioAtencion' => null,
+            'numAutorizacion' => trim($datos[7]),
+            'causaMotivoAtencion' => trim($datos[8]),
+            'codDiagnosticoPrincipal' => trim($datos[9]),
+            'codDiagnosticoPrincipalE' => trim($datos[10]),
+            'codDiagnosticoRelacionadoE1' => trim($datos[11]),
+            'codDiagnosticoRelacionadoE2' => trim($datos[12]),
+            'codDiagnosticoRelacionadoE3' => trim($datos[13]),
+            'codComplicacion' => trim($datos[14]),
+            'condicionDestinoUsuarioEgreso' => trim($datos[15]),
+            'codDiagnosticoCausaMuerte' => trim($datos[16]),
+            'fechaEgreso' => null,
+            'consecutivo' => null,
+            'numDocumentoIdentificacion' => trim($datos[3]),
+            'numFEVPagoModerador' => trim($datos[0]),
         ];
     }
 
-    protected function formatValueAM($datos): array
+    public function formatValueAM($datos): array
     {
         return [
-            self::$keyNumFact => trim($datos[0]),
-            'Codigo_del_prestador_de_servicios_de_salud' => trim($datos[1]),
-            'Tipo_de_identificacion_del_usuario' => trim($datos[2]),
-            self::$keyNumDocumentoIdentificacion => trim($datos[3]),
-            'Numero_de_autorizacion' => trim($datos[4]),
-            'Codigo_del_medicamento' => trim($datos[5]),
-            'Tipo_de_medicamento' => trim($datos[6]),
-            'Nombre_generico_del_medicamento' => trim($datos[7]),
-            'Forma_farmaceutica' => trim($datos[8]),
-            'Concentracion_del_medicamento' => trim($datos[9]),
-            'Unidad_de_medida_del_medicamento' => trim($datos[10]),
-            'Numero_de_unidades' => trim($datos[11]),
-            'Valor_unitario_de_medicamento' => trim($datos[12]),
-            self::$keyVrServicio => trim($datos[13]),
+            'codPrestador' => trim($datos[1]),
+            'numAutorizacion' => trim($datos[4]),
+            'idMIPRES' => null,
+            'fechaDispensAdmon' => null,
+            'codDiagnosticoPrincipal' => null,
+            'codDiagnosticoRelacionado' => null,
+            'tipoMedicamento' => trim($datos[6]),
+            'codTecnologiaSalud' => trim($datos[5]),
+            'nomTecnologiaSalud' => trim($datos[7]),
+            'concentracionMedicamento' => trim($datos[9]),
+            'unidadMedida' => trim($datos[10]),
+            'formaFarmaceutica' => trim($datos[8]),
+            'unidadMinDispensa' => trim($datos[10]),
+            'cantidadMedicamento' => trim($datos[11]),
+            'diasTratamiento' => null,
+            'tipoDocumentoIdentificacion' => trim($datos[2]),
+            'numDocumentoIdentificacion' => trim($datos[3]),
+            'vrUnitMedicamento' => trim($datos[12]),
+            'vrServicio' => trim($datos[13]),
+            'valorPagoModerador' => null,
+            'numFEVPagoModerador' => trim($datos[0]),
+            'consecutivo' => null,
+            'conceptoRecaudo' => null,
         ];
     }
 
-    protected function formatValueAU($datos): array
+    public function formatValueAU($datos): array
     {
         return [
-            self::$keyNumFact => trim($datos[0]),
-            'Codigo_del_prestador_de_servicios_de_salud' => trim($datos[1]),
-            'Tipo_de_identificacion_del_usuario' => trim($datos[2]),
-            self::$keyNumDocumentoIdentificacion => trim($datos[3]),
-            'Fecha_de_ingreso_del_usuario_a_observacion' => trim($datos[4]),
-            'Hora_de_ingreso_del_usuario_a_observacion' => trim($datos[5]),
-            'Numero_de_autorizacion' => trim($datos[6]),
-            'Causa_externa' => trim($datos[7]),
-            'Diagnostico_a_la_salida' => trim($datos[8]),
-            'Diagnostico_relacionado_Nro_1_a_la_salida' => trim($datos[9]),
-            'Diagnostico_relacionado_Nro_2_a_la_salida' => trim($datos[10]),
-            'Diagnostico_relacionado_Nro_3_a_la_salida' => trim($datos[11]),
-            'Destino_del_usuario_a_la_salida_de_observacion' => trim($datos[12]),
-            'Estado_a_la_salida' => trim($datos[13]),
-            'Causa_basica_de_muerte_en_urgencias' => trim($datos[14]),
-            'Fecha_de_la_salida_del_usuario_en_observacion' => trim($datos[15]),
-            'Hora_de_la_salida_del_usuario_en_observacion' => trim($datos[16]),
+            'codPrestador' => trim($datos[1]),
+            'fechaInicioAtencion' => null,
+            'causaMotivoAtencion' => trim($datos[7]),
+            'codDiagnosticoPrincipal' => trim($datos[8]),
+            'codDiagnosticoPrincipalE' => trim($datos[8]),
+            'codDiagnosticoRelacionadoE1' => trim($datos[9]),
+            'codDiagnosticoRelacionadoE2' => trim($datos[10]),
+            'codDiagnosticoRelacionadoE3' => trim($datos[11]),
+            'condicionDestinoUsuarioEgreso' => trim($datos[12]) . ' ' . trim($datos[13]),
+            'codDiagnosticoCausaMuerte' => trim($datos[14]),
+            'fechaEgreso' => null,
+            'consecutivo' => null,
+            'numFEVPagoModerador' => trim($datos[0]),
+            'numDocumentoIdentificacion' => trim($datos[3]),
         ];
     }
 
-    protected function formatValueAP($datos): array
+    public function formatValueAP($datos): array
     {
         return [
-            self::$keyNumFact => trim($datos[0]),
-            'Codigo_del_prestador_de_servicios_de_salud' => trim($datos[1]),
-            'Tipo_de_identificacion_del_usuario' => trim($datos[2]),
-            self::$keyNumDocumentoIdentificacion => trim($datos[3]),
-            'Fecha_del_procedimiento' => trim($datos[4]),
-            'Numero_de_autorizacion' => trim($datos[5]),
-            'Codigo_del_procedimiento' => trim($datos[6]),
-            'Ambito_de_realizacion_del_procedimiento' => trim($datos[7]),
-            'Finalidad_del_procedimiento' => trim($datos[8]),
-            'Personal_que_atiende' => trim($datos[9]),
-            'Diagnostico_principal' => trim($datos[10]),
-            'Diagnostico_relacionado' => trim($datos[11]),
-            'Complicacion' => trim($datos[12]),
-            'Forma_de_realizacion_del_acto_quirurgico' => trim($datos[13]),
-            self::$keyVrServicio => trim($datos[14]),
+            'codPrestador' => trim($datos[1]),
+            'fechaInicioAtencion' => null,
+            'idMIPRES' => null,
+            'numAutorizacion' => trim($datos[5]),
+            'codProcedimiento' => trim($datos[6]),
+            'viaIngresoServicioSalud' => trim($datos[7]),
+            'modalidadGrupoServicioTecSal' => null,
+            'grupoServicios' => null,
+            'codServicio' => null,
+            'finalidadTecnologiaSalud' => trim($datos[8]),
+            'tipoDocumentoIdentificacion' => trim($datos[2]),
+            'numDocumentoIdentificacion' => trim($datos[3]),
+            'codDiagnosticoPrincipal' => trim($datos[9]),
+            'codDiagnosticoRelacionado' => trim($datos[10]),
+            'codComplicacion' => trim($datos[11]),
+            'vrServicio' => trim($datos[14]),
+            'valorPagoModerador' => null,
+            'numFEVPagoModerador' => trim($datos[0]),
+            'consecutivo' => null,
+            'conceptoRecaudo' => null,
         ];
     }
 
-    protected function formatValueUS($datos): array
+    public function formatValueUS($datos): array
     {
         return [
-            'Tipo_de_identificacion_del_usuario' => trim($datos[0]),
-            self::$keyNumDocumentoIdentificacion => trim($datos[1]),
-            'Codigo_entidad_administradora' => trim($datos[2]),
-            'Tipo_de_usuario' => trim($datos[3]),
-            'Primer_apellido_del_usuario' => trim($datos[4]),
-            'Segundo_apellido_del_usuario' => trim($datos[5]),
-            'Primer_nombre_del_usuario' => trim($datos[6]),
-            'Segundo_nombre_del_usuario' => trim($datos[7]),
-            'Edad' => trim($datos[8]),
-            'Unidad_de_medida_de_la_edad' => trim($datos[9]),
-            'Sexo' => trim($datos[10]),
-            'Codigo_del_departamento_de_residencia_habitual' => trim($datos[11]),
-            'Codigo_del_municipio_de_residencia_habitual' => trim($datos[12]),
-            'Zona_de_residencia_habitual' => trim($datos[13]),
+            'tipoDocumentoIdentificacion' => trim($datos[0]),
+            'numDocumentoIdentificacion' => trim($datos[1]),
+            'tipoUsuario' => trim($datos[3]),
+            'fechaNacimiento' => null,
+            'codSexo' => trim($datos[10]),
+            'codPaisResidencia' => null,
+            'codMunicipioResidencia' => trim($datos[12]),
+            'codZonaTerritorialResidencia' => $this->transformCodZonaTerritorialResidencia(trim($datos[13])),
+            'incapacidad' => null,
+            'consecutivo' => null,
+            'codPaisOrigen' => null,
         ];
     }
 
-    protected function formatValueAC($datos): array
+    public function formatValueAC($datos): array
     {
         return [
-            self::$keyNumFact => trim($datos[0]),
-            'Codigo_del_prestador_de_servicios_de_salud' => trim($datos[1]),
-            'Tipo_de_identificacion_del_usuario' => trim($datos[2]),
-            self::$keyNumDocumentoIdentificacion => trim($datos[3]),
-            'Fecha_de_la_consulta' => trim($datos[4]),
-            'Numero_de_autorizacion' => trim($datos[5]),
-            'Codigo_de_la_consulta' => trim($datos[6]),
-            'Finalidad_de_la_consulta' => trim($datos[7]),
-            'Causa_externa' => trim($datos[8]),
-            'Codigo_de_diagnostico_principal' => trim($datos[9]),
-            'Codigo_del_diagnostico_relacionado_No_1' => trim($datos[10]),
-            'Codigo_del_diagnostico_relacionado_No_2' => trim($datos[11]),
-            'Codigo_del_diagnostico_relacionado_No_3' => trim($datos[12]),
-            'Tipo_de_diagnostico_principal' => trim($datos[13]),
-            self::$keyVrServicio => trim($datos[14]),
-            'Valor_de_la_cuota_moderadora' => trim($datos[15]),
-            'Valor_neto_a_pagar' => trim($datos[16]),
+            'codPrestador' => trim($datos[1]),
+            'fechaInicioAtencion' => null,
+            'numAutorizacion' => trim($datos[5]),
+            'codConsulta' => trim($datos[6]),
+            'modalidadGrupoServicioTecSal' => null,
+            'grupoServicios' => null,
+            'codServicio' => null,
+            'finalidadTecnologiaSalud' => trim($datos[7]),
+            'causaMotivoAtencion' => trim($datos[8]),
+            'codDiagnosticoPrincipal' => trim($datos[9]),
+            'codDiagnosticoRelacionado1' => trim($datos[10]),
+            'codDiagnosticoRelacionado2' => trim($datos[11]),
+            'codDiagnosticoRelacionado3' => trim($datos[12]),
+            'tipoDiagnosticoPrincipal' => trim($datos[13]),
+            'tipoDocumentoIdentificacion' => trim($datos[2]),
+            'numDocumentoIdentificacion' => trim($datos[3]),
+            'vrServicio' => trim($datos[14]),
+            'valorPagoModerador' => trim($datos[15]),
+            'numFEVPagoModerador' => trim($datos[0]),
+            'consecutivo' => null,
+            'conceptoRecaudo' => null,
         ];
     }
 
-    protected function formatValueAF($datos): array
+    public function formatValueAF($datos): array
     {
         return [
-            'Codigo_del_prestador_de_servicios_de_salud' => trim($datos[0]),
-            'Razon_social_o_apellidos_y_nombre_del_prestador_de_servicios_de_salud' => trim($datos[1]),
-            'Tipo_de_identificacion_del_prestador_de_servicios_de_salud' => trim($datos[2]),
-            'Numero_de_identificacion_del_prestador' => trim($datos[3]),
-            self::$keyNumFact => trim($datos[4]),
-            'Fecha_de_expedicion_de_la_factura' => trim($datos[5]),
-            'Fecha_de_inicio' => trim($datos[6]),
-            'Fecha_final' => trim($datos[7]),
-            'Codigo_entidad_administradora' => trim($datos[8]),
-            'Nombre_entidad_administradora' => trim($datos[9]),
-            'Numero_del_contrato' => trim($datos[10]),
-            'Plan_de_beneficios' => trim($datos[11]),
-            'Numero_de_la_poliza' => trim($datos[12]),
-            'Valor_total_del_pago_compartido_copago' => trim($datos[13]),
-            'Valor_de_la_comision' => trim($datos[14]),
-            'Valor_total_de_descuentos' => trim($datos[15]),
-            'Valor_neto_a_pagar_por_la_entidad_contratante' => trim($datos[16]),
+            'numDocumentoIdObligado' => trim($datos[3]),
+            'numFactura' => trim($datos[4]),
+            'tipoNota' => null,
+            'numNota' => null,
             'usuarios' => [],
         ];
+    }
+
+    public function transformCodZonaTerritorialResidencia($value)
+    {
+        $newValue = $value;
+
+        if (Str::upper($value) == 'R') {
+            $newValue = '01';
+        }
+        if (Str::upper($value) == 'U') {
+            $newValue = '02';
+        }
+
+        return $newValue;
+    }
+
+    public function transformDate($fecha)
+    {
+        $dateTime = DateTime::createFromFormat('d/m/Y', $fecha);
+        if ($dateTime) {
+            return $dateTime->format('Y-m-d');
+        }
+        $dateTime = DateTime::createFromFormat('Y/m/d', $fecha);
+        if ($dateTime) {
+            return $dateTime->format('Y-m-d');
+        }
+        $dateTime = DateTime::createFromFormat('d-m-Y', $fecha);
+        if ($dateTime) {
+            return $dateTime->format('Y-m-d');
+        }
+
+        return $fecha;
     }
 }

@@ -74,7 +74,7 @@ class ValidateZipJob implements ShouldQueue
                 return;
             }
 
-            Log::info("Validación ZIP completada para batch {$this->batchId}", ['error_count' => $errorCount]);
+            // Log::info("Validación ZIP completada para batch {$this->batchId}", ['error_count' => $errorCount]);
             event(new ImportProgressEvent($this->batchId, $numFiles, 'Validación ZIP completada', $errorCount, "active", 'ZIP'));
 
             $redis->hmset("rip_batch:{$this->batchId}", [

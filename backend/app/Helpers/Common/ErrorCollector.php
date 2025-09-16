@@ -80,7 +80,7 @@ class ErrorCollector
         $metadata['completed_at'] = now()->toDateTimeString();
 
         if (empty($errors)) {
-            Log::info("No errors to save for batch {$batchId}");
+            // Log::info("No errors to save for batch {$batchId}");
             ProcessBatch::where('batch_id', $batchId)->update([
                 'error_count' => 0,
                 'status' => 'completed',
@@ -112,12 +112,12 @@ class ErrorCollector
         // Insert errors in chunks
         $totalErrors = count($errorRecords);
         $chunks = array_chunk($errorRecords, $chunkSize);
-        Log::info("Inserting {$totalErrors} errors for batch {$batchId} in " . count($chunks) . " chunks of {$chunkSize}.");
+        // Log::info("Inserting {$totalErrors} errors for batch {$batchId} in " . count($chunks) . " chunks of {$chunkSize}.");
 
         foreach ($chunks as $index => $chunk) {
             try {
                 ProcessBatchesError::insert($chunk);
-                Log::info("Inserted chunk " . ($index + 1) . " of " . count($chunks) . " for batch {$batchId} (" . count($chunk) . " records).");
+                // Log::info("Inserted chunk " . ($index + 1) . " of " . count($chunks) . " for batch {$batchId} (" . count($chunk) . " records).");
             } catch (\Exception $e) {
                 Log::error("Failed to insert chunk " . ($index + 1) . " for batch {$batchId}: {$e->getMessage()}");
                 // Optionally notify user here if needed
@@ -135,7 +135,7 @@ class ErrorCollector
         $redis->hmset("batch:{$batchId}:metadata", $metadata);
         $redis->hmset("rip_batch:{$batchId}", ['status' => $status]);
 
-        Log::info("Saved {$totalErrors} errors to process_batches_errors for batch {$batchId}");
+        // Log::info("Saved {$totalErrors} errors to process_batches_errors for batch {$batchId}");
 
         self::clear($batchId);
     }

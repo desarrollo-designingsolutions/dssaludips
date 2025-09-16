@@ -77,6 +77,7 @@ class ProcessChunkJob implements ShouldQueue
                 return;
             }
 
+
             // --- Validar filas del chunk ---
             foreach ($this->chunk as $offset => $row) {
                 $rowNumber = $this->start_row + $offset;
