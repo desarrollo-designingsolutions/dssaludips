@@ -57,6 +57,7 @@ class AFFileValidator
 
         // Que sea el mismo registrado en el archivo de control
         $numberInvoiceCT = self::getNumberInvoiceCT($batchId);
+        // Log::info("NumberInvoiceCT: " . $numberInvoiceCT);
         if ($numberInvoiceCT !== null) {
 
             if ($rowData[0] !== $numberInvoiceCT) {
@@ -214,28 +215,18 @@ class AFFileValidator
         $redis = Redis::connection('redis_6380');
         $contentDataArrayCt = json_decode($redis->get("rip_batch:{$batchId}:CT"), true);
 
-        // Log::info("ContentDataArrayCT for batch {$batchId}: " . print_r($contentDataArrayCt, true));
-
         if (!is_array($contentDataArrayCt)) {
-            // Log::error("No valid data found in Redis for batch {$batchId}");
+            Log::error("No valid data found in Redis for batch {$batchId}");
             return null;
         }
 
-        $afFile = array_filter($contentDataArrayCt, function ($item) {
-            return isset($item[2]) && strpos($item[2], 'AF') === 0;
-        });
-
-        $afFile = reset($afFile);
-
-        if ($afFile === false || !isset($afFile[0])) {
-            // Log::error("No AF file found or invalid format for batch {$batchId}");
-            return null;
+        foreach ($contentDataArrayCt["contentDataArray"] as $key => $value) {
+            if (isset($value[2]) && strpos($value[2], 'AF') === 0) {
+                $positionZero = $value[0];
+                break;
+            }
         }
-
-        $positionZero = $afFile[0];
-        // Log::info("Position Zero for batch {$batchId}: " . $positionZero);
 
         return $positionZero;
     }
-
 }

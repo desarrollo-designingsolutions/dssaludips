@@ -19,16 +19,20 @@ class RipPaginateResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'rip_id' => $this->rip_id,
             'numInvoices' => $this->numInvoices,
             'successfulInvoices' => $this->successfulInvoices,
             'failedInvoices' => $this->failedInvoices,
             'type' => $this->type,
             'type_description' => $this->type?->description(),
             'status' => $this->status,
+            'path_json' => $this->path_json,
+            'path_excel' => $this->path_excel,
             'status_backgroundColor' => $this->status?->backgroundColor(),
             'status_description' => $this->status?->description(),
             'created_at' => $created_at,
             'user_full_name' => $this->user?->full_name,
+
         ];
     }
 }

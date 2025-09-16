@@ -22,7 +22,11 @@ return new class extends Migration
             $table->integer('successfulInvoices')->default(0)->comment('cantidad de facturas completas');
             $table->integer('failedInvoices')->default(0)->comment('cantidad de facturas incompletas');
             $table->string('type')->comment('Tipo y método de subida (manual, zip, etc)');
+            $table->decimal('sumVr', 15, 2)->comment('Sumatoria de todos los vrservicio de las facturas');
+            $table->string('path_json')->nullable()->comment('ruta del archivo json Global');
+            $table->string('path_excel')->nullable()->comment('ruta del archivo excel Global');
             $table->string('status');
+            $table->string('nit')->nullable()->comment('Nit de la factura');
 
             $table->timestamps();
             $table->softDeletes();

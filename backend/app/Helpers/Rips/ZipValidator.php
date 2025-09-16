@@ -200,7 +200,7 @@ class ZipValidator
             $prefix = strtoupper(substr(basename($name), 0, 2));
 
             // Log y evento: Archivo en validación
-            Log::info("Validando archivo {$processedFiles}/" . count($fileNames) . ": {$name} (Batch: {$batchId})");
+            // Log::info("Validando archivo {$processedFiles}/" . count($fileNames) . ": {$name} (Batch: {$batchId})");
             event(new ImportProgressEvent(
                 $batchId,
                 (string) $processedFiles,

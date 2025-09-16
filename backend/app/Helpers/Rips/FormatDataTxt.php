@@ -10,8 +10,9 @@ class FormatDataTxt
         $lineas = explode("\n", $contenido);
 
         foreach ($lineas as $linea) {
+            $linea = trim($linea);
             // Ignorar líneas vacías o que solo contengan espacios
-            if (trim($linea) === '') {
+            if (empty($linea)) {
                 continue;
             }
 

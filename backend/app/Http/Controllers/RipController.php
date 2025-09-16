@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Rip\RipTypeEnum;
 use App\Events\ImportProgressEvent;
 use App\Helpers\Common\ErrorCollector;
 use App\Helpers\Constants;
@@ -12,16 +13,13 @@ use App\Jobs\Rips\ProcessZipFilesJob;
 use App\Jobs\Rips\SaveErrorsJob;
 use App\Jobs\Rips\ValidateZipJob;
 use App\Models\ProcessBatch;
-use App\Models\Rip;
 use App\Repositories\RipRepository;
 use App\Services\ProcessBatchService;
 use App\Traits\HttpResponseTrait;
-use Illuminate\Bus\Batch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class RipController extends Controller
@@ -82,14 +80,15 @@ class RipController extends Controller
                 'file_path' => $filePath,
                 'user_id' => $user_id,
                 'company_id' => $company_id,
-                'type' => 'zip',
+                'process_batch_id' => $batchId,
+                'type' => RipTypeEnum::RIP_TYPE_001->value,
             ]);
             $redis->expire("rip_batch:{$batchId}", 86400);
 
-            Log::info("ZIP uploaded for batch {$batchId}: Path {$filePath}");
+            // Log::info("ZIP uploaded for batch {$batchId}: Path {$filePath}");
 
             ProcessBatch::create([
-                'id' => Str::uuid(),
+                'id' => $batchId,
                 'batch_id' => $batchId,
                 'company_id' => $company_id,
                 'user_id' => $user_id,
@@ -130,5 +129,59 @@ class RipController extends Controller
                 'status' => 'success',
             ];
         });
+    }
+
+    public function downloadJson($id)
+    {
+        // Buscar el registro en el repositorio
+        $rip = $this->ripRepository->find($id);
+
+        // Verificar si existe el registro
+        if (!$rip) {
+            return response()->json(['message' => 'RIP no encontrado.'], 404);
+        }
+
+        // Construir la ruta completa del archivo
+        $filePath = storage_path('app/public/' . $rip->path_json);
+
+        // Verificar si existe el archivo JSON
+        if (!$rip->path_json || !file_exists($filePath)) {
+            return response()->json(['message' => 'Archivo JSON no encontrado.'], 404);
+        }
+
+        // Obtener el nombre del archivo desde la ruta
+        $fileName = basename($rip->path_json);
+
+        // Retornar la respuesta con el archivo JSON para descarga
+        return response()->download($filePath, $fileName, [
+            'Content-Type' => 'application/json',
+        ]);
+    }
+
+    public function downloadExcel($id)
+    {
+        // Buscar el registro en el repositorio
+        $rip = $this->ripRepository->find($id);
+
+        // Verificar si existe el registro
+        if (!$rip) {
+            return response()->json(['message' => 'RIP no encontrado.'], 404);
+        }
+
+        // Construir la ruta completa del archivo
+        $filePath = storage_path('app/public/' . $rip->path_excel);
+
+        // Verificar si existe el archivo Excel
+        if (!$rip->path_excel || !file_exists($filePath)) {
+            return response()->json(['message' => 'Archivo Excel no encontrado.'], 404);
+        }
+
+        // Obtener el nombre del archivo desde la ruta
+        $fileName = basename($rip->path_excel);
+
+        // Retornar la respuesta con el archivo Excel para descarga
+        return response()->download($filePath, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }

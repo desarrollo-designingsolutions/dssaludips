@@ -42,7 +42,7 @@ class SaveErrorsJob implements ShouldQueue
         $userId = $metadata['user_id'] ?? null;
 
         if ($totalErrors === 0) {
-            Log::info("No errors to save for batch {$this->batchId}");
+            // Log::info("No errors to save for batch {$this->batchId}");
             ProcessBatch::where('batch_id', $this->batchId)->update([
                 'error_count' => 0,
                 'status' => 'completed',
@@ -50,7 +50,6 @@ class SaveErrorsJob implements ShouldQueue
                 'updated_at' => now(),
             ]);
             $redis->hmset("batch:{$this->batchId}:metadata", $metadata);
-            $redis->hmset("rip_batch:{$this->batchId}", ['status' => 'completed']);
             ErrorCollector::clear($this->batchId);
 
             // Evento final sin errores
@@ -86,7 +85,7 @@ class SaveErrorsJob implements ShouldQueue
         $redis->hmset($progressKey, ['processed' => 0]);
         $redis->expire($progressKey, 3600);
 
-        Log::info("Iniciando guardado de {$totalErrors} errores para batch {$this->batchId} en {$numChunks} chunks.");
+        // Log::info("Iniciando guardado de {$totalErrors} errores para batch {$this->batchId} en {$numChunks} chunks.");
 
         // Preparar jobs para chunks
         $jobs = [];

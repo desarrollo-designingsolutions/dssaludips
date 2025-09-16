@@ -2,9 +2,12 @@
 
 namespace App\Jobs\Rips;
 
+use App\Enums\Rip\RipStatusEnum;
+use App\Enums\Rip\RipTypeEnum;
 use App\Helpers\Common\ErrorCollector;
 use App\Helpers\Constants;
 use App\Helpers\Rips\BuildAllDataToJson;
+use App\Helpers\Rips\GenerateRipInfo;
 use App\Models\ProcessBatch;
 use App\Models\Rip;
 use App\Models\User;
@@ -41,13 +44,16 @@ class BuildJsonJob implements ShouldQueue
 
         // Obtener metadatos del batch
         $metadata = $redis->hgetall("rip_batch:{$this->batchId}");
-        Log::info("BuildJsonJob started for batch {$this->batchId} with metadata: ", [$metadata]);
+        if (empty($metadata)) {
+            Log::error("No se encontraron metadatos para el batchId: {$this->batchId}");
+            return;
+        }
 
-
-        $userId = $metadata['user_id'] ?? null;
-        $type = $metadata['type'] ?? 'RIP_TYPE_001'; // Tipo por defecto: zip
-        $companyId = $metadata['company_id'] ?? null;
-        $pathZip = $metadata['file_path'] ?? null;
+        $userId = $metadata['user_id'];
+        $type = $metadata['type'];
+        $companyId = $metadata['company_id'];
+        $pathZip = $metadata['file_path'];
+        $process_batch_id = $metadata['process_batch_id'];
 
 
         // Verificar si hay errores
@@ -61,7 +67,7 @@ class BuildJsonJob implements ShouldQueue
         try {
             // Construir el JSON
             $jsonContents = BuildAllDataToJson::execute($this->batchId);
-            Log::info("BuildAllDataToJson started for batch {$this->batchId}", [$jsonContents]);
+            // Log::info("BuildAllDataToJson started for batch {$this->batchId}", [$jsonContents]);
 
             if (empty($jsonContents)) {
                 throw new \Exception("El JSON generado está vacío o no se pudo construir.");
@@ -77,19 +83,19 @@ class BuildJsonJob implements ShouldQueue
                 'id' => Str::uuid(),
                 'company_id' => $companyId,
                 'user_id' => $userId,
-                'process_batch_id' => $this->batchId,
+                'process_batch_id' => $process_batch_id,
                 'path_zip' => $pathZip,
                 'numInvoices' => $numInvoices,
                 'successfulInvoices' => $successfulInvoices,
                 'failedInvoices' => $failedInvoices,
                 'type' => $type,
-                'status' => 'completed',
+                'sumVr' => 0,
+                'status' => RipStatusEnum::RIP_STATUS_001,
             ]);
 
-            // Guardar el JSON en el sistema de archivos
-            $nameFile = 'rips_' . $rip->id . '.json';
-            $path = "companies/company_{$companyId}/rips/{$type}/rips_{$rip->id}/{$nameFile}";
-            Storage::disk(Constants::DISK_FILES)->put($path, json_encode($jsonContents, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            GenerateRipInfo::saveReloadDataRips($rip->id, $jsonContents);
+
+            GenerateRipInfo::generateDataJsonAndExcel($rip->id);
 
             // Actualizar el batch con estado completado
             $this->updateBatchStatus('completed');
@@ -97,7 +103,7 @@ class BuildJsonJob implements ShouldQueue
             // Notificar al usuario
             $this->notifyUser($userId, 'JSON Construido Exitosamente', "Se generó el archivo JSON para el batch {$this->batchId} con {$numInvoices} facturas.", 'success');
 
-            Log::info("BuildJsonJob completado: JSON guardado en {$path}, registro creado en rips con ID {$rip->id}.");
+            // Log::info("BuildJsonJob completado: JSON guardado en {$path}, registro creado en rips con ID {$rip->id}.");
         } catch (\Exception $e) {
             Log::error("Error en BuildJsonJob: {$e->getMessage()}", [
                 'batchId' => $this->batchId,
