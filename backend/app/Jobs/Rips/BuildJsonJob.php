@@ -85,6 +85,7 @@ class BuildJsonJob implements ShouldQueue
                 'user_id' => $userId,
                 'process_batch_id' => $process_batch_id,
                 'path_zip' => $pathZip,
+                'nit' => $jsonContents[0]['numDocumentoIdObligado'] ?? null,
                 'numInvoices' => $numInvoices,
                 'successfulInvoices' => $successfulInvoices,
                 'failedInvoices' => $failedInvoices,

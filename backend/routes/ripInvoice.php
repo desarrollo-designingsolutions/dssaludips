@@ -18,7 +18,9 @@ Route::middleware(['check.permission:rips.index'])->group(function () {
 
     Route::get('/ripInvoice/downloadExcel/{id}', [RipInvoiceController::class, 'downloadExcel']);
 
-    Route::post('/ripInvoice/uploadFileXml', [RipController::class, 'uploadFileXml']);
+    Route::get('/ripInvoice/downloadXml/{id}', [RipInvoiceController::class, 'downloadXml']);
+
+    Route::post('/ripInvoice/uploadFileXml', [RipInvoiceController::class, 'uploadFileXml']);
 
 
 });

@@ -17,13 +17,18 @@ class RipInvoicePaginateResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'rip_id' => $this->rip_id,
             'invoice_number' => $this->invoice_number,
-            'status' => $this->status,
-            'status_xml' => $this->status_xml,
-            'users_count' => $this->users_count,
+            'count_users' => $this->count_users,
+            'sumVr' => formatNumber($this->sumVr),
+            'status_description' => $this->status?->description(),
+            'status_backgroundColor' => $this->status?->backgroundColor(),
+
+            'status_xml_description' => $this->status_xml?->description(),
+            'status_xml_backgroundColor' => $this->status_xml?->backgroundColor(),
+
             'path_json' => $this->path_json,
             'path_excel' => $this->path_excel,
+            'path_xml' => $this->path_xml,
         ];
     }
 }

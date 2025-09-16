@@ -25,8 +25,11 @@ class Constants
     public const CHUNKSIZE = 5;
 
     // Lista de colas disponibles para importacion de RIPS
-    // public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS = ['import_rips_1', 'import_rips_2', 'import_rips_3'];
-    public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS = ['import_rips_1'];
+    // public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_ZIP = ['import_rips_zip_1', 'import_rips_zip_2', 'import_rips_zip_3'];
+    public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_ZIP = ['import_rips_zip_1'];
+
+    // public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_XML = ['import_rips_xml_1', 'import_rips_xml_2', 'import_rips_xml_3'];
+    public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_XML = ['import_rips_xml_1'];
 
 
 

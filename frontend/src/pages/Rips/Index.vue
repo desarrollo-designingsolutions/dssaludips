@@ -50,7 +50,7 @@ const refreshTable = () => {
 };
 
 
-//ModalUploadCsv
+//ModalUploadZip
 const refModalUploadZip = ref()
 const openModalUploadZip = () => {
   refModalUploadZip.value.openModal()

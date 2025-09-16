@@ -10,11 +10,15 @@ enum RipInvoiceStatusEnum: string
 {
     use AttributableEnum;
 
-    #[Description('Validado')]
-    #[BackgroundColor('success')]
-    case FILINGINVOICE_EST_001 = 'FILINGINVOICE_EST_001';
+    #[Description('Incompleto')]
+    #[BackgroundColor('warning')]
+    case RIP_INVOICE_STATUS_001 = 'RIP_INVOICE_STATUS_001';
 
-    #[Description('Sin validar')]
-    #[BackgroundColor('')]
-    case FILINGINVOICE_EST_002 = 'FILINGINVOICE_EST_002';
+    #[Description('Completado')]
+    #[BackgroundColor('warning')]
+    case RIP_INVOICE_STATUS_002 = 'RIP_INVOICE_STATUS_002';
+
+    #[Description('Error Excel')]
+    #[BackgroundColor('warning')]
+    case RIP_INVOICE_STATUS_003 = 'RIP_INVOICE_STATUS_003';
 }

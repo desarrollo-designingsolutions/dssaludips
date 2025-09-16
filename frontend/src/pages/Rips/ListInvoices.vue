@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
+import ModalUploadXml from '@/pages/Rips/Components/ModalUploadXml.vue';
 
 definePage({
   path: "Rips/ListInvoices/:id",
@@ -21,6 +22,7 @@ const rip_id = route.params.id;
 const refTableFull = ref()
 
 const optionsTable = {
+  showSelect: true,
   url: "/ripInvoice/paginate",
   paramsGlobal: {
     company_id: authenticationStore.company.id,
@@ -28,12 +30,10 @@ const optionsTable = {
   },
   headers: [
     { key: 'invoice_number', title: 'Número de factura' },
-    { key: 'users_count', title: 'Cant. Usuarios' },
-    { key: 'files_count', title: 'Soportes Cargados' },
-    { key: 'case_number', title: 'N° Radicado' },
+    { key: 'count_users', title: 'Cant. Usuarios' },
     { key: 'sumVr', title: 'Valor' },
-    { key: "status", title: 'Estado' },
-    { key: "date", title: 'Fecha' },
+    { key: 'status', title: 'Estado' },
+    { key: 'status_xml', title: 'Estado XML' },
     { key: 'actions', title: 'Acciones', sortable: false },
   ],
   actions: {
@@ -69,23 +69,27 @@ const downloadFileData = async (obj: any, type: string) => {
   let ext = ""
   let nameFile = ""
 
-  if(type === "excel"){
+  if (type === "excel") {
     api = `/ripInvoice/downloadExcel/${obj.id}`
     ext = "xlsx"
-    nameFile = `Invoice_${obj.invoice_number}_${formattedDate}.xlsx`
-  } else {
+    nameFile = `Invoice_${obj.invoice_number}_${formattedDate}`
+  } else if (type === "json") {
     api = `/ripInvoice/downloadJson/${obj.id}`
     ext = "json"
-    nameFile = `Invoice_${obj.invoice_number}_${formattedDate}.json`
+    nameFile = `Invoice_${obj.invoice_number}_${formattedDate}`
+  } else if (type === "xml") {
+    api = `/ripInvoice/downloadXml/${obj.id}`
+    ext = "xml"
+    nameFile = `Invoice_${obj.invoice_number}_${formattedDate}`
   }
-  
+
   await downloadBlob(api, nameFile, ext)
 
   loading.downloadFile = false;
 };
- 
 
- 
+
+
 const tableLoading = ref(false); // Estado de carga de la tabla
 
 // Método para refrescar los datos
@@ -94,6 +98,27 @@ const refreshTable = () => {
     refTableFull.value.fetchTableData(null, false, true); // Forzamos la búsqueda
   }
 };
+
+//ModalUploadXml
+const refModalUploadXml = ref()
+const openModalUploadXml = (item: any) => {
+  refModalUploadXml.value.openModal(item)
+}
+
+const echoChannel = () => {
+  refTableFull.value.options.tableData.forEach(element => {
+    window.Echo.channel(`rip_invoice.${element.id}`)
+      .listen('.RipInvoiceRowUpdatedNow', (event: any) => {
+        element.status_xml = event.status_xml
+        element.status_xml_backgroundColor = event.status_xml_backgroundColor
+        element.status_xml_description = event.status_xml_description
+
+        element.path_xml = event.path_xml
+      });
+  });
+}
+
+const invoicesIds = ref<Array<string>>([]);
 
 </script>
 
@@ -106,6 +131,14 @@ const refreshTable = () => {
         <span>
           Lista de Facturas
         </span>
+        <div class="d-flex justify-end gap-3 flex-wrap ">
+          <VBtn @click="">
+            <template #prepend>
+              <VIcon icon="tabler-circle-plus"></VIcon>
+            </template>
+            Validar con el ministerio
+          </VBtn>
+        </div>
       </VCardTitle>
 
       <VCardText>
@@ -114,7 +147,8 @@ const refreshTable = () => {
       </VCardText>
 
       <VCardText class=" mt-2">
-        <TableFull ref="refTableFull" :options="optionsTable" @update:loading="tableLoading = $event">
+        <TableFull v-model:selected="invoicesIds" ref="refTableFull" :options="optionsTable"
+          @update:loading="tableLoading = $event" @dataFetched="echoChannel">
 
           <template #item.actions="{ item }">
             <div>
@@ -126,10 +160,12 @@ const refreshTable = () => {
                     </VListItem>
                     <VListItem v-if="item.path_excel" @click="downloadFileData(item, 'excel')">Descargar Excel
                     </VListItem>
-                    <VListItem @click="() => { }">Subir XML</VListItem>
+                    <VListItem v-if="!item.path_xml" @click="openModalUploadXml(item)">Subir XML</VListItem>
+                    <VListItem v-if="item.path_xml" @click="downloadFileData(item, 'xml')">Descargar XML</VListItem>
+                    <VListItem @click="">Validar con el ministerio</VListItem>
                   </VList>
                 </VMenu>
-              </VBtn> 
+              </VBtn>
             </div>
           </template>
 
@@ -147,5 +183,8 @@ const refreshTable = () => {
         </TableFull>
       </VCardText>
     </VCard>
+
+    <ModalUploadXml ref="refModalUploadXml" :maxFileSizeMB="200" />
+
   </div>
 </template>
