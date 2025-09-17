@@ -1,6 +1,8 @@
 networks:
   project_network:
     driver: bridge
+  # fevrips-net:
+  #   driver: bridge
 
 services:
   php:
@@ -128,3 +130,47 @@ services:
       - project_network
     # deploy:
     #   replicas: 5   # <-- Solo funciona con Docker Swarm
+
+  # fevrips-db:
+  #       container_name: fevrips-db
+  #       image: mcr.microsoft.com/mssql/server:2022-CU12-ubuntu-22.04
+  #       deploy:
+  #           resources:
+  #               limits:
+  #                   cpus: '4.00'
+  #                   memory: 9G
+  #               reservations:
+  #                   cpus: '2.50'
+  #                   memory: 6G
+  #       environment:
+  #           - ACCEPT_EULA=Y
+  #           - MSSQL_SA_PASSWORD=FEVRIPS1*
+  #           - MSSQL_MEMORY_LIMIT_MB=9000
+  #           - MSSQL_COLLATION=SQL_Latin1_General_CP1_CI_AS
+  #           - MSSQL_PID=Enterprise
+  #       networks:
+  #         - fevrips-net
+
+  # fevrips-api:
+  #     container_name: fevrips-api
+  #     image: crmspsgovcostage.azurecr.io/stage-fevrips-apilocal
+  #     deploy:
+  #         resources:
+  #             limits:
+  #                 cpus: '4.00'
+  #                 memory: 9G
+  #             reservations:
+  #                 cpus: '2.50'
+  #                 memory: 6G
+  #     ports:
+  #       - "9443:5100"
+  #     environment:
+  #       - ASPNETCORE_ENVIRONMENT=DockerStage
+  #       - ASPNETCORE_Kestrel__Certificates__Default__Password=designing2025*
+  #       - ASPNETCORE_Kestrel__Certificates__Default__Path=/Certificates/fevripsapilocal.pfx
+  #     volumes:
+  #       - ./Certificates:/certificates
+  #     networks:
+  #       - fevrips-net
+  #     depends_on:   
+  #       - fevrips-db
