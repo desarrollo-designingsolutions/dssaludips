@@ -207,7 +207,7 @@ const finishRips = async () => {
                     </VListItem>
                     <VListItem v-if="!item.path_xml" @click="openModalUploadXml(item)">Subir XML</VListItem>
                     <VListItem v-if="item.path_xml" @click="downloadFileData(item, 'xml')">Descargar XML</VListItem>
-                    <VListItem @click="">Validar con el ministerio</VListItem>
+                    <VListItem v-if="item.path_xml" @click="">Validar con el ministerio</VListItem>
                   </VList>
                 </VMenu>
               </VBtn>
