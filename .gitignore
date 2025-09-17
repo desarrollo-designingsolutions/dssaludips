@@ -66,4 +66,4 @@ docker/redis_data_6379
 docker/redis_data_6380
 
 # Scripts
-deploy-local.sh
+# deploy-local.sh

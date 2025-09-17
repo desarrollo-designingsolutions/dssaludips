@@ -180,6 +180,13 @@ class ErrorCodes
     const FILE_AC_ERROR_013 = ['code' => 'FILE_AC_ERROR_013', 'message' => 'El valor de la consulta es obligatorio.'];
     const FILE_AC_ERROR_014 = ['code' => 'FILE_AC_ERROR_014', 'message' => 'El valor neto a pagar es obligatorio.'];
 
+    //Errores de validaciones XML
+    const FILE_XML_ERROR_001 = ['code' => 'FILE_XML_ERROR_001', 'message' => 'No se pudo leer el archivo XML.'];
+    const FILE_XML_ERROR_002 = ['code' => 'FILE_XML_ERROR_002', 'message' => 'el ValidationResultCode debe ser el numero 2.'];
+    const FILE_XML_ERROR_003 = ['code' => 'FILE_XML_ERROR_003', 'message' => 'El número de la factura informado en RIPS no coincide con el informado en la factura electrónica de venta.'];
+    const FILE_XML_ERROR_004 = ['code' => 'FILE_XML_ERROR_004', 'message' => 'El nit del prestador no coincide.'];
+
+
     /**
      * Obtiene el mensaje de error asociado a un código de error, con soporte para parámetros dinámicos.
      *

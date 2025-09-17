@@ -26,7 +26,7 @@ function validateDataFilesXml($archivo, $data)
     $numFac = $attachedDocument['cbc:ID'];
     $arrayExito[] = RVC004($data['jsonContents'], $numFac, $errorMessages);
 
-    $nitSenderVendor = $attachedDocument['cac:SenderParty']['cac:PartyTaxScheme']['cbc:CompanyID'];     
+    $nitSenderVendor = $attachedDocument['cac:SenderParty']['cac:PartyTaxScheme']['cbc:CompanyID'];
     $arrayExito[] = validationNitSenderVendor($data, $nitSenderVendor, $errorMessages);
 
 
@@ -84,8 +84,7 @@ function validationFileXml($archiveXml, $data, &$errorMessages)
     $validation = true;
 
     try {
-        $contenidoXml = file_get_contents($archiveXml);
-        $reader = XmlReader::fromString($contenidoXml);
+        $reader = XmlReader::fromFile($archiveXml);
         $xmlData = $reader->values(); // Array of values.
     } catch (\Throwable $th) {
         $errorMessages[] = [

@@ -2,7 +2,8 @@
 
 namespace App\Helpers\Rips;
 
-use App\Enums\Rip\RipStatusEnum;
+use App\Enums\Rip\RipInvoiceStatusEnum;
+use App\Enums\Rip\RipInvoiceStatusXmlEnum;
 use App\Enums\Rip\RipTypeEnum;
 use App\Exports\RipXlsExport;
 use App\Helpers\Constants;
@@ -159,11 +160,11 @@ class GenerateRipInfo
         }
 
         if ($counErrorExcelInvoice == 'sinValidarExcel') {
-            $ripInvoice->status = RipStatusEnum::RIP_STATUS_001;
+            $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_001;
         } else if ($counErrorExcelInvoice > 0) {
-            $ripInvoice->status = RipStatusEnum::RIP_STATUS_003;
+            $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_003;
         } else if ($counErrorExcelInvoice == 0) {
-            $ripInvoice->status = RipStatusEnum::RIP_STATUS_002;
+            $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_002;
         }
 
         $ripInvoice->rip_id = $ripId;
@@ -176,6 +177,7 @@ class GenerateRipInfo
         $ripInvoice->count_users = $valueJsonInvoice['usuarios'] ? count($valueJsonInvoice['usuarios']) : 0;
         $ripInvoice->note_type = $valueJsonInvoice['TipoNota'] ?? null;
         $ripInvoice->note_number = $valueJsonInvoice['numNota'] ?? null;
+        $ripInvoice->status_xml = RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002;
 
         $ripInvoice->save();
     }
