@@ -38,6 +38,8 @@ class RipRepository extends BaseRepository
 
                             QueryFilters::filterByText($subQuery, $value, 'status', [
                                 RipStatusEnum::RIP_STATUS_001->description() => RipStatusEnum::RIP_STATUS_001,
+                                RipStatusEnum::RIP_STATUS_002->description() => RipStatusEnum::RIP_STATUS_002,
+                                RipStatusEnum::RIP_STATUS_003->description() => RipStatusEnum::RIP_STATUS_003,
                             ]);
 
                             QueryFilters::filterByDMYtoYMD($subQuery, $value, 'created_at');

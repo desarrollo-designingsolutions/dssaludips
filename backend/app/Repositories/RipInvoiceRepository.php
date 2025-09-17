@@ -2,8 +2,11 @@
 
 namespace App\Repositories;
 
+use App\Enums\Rip\RipInvoiceStatusEnum;
+use App\Enums\Rip\RipInvoiceStatusXmlEnum;
 use App\Helpers\Constants;
 use App\Models\RipInvoice;
+use App\QueryBuilder\Filters\QueryFilters;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -23,12 +26,34 @@ class RipInvoiceRepository extends BaseRepository
                 ->allowedFilters([
                     AllowedFilter::callback('inputGeneral', function ($query, $value) {
                         $query->where(function ($subQuery) use ($value) {
-                            // $subQuery->orWhere('numInvoices', 'like', "%$value%");
+                            $subQuery->orWhere('invoice_number', 'like', "%$value%");
+                            $subQuery->orWhere('count_users', 'like', "%$value%");
 
+                            $subQuery->orWhere(function ($subQuery2) use ($value) {
+                                $normalizedValue = preg_replace('/[\$\s\.,]/', '', $value);
+                                $subQuery2->orWhere('sumVr', 'like', "%$normalizedValue%");
+                            });
+
+                            QueryFilters::filterByText($subQuery, $value, 'status', [
+                                RipInvoiceStatusEnum::RIP_INVOICE_STATUS_001->description() => RipInvoiceStatusEnum::RIP_INVOICE_STATUS_001,
+                                RipInvoiceStatusEnum::RIP_INVOICE_STATUS_002->description() => RipInvoiceStatusEnum::RIP_INVOICE_STATUS_002,
+                                RipInvoiceStatusEnum::RIP_INVOICE_STATUS_003->description() => RipInvoiceStatusEnum::RIP_INVOICE_STATUS_003,
+                            ]);
+
+                            QueryFilters::filterByText($subQuery, $value, 'status_xml', [
+                                RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_001->description() => RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_001,
+                                RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002->description() => RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002,
+                                RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_003->description() => RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_003,
+                            ]);
                         });
                     }),
                 ])
                 ->allowedSorts([
+                    'invoice_number',
+                    'count_users',
+                    'sumVr',
+                    'status',
+                    'status_xml',
                 ])
                 ->where(function ($query) use ($request) {
                     if (!empty($request['company_id'])) {

@@ -30,7 +30,7 @@ const optionsTable = {
     { key: 'failedInvoices', title: 'Data Incompleta' }, 
     { key: 'created_at', title: 'Fecha de creación' }, 
     { key: 'status', title: 'Estado' },
-    { key: 'actions', title: 'Acciones' },
+    { key: 'actions', title: 'Acciones', sortable: false },
   ],
 }
 
@@ -75,11 +75,11 @@ const downloadFileData = async (obj: any, type: string) => {
   let nameFile = ""
 
   if(type === "excel"){
-    api = `/ripInvoice/downloadExcel/${obj.id}`
+    api = `/rip/downloadExcel/${obj.id}`
     ext = "xlsx"
     nameFile = `Invoice_${obj.id}_${formattedDate}.xlsx`
   } else {
-    api = `/ripInvoice/downloadJson/${obj.id}`
+    api = `/rip/downloadJson/${obj.id}`
     ext = "json"
     nameFile = `Invoice_${obj.id}_${formattedDate}.json`
   }
