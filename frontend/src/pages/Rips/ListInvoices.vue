@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 import ModalUploadXml from '@/pages/Rips/Components/ModalUploadXml.vue';
+const { toast } = useToast();
 
 definePage({
   path: "Rips/ListInvoices/:id",
@@ -15,7 +16,7 @@ definePage({
 
 const route = useRoute()
 const authenticationStore = useAuthenticationStore();
-const loading = reactive({ downloadFile: false })
+const loading = reactive({ downloadFile: false, finishRips: false })
 const rip_id = route.params.id;
 
 //TABLE
@@ -120,6 +121,50 @@ const echoChannel = () => {
 
 const invoicesIds = ref<Array<string>>([]);
 
+
+//ModalQuestion
+const refModalQuestion = ref()
+
+const finishRips = async () => {
+  if (invoicesIds.value.length === 0) {
+    toast("Debes seleccionar al menos una factura", "", "info")
+    return
+  }
+  loading.finishRips = true
+  try {
+    const { data, response } = await useAxios(`/ripInvoice/getCountRipInvoicestoValidate`).post({
+      invoices_ids: invoicesIds.value,
+    })
+
+
+    if (response.status === 200 && data) {
+      const countRipInvoicesWithoutXml = data.countRipInvoicesWithoutXml ?? 0
+      const totalInvoices = data.totalInvoices ?? 0
+      if (countRipInvoicesWithoutXml > 0) { 
+        refModalQuestion.value.componentData.isDialogVisible = true
+        refModalQuestion.value.componentData.principalIcon = 'tabler-help-hexagon'
+        refModalQuestion.value.componentData.btnSuccessText = 'Aceptar'
+        refModalQuestion.value.componentData.title = `¿Desea validar ${totalInvoices} facturas?`
+        refModalQuestion.value.componentData.subTitle = `Tenga en cuenta que tiene ${countRipInvoicesWithoutXml} factura sin xml valido, y solo se podran validar las que cumplan con todos los requisitos`
+
+      } else { 
+        // Caso en que no hay facturas sin XML
+        refModalQuestion.value.componentData.isDialogVisible = true
+        refModalQuestion.value.componentData.principalIcon = 'tabler-help-hexagon'
+        refModalQuestion.value.componentData.btnSuccessText = 'Aceptar'
+        refModalQuestion.value.componentData.title = `¿Desea validar ${totalInvoices} facturas?`
+        refModalQuestion.value.componentData.subTitle = `Todas las facturas seleccionadas tienen soporte XML.`
+ 
+      }
+    }
+  } catch (error) {
+    toast("Error al verificar las facturas", "", "error")
+  } finally {
+    loading.finishRips = false
+  }
+}
+
+
 </script>
 
 <template>
@@ -132,7 +177,7 @@ const invoicesIds = ref<Array<string>>([]);
           Lista de Facturas
         </span>
         <div class="d-flex justify-end gap-3 flex-wrap ">
-          <VBtn @click="">
+          <VBtn @click="finishRips">
             <template #prepend>
               <VIcon icon="tabler-circle-plus"></VIcon>
             </template>
@@ -183,6 +228,8 @@ const invoicesIds = ref<Array<string>>([]);
         </TableFull>
       </VCardText>
     </VCard>
+
+    <ModalQuestion ref="refModalQuestion" />
 
     <ModalUploadXml ref="refModalUploadXml" :maxFileSizeMB="200" />
 

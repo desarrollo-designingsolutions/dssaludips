@@ -196,4 +196,26 @@ class RipInvoiceController extends Controller
             'status' => 'success',
         ];
     }
+
+
+
+    public function getCountRipInvoicestoValidate(Request $request)
+    {
+        return $this->execute(function () use ($request) {
+
+            $request->validate([
+                'invoices_ids' => 'required|array',
+                'invoices_ids.*' => 'string',
+            ]);
+
+            $invoices_ids = $request->input('invoices_ids');
+            $countRipInvoicesWithoutXml = $this->ripInvoiceRepository->countRipInvoicesWithoutXml($invoices_ids);
+
+            return [
+                'code' => 200,
+                'countRipInvoicesWithoutXml' => $countRipInvoicesWithoutXml,
+                'totalInvoices' => count($invoices_ids), // Añadimos el total de facturas enviadas
+            ];
+        });
+    }
 }

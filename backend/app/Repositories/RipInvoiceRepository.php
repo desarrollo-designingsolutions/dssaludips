@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\Rip\RipInvoiceStatusXmlEnum;
 use App\Helpers\Constants;
 use App\Models\RipInvoice;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -114,5 +115,12 @@ class RipInvoiceRepository extends BaseRepository
         });
 
         return $data;
+    }
+
+    public function countRipInvoicesWithoutXml($rip_ids)
+    {
+        $ripInvoices = RipInvoice::whereIn('id', $rip_ids)->where('status_xml', RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002)->count();
+
+        return $ripInvoices;
     }
 }

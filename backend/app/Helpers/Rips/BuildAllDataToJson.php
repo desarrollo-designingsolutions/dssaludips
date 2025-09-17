@@ -363,4 +363,27 @@ class BuildAllDataToJson
 
         return $fecha;
     }
+
+    public static function generateConsecutive(&$buildDataFinal)
+    {
+        foreach ($buildDataFinal as &$invoice) {
+            $i = 1;
+            foreach ($invoice['usuarios'] as &$user) {
+                $user['consecutivo'] = $i;
+                $services = ['consultas', 'procedimientos', 'medicamentos', 'urgencias', 'otrosServicios', 'hospitalizacion', 'recienNacidos'];
+                foreach ($services as $service) {
+                    $j = 1;
+                    if (isset($user['servicios'][$service]) && count($user['servicios'][$service]) > 0) {
+                        $user['servicios'][$service] = array_map(function ($value) use (&$j) {
+                            $value['consecutivo'] = $j;
+                            $j++;
+
+                            return $value;
+                        }, $user['servicios'][$service]->toArray());
+                    }
+                }
+                $i++;
+            }
+        }
+    }
 }

@@ -137,7 +137,7 @@ class GenerateRipInfo
 
     private static function saveReloadDataInvoice($ripId, $valueJsonInvoice, $counErrorExcelInvoice = 'sinValidarExcel')
     {
-        $rip = Rip::find($ripId);
+        $rip = Rip::select(["id","company_id","type"])->find($ripId);
         $type = $rip->type->value;
 
         $nameFile = $valueJsonInvoice['numFactura'] . '.xlsx';

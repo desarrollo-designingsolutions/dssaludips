@@ -2,10 +2,12 @@
 
 namespace App\Repositories;
 
+use App\Enums\Rip\RipInvoiceStatusXmlEnum;
 use App\Enums\Rip\RipStatusEnum;
 use App\Enums\Rip\RipTypeEnum;
 use App\Helpers\Constants;
 use App\Models\Rip;
+use App\Models\RipInvoice;
 use App\QueryBuilder\Filters\QueryFilters;
 use App\QueryBuilder\Sort\DynamicJoinConcatSort;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -140,4 +142,7 @@ class RipRepository extends BaseRepository
 
         return $data;
     }
+
+
+
 }

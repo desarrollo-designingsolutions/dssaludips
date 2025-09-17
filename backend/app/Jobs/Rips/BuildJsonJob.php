@@ -67,6 +67,9 @@ class BuildJsonJob implements ShouldQueue
         try {
             // Construir el JSON
             $jsonContents = BuildAllDataToJson::execute($this->batchId);
+
+            //genero los consecutivos para usuarios y servicios tomando encuenta que deben ser consecutivos e iniciar en uno en los servicios y en usuarios
+            BuildAllDataToJson::generateConsecutive($jsonContents);
             // Log::info("BuildAllDataToJson started for batch {$this->batchId}", [$jsonContents]);
 
             if (empty($jsonContents)) {
@@ -112,6 +115,7 @@ class BuildJsonJob implements ShouldQueue
             ]);
             $this->updateBatchStatus('failed');
             $this->notifyUser($userId, 'Error en Construcción de JSON', "Falló la construcción del JSON: {$e->getMessage()}", 'error');
+            $this->fail($e);
         }
     }
 

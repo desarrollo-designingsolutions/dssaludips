@@ -22,5 +22,6 @@ Route::middleware(['check.permission:rips.index'])->group(function () {
 
     Route::post('/ripInvoice/uploadFileXml', [RipInvoiceController::class, 'uploadFileXml']);
 
+    Route::post('/ripInvoice/getCountRipInvoicestoValidate', [RipInvoiceController::class, 'getCountRipInvoicestoValidate']);
 
 });
