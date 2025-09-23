@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 import ModalUploadZip from '@/pages/Rips/Components/ModalUploadZip.vue';
+import ModalUploadExcel from '@/pages/Rips/Components/ModalUploadExcel.vue';
 import { router } from "@/plugins/1.router";
 
 definePage({
@@ -89,6 +90,13 @@ const downloadFileData = async (obj: any, type: string) => {
   loading.downloadFile = false;
 };
  
+ //ModalUploadExcel
+const refModalUploadExcel = ref()
+const openModalUploadExcel = (item: any) => {
+  refModalUploadExcel.value.openModal(item)
+}
+
+
 </script>
 
 <template>
@@ -154,9 +162,11 @@ const downloadFileData = async (obj: any, type: string) => {
                 <VMenu activator="parent">
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
+                    </VListItem> 
+                    <VListItem v-if="item.status == 'RIP_STATUS_001'" @click="downloadFileData(item, 'excel')">Descargar Excel
                     </VListItem>
-                    <VListItem v-if="item.path_excel" @click="downloadFileData(item, 'excel')">Descargar Excel
-                    </VListItem>
+                    <VListItem v-if="item.status == 'RIP_STATUS_001'" @click="openModalUploadExcel(item)">Subir
+                      Excel</VListItem>
                     <VListItem @click="goView(item)">
                       Ingresar
                     </VListItem>
@@ -170,6 +180,9 @@ const downloadFileData = async (obj: any, type: string) => {
     </VCard>  
 
     <ModalUploadZip ref="refModalUploadZip" :maxFileSizeMB="200" />
+
+    <ModalUploadExcel ref="refModalUploadExcel" :maxFileSizeMB="200" />
+
 
   </div>
 </template>

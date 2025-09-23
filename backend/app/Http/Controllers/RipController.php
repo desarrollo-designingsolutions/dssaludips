@@ -15,6 +15,7 @@ use App\Jobs\Rips\ValidateZipJob;
 use App\Models\ProcessBatch;
 use App\Repositories\RipRepository;
 use App\Services\ProcessBatchService;
+use App\Services\Rips\RipsMinistryApiClient;
 use App\Traits\HttpResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
@@ -28,6 +29,7 @@ class RipController extends Controller
 
     public function __construct(
         private RipRepository $ripRepository,
+        private RipsMinistryApiClient $ripsMinistryApiClient,
     ) {}
 
     public function paginate(Request $request)
@@ -158,31 +160,20 @@ class RipController extends Controller
         ]);
     }
 
-    public function downloadExcel($id)
+    public function validateRips(Request $request)
     {
-        // Buscar el registro en el repositorio
-        $rip = $this->ripRepository->find($id);
+        return $token = $this->ripsMinistryApiClient->getAuthToken();
 
-        // Verificar si existe el registro
-        if (!$rip) {
-            return response()->json(['message' => 'RIP no encontrado.'], 404);
+        $request->validate(['ids' => 'required|array']);
+        return $results = $this->ripsMinistryApiClient->validateMultipleRips($request->ids);
+
+        // Ejemplo: Procesar para front-end
+        foreach ($results as $id => $result) {
+            if (!$result['success']) {
+                // Maneja errores, e.g., notifica al usuario sobre $result['errors']
+            }
         }
 
-        // Construir la ruta completa del archivo
-        $filePath = storage_path('app/public/' . $rip->path_excel);
-
-        // Verificar si existe el archivo Excel
-        if (!$rip->path_excel || !file_exists($filePath)) {
-            return response()->json(['message' => 'Archivo Excel no encontrado.'], 404);
-        }
-
-        // Obtener el nombre del archivo desde la ruta
-        $fileName = basename($rip->path_excel);
-
-        // Retornar la respuesta con el archivo Excel para descarga
-        return response()->download($filePath, $fileName, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
+        return response()->json($results);
     }
-
 }

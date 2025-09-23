@@ -70,16 +70,20 @@ class BuildJsonJob implements ShouldQueue
 
             //genero los consecutivos para usuarios y servicios tomando encuenta que deben ser consecutivos e iniciar en uno en los servicios y en usuarios
             BuildAllDataToJson::generateConsecutive($jsonContents);
-            // Log::info("BuildAllDataToJson started for batch {$this->batchId}", [$jsonContents]);
+
+            //revisamos cuantas fcturas estan completas y cuantas estan incompletas de datos
+            $counts = BuildAllDataToJson::checkInvoiceCompleteness($jsonContents);
 
             if (empty($jsonContents)) {
                 throw new \Exception("El JSON generado está vacío o no se pudo construir.");
             }
 
             // Calcular facturas
+            $status = RipStatusEnum::RIP_STATUS_001;
             $numInvoices = count($jsonContents); // Número total de facturas (AF)
-            $successfulInvoices = $numInvoices; // Suponemos que todas son exitosas si no hay errores
-            $failedInvoices = 0; // Sin errores, no hay facturas fallidas
+            if ($counts["successfulInvoices"] == $numInvoices) {
+                $status = RipStatusEnum::RIP_STATUS_002;
+            }
 
             // Crear registro en la tabla rips
             $rip = Rip::create([
@@ -90,11 +94,11 @@ class BuildJsonJob implements ShouldQueue
                 'path_zip' => $pathZip,
                 'nit' => $jsonContents[0]['numDocumentoIdObligado'] ?? null,
                 'numInvoices' => $numInvoices,
-                'successfulInvoices' => $successfulInvoices,
-                'failedInvoices' => $failedInvoices,
+                'successfulInvoices' => $counts["successfulInvoices"],
+                'failedInvoices' => $counts["failedInvoices"],
                 'type' => $type,
                 'sumVr' => 0,
-                'status' => RipStatusEnum::RIP_STATUS_001,
+                'status' => $status,
             ]);
 
             GenerateRipInfo::saveReloadDataRips($rip->id, $jsonContents);

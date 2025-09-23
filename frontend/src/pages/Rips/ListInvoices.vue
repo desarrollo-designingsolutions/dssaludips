@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
+import ModalUploadExcel from '@/pages/Rips/Components/ModalUploadExcel.vue';
 import ModalUploadXml from '@/pages/Rips/Components/ModalUploadXml.vue';
+import ModalValidateRips from '@/pages/Rips/Components/ModalValidateRips.vue';
 const { toast } = useToast();
 
 definePage({
@@ -106,6 +108,12 @@ const openModalUploadXml = (item: any) => {
   refModalUploadXml.value.openModal(item)
 }
 
+//ModalUploadExcel
+const refModalUploadExcel = ref()
+const openModalUploadExcel = (item: any) => {
+  refModalUploadExcel.value.openModal(item)
+}
+
 const echoChannel = () => {
   refTableFull.value.options.tableData.forEach(element => {
     window.Echo.channel(`rip_invoice.${element.id}`)
@@ -140,21 +148,21 @@ const finishRips = async () => {
     if (response.status === 200 && data) {
       const countRipInvoicesWithoutXml = data.countRipInvoicesWithoutXml ?? 0
       const totalInvoices = data.totalInvoices ?? 0
-      if (countRipInvoicesWithoutXml > 0) { 
+      if (countRipInvoicesWithoutXml > 0) {
         refModalQuestion.value.componentData.isDialogVisible = true
         refModalQuestion.value.componentData.principalIcon = 'tabler-help-hexagon'
         refModalQuestion.value.componentData.btnSuccessText = 'Aceptar'
         refModalQuestion.value.componentData.title = `¿Desea validar ${totalInvoices} facturas?`
         refModalQuestion.value.componentData.subTitle = `Tenga en cuenta que tiene ${countRipInvoicesWithoutXml} factura sin xml valido, y solo se podran validar las que cumplan con todos los requisitos`
 
-      } else { 
+      } else {
         // Caso en que no hay facturas sin XML
         refModalQuestion.value.componentData.isDialogVisible = true
         refModalQuestion.value.componentData.principalIcon = 'tabler-help-hexagon'
         refModalQuestion.value.componentData.btnSuccessText = 'Aceptar'
         refModalQuestion.value.componentData.title = `¿Desea validar ${totalInvoices} facturas?`
         refModalQuestion.value.componentData.subTitle = `Todas las facturas seleccionadas tienen soporte XML.`
- 
+
       }
     }
   } catch (error) {
@@ -164,7 +172,11 @@ const finishRips = async () => {
   }
 }
 
-
+//ModalValidateRips
+const refModalValidateRips = ref()
+const openModalValidateRips = (item: any) => {
+  refModalValidateRips.value.openModal([item.id])
+}
 </script>
 
 <template>
@@ -203,11 +215,13 @@ const finishRips = async () => {
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
                     </VListItem>
-                    <VListItem v-if="item.path_excel" @click="downloadFileData(item, 'excel')">Descargar Excel
+                    <VListItem v-if="item.status == 'RIP_INVOICE_STATUS_001'" @click="downloadFileData(item, 'excel')">Descargar Excel
                     </VListItem>
+                    <VListItem v-if="item.status == 'RIP_INVOICE_STATUS_001'" @click="openModalUploadExcel(item)">Subir
+                      Excel</VListItem>
                     <VListItem v-if="!item.path_xml" @click="openModalUploadXml(item)">Subir XML</VListItem>
                     <VListItem v-if="item.path_xml" @click="downloadFileData(item, 'xml')">Descargar XML</VListItem>
-                    <VListItem v-if="item.path_xml" @click="">Validar con el ministerio</VListItem>
+                    <VListItem v-if="item.path_xml" @click="openModalValidateRips(item)">Validar con el ministerio</VListItem>
                   </VList>
                 </VMenu>
               </VBtn>
@@ -232,6 +246,10 @@ const finishRips = async () => {
     <ModalQuestion ref="refModalQuestion" />
 
     <ModalUploadXml ref="refModalUploadXml" :maxFileSizeMB="200" />
+
+    <ModalUploadExcel ref="refModalUploadExcel" :maxFileSizeMB="200" />
+
+    <ModalValidateRips ref="refModalValidateRips"/>
 
   </div>
 </template>

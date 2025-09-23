@@ -386,4 +386,64 @@ class BuildAllDataToJson
             }
         }
     }
+
+
+
+    /**
+     * Verifica la completitud de las facturas en $buildDataFinal.
+     * Retorna un arreglo con las cantidades de facturas completas e incompletas.
+     * Lanza una excepción si una factura no tiene un invoice_number válido.
+     *
+     * @param array $buildDataFinal El arreglo de facturas a verificar
+     * @return array Arreglo con ['complete' => int, 'incomplete' => int]
+     */
+    public static function checkInvoiceCompleteness($buildDataFinal): array
+    {
+        $successfulInvoices = 0;
+        $failedInvoices = 0;
+
+        foreach ($buildDataFinal as $index => $invoice) {
+            if (self::isInvoiceComplete($invoice)) {
+                $successfulInvoices++;
+            } else {
+                $failedInvoices++;
+            }
+        }
+
+        return [
+            'successfulInvoices' => $successfulInvoices,
+            'failedInvoices' => $failedInvoices
+        ];
+    }
+
+    /**
+     * Verifica recursivamente si una factura está completa.
+     * Una factura está completa si ningún valor escalar es null o cadena vacía.
+     * Las arrays vacías se consideran válidas (por ejemplo, si no hay servicios).
+     * Ignora objetos (como colecciones) asumiendo que su contenido se verifica al convertir a array.
+     *
+     * @param mixed $data El dato a verificar (array, objeto o escalar)
+     * @return bool True si la factura está completa, false si tiene al menos un valor nulo o vacío
+     */
+    private static function isInvoiceComplete($data): bool
+    {
+        if (is_array($data)) {
+            // Recorrer cada elemento del array
+            foreach ($data as $value) {
+                if (!self::isInvoiceComplete($value)) {
+                    return false;
+                }
+            }
+            return true;
+        } elseif (is_object($data)) {
+            // Ignorar objetos (como colecciones Laravel), ya que su contenido se verifica al convertir a array
+            return true;
+        } else {
+            // Valor escalar: falso si es null o cadena vacía (después de trim)
+            if ($data === null || (is_string($data) && trim($data) === '')) {
+                return false;
+            }
+            return true;
+        }
+    }
 }

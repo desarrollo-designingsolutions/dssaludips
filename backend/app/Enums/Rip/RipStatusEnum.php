@@ -10,16 +10,16 @@ enum RipStatusEnum: string
 {
     use AttributableEnum;
 
-    #[Description('Incompleto')]
+    #[Description('Datos incompletos')]
     #[BackgroundColor('warning')]
     case RIP_STATUS_001 = 'RIP_STATUS_001';
 
 
-    #[Description('Completado')]
-    #[BackgroundColor('warning')]
+    #[Description('Sin validar')]
+    #[BackgroundColor('info')]
     case RIP_STATUS_002 = 'RIP_STATUS_002';
 
     #[Description('Error Excel')]
-    #[BackgroundColor('warning')]
+    #[BackgroundColor('error')]
     case RIP_STATUS_003 = 'RIP_STATUS_003';
 }

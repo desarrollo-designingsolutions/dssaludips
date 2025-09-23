@@ -20,6 +20,8 @@ class RipInvoicePaginateResource extends JsonResource
             'invoice_number' => $this->invoice_number,
             'count_users' => $this->count_users,
             'sumVr' => formatNumber($this->sumVr),
+
+            'status' => $this->status,
             'status_description' => $this->status?->description(),
             'status_backgroundColor' => $this->status?->backgroundColor(),
 

@@ -14,11 +14,11 @@ enum RipInvoiceStatusEnum: string
     #[BackgroundColor('warning')]
     case RIP_INVOICE_STATUS_001 = 'RIP_INVOICE_STATUS_001';
 
-    #[Description('Completado')]
-    #[BackgroundColor('warning')]
+    #[Description('Sin validar')]
+    #[BackgroundColor('info')]
     case RIP_INVOICE_STATUS_002 = 'RIP_INVOICE_STATUS_002';
 
     #[Description('Error Excel')]
-    #[BackgroundColor('warning')]
+    #[BackgroundColor('error')]
     case RIP_INVOICE_STATUS_003 = 'RIP_INVOICE_STATUS_003';
 }

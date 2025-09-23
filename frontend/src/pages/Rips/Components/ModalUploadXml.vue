@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { useGlobalLoading } from '@/composables/useGlobalLoading';
 import { useToast } from '@/composables/useToast';
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
-import axios from 'axios';
-import { computed, ref } from 'vue';
+import axios from 'axios'; 
 const globalLoading = useGlobalLoading();
 
 const { toast } = useToast()

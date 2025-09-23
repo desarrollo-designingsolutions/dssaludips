@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useToast } from '@/composables/useToast';
 import { useGlobalLoading } from '@/composables/useGlobalLoading';
+import { useToast } from '@/composables/useToast';
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 import axios from 'axios'; 
 const globalLoading = useGlobalLoading();
@@ -26,8 +26,8 @@ interface FileUploadProps {
 }
 
 const props = withDefaults(defineProps<FileUploadProps>(), {
-  maxFileSizeMB: 5, // 5MB para archivos ZIP
-  allowedExtensions: () => [".zip"],
+  maxFileSizeMB: 5, // 5MB para archivos Excel
+  allowedExtensions: () => [".xls",".xlsx"],
   maxFiles: 1
 })
 
@@ -52,9 +52,9 @@ const fileInput = ref<HTMLInputElement>()
 
 // Progress messages
 const getProgressMessage = (progress: number): string => {
-  if (progress < 20) return "Iniciando la carga del archivo ZIP...";
-  if (progress < 40) return "Verificando la integridad del archivo ZIP...";
-  if (progress < 60) return "Subiendo el archivo ZIP al servidor...";
+  if (progress < 20) return "Iniciando la carga del archivo Excel...";
+  if (progress < 40) return "Verificando la integridad del archivo Excel...";
+  if (progress < 60) return "Subiendo el archivo Excel al servidor...";
   if (progress < 80) return "Preparando los datos para la cola...";
   if (progress < 100) return "Finalizando la carga del archivo...";
   return "¡Carga completada! Los datos están listos para procesarse en la cola.";
@@ -184,6 +184,8 @@ const onFileSelect = (event: Event) => {
   }
 }
 
+const invoice = ref<any>(null);
+
 // Métodos para subir archivos
 const startUpload = async () => {
   currentStep.value = 'uploading'
@@ -195,6 +197,7 @@ const startUpload = async () => {
     formData.append('file', file.file);
     formData.append('company_id', String(authenticationStore.company.id));
     formData.append('user_id', String(authenticationStore.user.id)); 
+    formData.append('invoice_id', String(invoice.value.id)); 
 
     try {
       file.status = 'uploading';
@@ -227,7 +230,7 @@ const startUpload = async () => {
           reject(new Error('Subida cancelada'));
         });
 
-        xhr.open('POST', `${api.defaults.baseURL}/rip/uploadFileZip`);
+        xhr.open('POST', `${api.defaults.baseURL}/ripInvoice/uploadFileExcel`);
         xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
         xhr.setRequestHeader('Accept', 'application/json');
         xhr.send(formData);
@@ -343,10 +346,11 @@ const handleDialogVisible = () => {
   isDialogVisible.value = !isDialogVisible.value;
 };
  
-const openModal = async () => {
+const openModal = async (data_invoice: any) => {
   handleDialogVisible();
   resetState()
- 
+  invoice.value = data_invoice;
+
 };
 
 defineExpose({
@@ -364,7 +368,7 @@ defineExpose({
         <VToolbar color="primary">
           <VToolbarTitle>
             <v-icon class="mr-2">tabler-file-spreadsheet</v-icon>
-            Carga de archivo ZIP
+            Carga de archivo Excel {{ invoice?.invoice_number ? `- Factura: ${invoice.invoice_number}` : '' }}
           </VToolbarTitle>
         </VToolbar>
       </div>
@@ -379,7 +383,7 @@ defineExpose({
                 <v-icon size="64" color="primary">tabler-file-spreadsheet</v-icon>
               </div>
 
-              <h3 class="text-h5 font-weight-medium mb-2">Arrastra tu archivo ZIP aquí</h3>
+              <h3 class="text-h5 font-weight-medium mb-2">Arrastra tu archivo Excel aquí</h3>
               <p class="text-body-1 text-medium-emphasis mb-4">o selecciona desde tu computadora</p>
 
               <v-btn color="primary" variant="elevated" size="large" class="upload-btn" @click="openFileDialog">
@@ -402,7 +406,7 @@ defineExpose({
                 </div>
                 <div class="requirement-item">
                   <v-icon size="16" color="success" class="mr-2">tabler-check</v-icon>
-                  <span class="text-body-2">Formato: ZIP únicamente</span>
+                  <span class="text-body-2">Formato: Excel únicamente</span>
                 </div>
                 <div class="requirement-item">
                   <v-icon size="16" color="success" class="mr-2">tabler-check</v-icon>
@@ -443,7 +447,7 @@ defineExpose({
           <div class="progress-header text-center mb-6">
             <h3 class="text-h5 font-weight-medium">
               <v-icon start color="primary">tabler-upload</v-icon>
-              Cargando archivo ZIP
+              Cargando archivo Excel
             </h3>
           </div>
 
@@ -516,7 +520,7 @@ defineExpose({
       <v-card-text class="text-h5 text-center">
         <v-icon color="success" size="5rem" class="mb-2">tabler-circle-check</v-icon>
         <h2>¡Subida exitosa!</h2>
-        <span>El archivo ZIP se ha cargado correctamente.</span>
+        <span>El archivo Excel se ha cargado correctamente.</span>
       </v-card-text>
       <VCardText class="d-flex justify-center">
         <v-btn @click="closeSuccessDialog">
