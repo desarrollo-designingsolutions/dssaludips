@@ -13,6 +13,8 @@ use App\Jobs\Rips\ProcessZipFilesJob;
 use App\Jobs\Rips\SaveErrorsJob;
 use App\Jobs\Rips\ValidateZipJob;
 use App\Models\ProcessBatch;
+use App\Models\RipInvoice;
+use App\Repositories\RipInvoiceRepository;
 use App\Repositories\RipRepository;
 use App\Services\ProcessBatchService;
 use App\Services\Rips\RipsMinistryApiClient;
@@ -29,6 +31,7 @@ class RipController extends Controller
 
     public function __construct(
         private RipRepository $ripRepository,
+        private RipInvoiceRepository $ripInvoiceRepository,
         private RipsMinistryApiClient $ripsMinistryApiClient,
     ) {}
 
@@ -160,17 +163,50 @@ class RipController extends Controller
         ]);
     }
 
+    public function getValidationMetadata(Request $request)
+    {
+        return $this->execute(function () use ($request) {
+            $request->validate(['ids' => 'required|array']);
+            $invoices = [];
+
+            foreach ($request->ids as $id) {
+                $invoice = $this->ripInvoiceRepository->find($id, select: ["id", "validation_metadata", "invoice_number"]);
+                if ($invoice) {
+                    $metadata = null;
+                    if ($invoice->validation_metadata) {
+                        $metadata = json_decode($invoice->validation_metadata, true);
+                    }
+
+                    $invoices[] = [
+                        "invoice_number" => $invoice->invoice_number,
+                        "metadata" => $metadata,
+                    ];
+                }
+            }
+
+            return [
+                "code" => 200,
+                "invoices" => $invoices  // Cambiar esto: poner los invoices dentro de 'data'
+            ];
+        });
+    }
+
+
+
     public function validateRips(Request $request)
     {
-        return $token = $this->ripsMinistryApiClient->getAuthToken();
-
         $request->validate(['ids' => 'required|array']);
-        return $results = $this->ripsMinistryApiClient->validateMultipleRips($request->ids);
+        $validateAll = $request->input('validate_all', false);
+        $invoiceIds = $request->ids;
 
-        // Ejemplo: Procesar para front-end
-        foreach ($results as $id => $result) {
-            if (!$result['success']) {
-                // Maneja errores, e.g., notifica al usuario sobre $result['errors']
+        if ($validateAll) {
+            // Validar todas las facturas
+            $results = $this->ripsMinistryApiClient->validateMultipleInvoices($invoiceIds);
+        } else {
+            // Validar solo la factura específica
+            $results = [];
+            foreach ($invoiceIds as $invoiceId) {
+                $results[$invoiceId] = $this->ripsMinistryApiClient->validateInvoice($invoiceId);
             }
         }
 

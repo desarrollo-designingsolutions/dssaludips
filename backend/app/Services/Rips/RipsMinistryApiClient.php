@@ -2,10 +2,12 @@
 
 namespace App\Services\Rips;
 
+use App\Helpers\Constants;
+use App\Models\Rip;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use App\Models\Rip; // Asume tu modelo
+use App\Models\RipInvoice; // Asumimos que existe este modelo para facturas
 
 class RipsMinistryApiClient
 {
@@ -14,7 +16,14 @@ class RipsMinistryApiClient
 
     public function __construct()
     {
-        $this->baseUrl = env('API_BASE_URL', 'https://localhost:9443');
+        $this->baseUrl = env('API_BASE_URL', 'https://fevrips-api:5100');
+
+        // Configura el cliente HTTP globalmente
+        Http::macro('ripsApi', function () {
+            return Http::withOptions([
+                'verify' => env('API_VERIFY_SSL', false),
+            ]);
+        });
 
         // Credenciales hardcoded (migra a .env: AUTH_CLAVE, etc.)
         $this->authCredentials = [
@@ -32,14 +41,14 @@ class RipsMinistryApiClient
     /**
      * Obtiene el token de autenticación, verificando la estructura específica.
      *
-     * @return string|null El token o null si falla.
+     * @return array|null El token o null si falla.
      */
     public function getAuthToken()
     {
         $url = $this->baseUrl . '/api/Auth/LoginSISPRO';
 
         try {
-            $response = Http::post($url, $this->authCredentials);
+            $response = Http::ripsApi()->post($url, $this->authCredentials);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -51,7 +60,7 @@ class RipsMinistryApiClient
                     (empty($data['errors']) || $data['errors'] === null) &&
                     isset($data['token'])
                 ) {
-                    return $data['token'];
+                    return $data;
                 } else {
                     Log::error('Autenticación inválida: ' . json_encode($data));
                     return null;
@@ -67,110 +76,168 @@ class RipsMinistryApiClient
     }
 
     /**
-     * Valida un RIP, estructurando la respuesta para fácil verificación.
+     * Valida una factura, estructurando la respuesta para fácil verificación.
      *
-     * @param int $ripId ID del Rip.
-     * @param string $token Token (se obtiene si no se pasa).
-     * @return array { 'success' => bool, 'data' => array, 'errors' => array }
+     * @param int $invoiceId ID de la factura (RipInvoice).
+     * @param string|null $token Token (se obtiene si no se pasa).
+     * @return array {
+     *   'success' => bool,
+     *   'data' => array,
+     *   'errors' => array,
+     *   'status_code' => int|null // Código HTTP de la respuesta
+     * }
      */
-    public function validateRip($ripId, $token = null)
+    public function validateInvoice($invoiceId, $token = null)
     {
-        $rip = Rip::find($ripId);
-        if (!$rip) {
-            return ['success' => false, 'data' => [], 'errors' => ['Rip no encontrado']];
+        $invoice = RipInvoice::find($invoiceId);
+        if (!$invoice) {
+            return [
+                'success' => false,
+                'data' => [],
+                'errors' => ['Factura no encontrada'],
+                'status_code' => 422
+            ];
         }
-
         if (!$token) {
-            $token = $this->getAuthToken();
-            if (!$token) {
-                return ['success' => false, 'data' => [], 'errors' => ['Autenticación fallida']];
+            $tokenData = $this->getAuthToken();
+            if (!$tokenData) {
+                return [
+                    'success' => false,
+                    'data' => [],
+                    'errors' => ['Autenticación fallida'],
+                    'status_code' => 401 // Usamos 401 porque es un error de autenticación
+                ];
             }
+            $token = $tokenData['token'];
         }
 
-        // Carga archivos (igual que antes)
-        $jsonContent = Storage::get($rip->path_json);
+        $jsonContent = Storage::disk(Constants::DISK_FILES)->get($invoice->path_json);
         if (!$jsonContent) {
-            return ['success' => false, 'data' => [], 'errors' => ['JSON no encontrado']];
+            return [
+                'success' => false,
+                'data' => [],
+                'errors' => ['JSON no encontrado'],
+                'status_code' => 422
+            ];
         }
         $ripsData = json_decode($jsonContent, true);
-
-        $xmlContent = Storage::get($rip->path_xml);
+        $xmlContent = Storage::disk(Constants::DISK_FILES)->get($invoice->path_xml);
         if (!$xmlContent) {
-            return ['success' => false, 'data' => [], 'errors' => ['XML no encontrado']];
+            return [
+                'success' => false,
+                'data' => [],
+                'errors' => ['XML no encontrado'],
+                'status_code' => 422
+            ];
         }
         $xmlBase64 = base64_encode($xmlContent);
-
         $payload = [
             'rips' => $ripsData,
             'xmlFevFile' => $xmlBase64,
         ];
-
         $url = $this->baseUrl . '/api/PaquetesFevRips/CargarFevRips';
 
         try {
-            $response = Http::withHeaders([
+            $response = Http::ripsApi()->withHeaders([
                 'Authorization' => 'Bearer ' . $token,
                 'Content-Type' => 'application/json',
             ])->post($url, $payload);
 
-            if ($response->successful()) {
-                $data = $response->json();
+            $data = $response->json();
+            $statusCode = $response->status();
 
-                // Verificación basada en tu ejemplo
-                $success = isset($data['ResultState']) && $data['ResultState'] === true;
-                $errors = [];
+            // guarda los resultados en la base de datos
+            $invoice->validation_metadata = $data;
+            $invoice->save();
 
-                if (!$success && isset($data['ResultadosValidacion'])) {
-                    // Agrupa errores para mejor legibilidad
-                    foreach ($data['ResultadosValidacion'] as $err) {
-                        $errors[] = [
-                            'clase' => $err['Clase'] ?? 'Desconocido',
-                            'codigo' => $err['Codigo'] ?? 'Desconocido',
-                            'descripcion' => $err['Descripcion'] ?? '',
-                            'observaciones' => $err['Observaciones'] ?? '',
-                            'path' => $err['PathFuente'] ?? '',
-                        ];
-                    }
-                }
-
+            // Si la petición HTTP falla (ej: 400, 401, 500)
+            if (!$response->successful()) {
                 return [
-                    'success' => $success,
-                    'data' => $data, // Toda la respuesta original
-                    'errors' => $errors,
+                    'success' => false,
+                    'data' => $data,
+                    'errors' => ['Error HTTP: ' . $statusCode . ' - ' . $response->body()],
+                    'status_code' => $statusCode
                 ];
-            } else {
-                // Si falla (e.g., 401), intenta refrescar token una vez
-                if ($response->status() === 401) {
-                    $newToken = $this->getAuthToken();
-                    if ($newToken) {
-                        return $this->validateRip($ripId, $newToken); // Reintento
-                    }
-                }
-                Log::error('Error en validación: ' . $response->status() . ' - ' . $response->body());
-                return ['success' => false, 'data' => [], 'errors' => ['Validación fallida: ' . $response->body()]];
             }
+
+
+
+            // Si la petición HTTP es exitosa, devuelve los datos completos
+            return [
+                'success' => true,
+                'data' => $data,
+                'errors' => [],
+                'status_code' => $statusCode
+            ];
         } catch (\Exception $e) {
-            Log::error('Excepción en validación: ' . $e->getMessage());
-            return ['success' => false, 'data' => [], 'errors' => ['Excepción: ' . $e->getMessage()]];
+            Log::error('Excepción en validación de factura: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'data' => [],
+                'errors' => ['Excepción: ' . $e->getMessage()],
+                'status_code' => 500
+            ];
         }
     }
 
+
+
     /**
-     * Valida múltiples RIPs.
+     * Valida múltiples facturas.
      *
-     * @param array $ripIds
-     * @return array Resultados por ID.
+     * @param array $invoiceIds IDs de las facturas (RipInvoice).
+     * @return array Resultados por ID de factura.
      */
-    public function validateMultipleRips(array $ripIds)
+    public function validateMultipleInvoices(array $invoiceIds)
     {
-        $token = $this->getAuthToken();
-        if (!$token) {
-            return ['error' => 'Autenticación fallida']; // Global error
+        $tokenData = $this->getAuthToken();
+        if (!$tokenData) {
+            return ['error' => 'Autenticación fallida'];
         }
+        $token = $tokenData['token'];
 
         $results = [];
-        foreach ($ripIds as $id) {
-            $results[$id] = $this->validateRip($id, $token);
+        foreach ($invoiceIds as $id) {
+            $results[$id] = $this->validateInvoice($id, $token);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Valida facturas asociadas a múltiples RIPs.
+     *
+     * @param array $ripIds IDs de los RIPs.
+     * @return array Resultados por ID de factura, agrupados por RIP.
+     */
+    public function validateInvoicesByRips(array $ripIds)
+    {
+        $tokenData = $this->getAuthToken();
+        if (!$tokenData) {
+            return ['error' => 'Autenticación fallida'];
+        }
+        $token = $tokenData['token'];
+
+        $results = [];
+        foreach ($ripIds as $ripId) {
+            // Busca el RIP y sus facturas asociadas
+            $rip = Rip::with('ripInvoices')->find($ripId);
+            if (!$rip) {
+                $results[$ripId] = ['success' => false, 'data' => [], 'errors' => ['RIP no encontrado']];
+                continue;
+            }
+
+            // Si no hay facturas asociadas
+            if ($rip->ripInvoices->isEmpty()) {
+                $results[$ripId] = ['success' => false, 'data' => [], 'errors' => ['No se encontraron facturas para el RIP']];
+                continue;
+            }
+
+            // Valida cada factura asociada al RIP
+            $results[$ripId] = [];
+            foreach ($rip->ripInvoices as $invoice) {
+                $results[$ripId][$invoice->id] = $this->validateInvoice($invoice->id, $token);
+            }
         }
 
         return $results;

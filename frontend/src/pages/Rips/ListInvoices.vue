@@ -172,11 +172,17 @@ const finishRips = async () => {
   }
 }
 
+const validateRips = () => {
+  refModalValidateRips.value.openModal(invoicesIds.value, true); // true = validar automáticamente todas las facturas
+};
+
+
 //ModalValidateRips
 const refModalValidateRips = ref()
-const openModalValidateRips = (item: any) => {
-  refModalValidateRips.value.openModal([item.id])
-}
+const openModalValidateRips = (item: any, autoValidateAll: boolean = false) => {
+  refModalValidateRips.value.openModal([item.id], autoValidateAll); // true = solo cargar datos existentes
+};
+
 </script>
 
 <template>
@@ -215,13 +221,17 @@ const openModalValidateRips = (item: any) => {
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
                     </VListItem>
-                    <VListItem v-if="item.status == 'RIP_INVOICE_STATUS_001'" @click="downloadFileData(item, 'excel')">Descargar Excel
+                    <VListItem v-if="item.status == 'RIP_INVOICE_STATUS_001'" @click="downloadFileData(item, 'excel')">
+                      Descargar Excel
                     </VListItem>
                     <VListItem v-if="item.status == 'RIP_INVOICE_STATUS_001'" @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
                     <VListItem v-if="!item.path_xml" @click="openModalUploadXml(item)">Subir XML</VListItem>
                     <VListItem v-if="item.path_xml" @click="downloadFileData(item, 'xml')">Descargar XML</VListItem>
-                    <VListItem v-if="item.path_xml" @click="openModalValidateRips(item)">Validar con el ministerio</VListItem>
+                    <VListItem v-if="item.path_xml" @click="openModalValidateRips(item, false)">Ver inconsistencias
+                    </VListItem>
+                    <VListItem v-if="item.path_xml" @click="openModalValidateRips(item, true)">Validar con el ministerio
+                    </VListItem>
                   </VList>
                 </VMenu>
               </VBtn>
@@ -243,13 +253,13 @@ const openModalValidateRips = (item: any) => {
       </VCardText>
     </VCard>
 
-    <ModalQuestion ref="refModalQuestion" />
+    <ModalQuestion ref="refModalQuestion" @success="validateRips()" />
 
     <ModalUploadXml ref="refModalUploadXml" :maxFileSizeMB="200" />
 
     <ModalUploadExcel ref="refModalUploadExcel" :maxFileSizeMB="200" />
 
-    <ModalValidateRips ref="refModalValidateRips"/>
+    <ModalValidateRips ref="refModalValidateRips" />
 
   </div>
 </template>
