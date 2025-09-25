@@ -131,7 +131,7 @@ class CacheService
     /**
      * Recupera datos de Redis según el tipo.
      */
-    private function getDataFromRedis(string $key, string $type)
+    public function getDataFromRedis(string $key, string $type)
     {
         switch ($type) {
             case 'set':
@@ -151,7 +151,7 @@ class CacheService
     /**
      * Almacena datos en Redis según el tipo.
      */
-    private function storeDataInRedis(string $key, $data, string $type, int $ttl): void
+    public function storeDataInRedis(string $key, $data, string $type, int $ttl): void
     {
         Redis::del($key); // Limpiar antes de almacenar
 

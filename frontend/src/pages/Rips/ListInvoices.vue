@@ -111,13 +111,17 @@ const openModalUploadXml = (item: any) => {
 //ModalUploadExcel
 const refModalUploadExcel = ref()
 const openModalUploadExcel = (item: any) => {
-  refModalUploadExcel.value.openModal(item)
+  refModalUploadExcel.value.openModal(item, null)
 }
 
 const echoChannel = () => {
   refTableFull.value.options.tableData.forEach(element => {
     window.Echo.channel(`rip_invoice.${element.id}`)
       .listen('.RipInvoiceRowUpdatedNow', (event: any) => {
+        element.status = event.status
+        element.status_backgroundColor = event.status_backgroundColor
+        element.status_description = event.status_description
+
         element.status_xml = event.status_xml
         element.status_xml_backgroundColor = event.status_xml_backgroundColor
         element.status_xml_description = event.status_xml_description
@@ -230,7 +234,8 @@ const openModalValidateRips = (item: any) => {
 
           <template #item.status="{ item }">
             <div>
-              <VChip :color="item.status_backgroundColor">{{ item.status_description }}</VChip>
+              <VChip :color="item.status_backgroundColor">{{ item.status_description }}
+              </VChip>
             </div>
           </template>
           <template #item.status_xml="{ item }">

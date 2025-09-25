@@ -18,8 +18,9 @@ Route::middleware(['check.permission:rips.index'])->group(function () {
 
     Route::get('/rip/downloadJson/{id}', [RipController::class, 'downloadJson']);
 
+    Route::post('/rip/uploadExcel', [RipController::class, 'uploadExcel']);
+
     Route::get('/rip/downloadExcel/{id}', [RipController::class, 'downloadExcel']);
 
     Route::post('/rip/validateRips', [RipController::class, 'validateRips']);
-
 });

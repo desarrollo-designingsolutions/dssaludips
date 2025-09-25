@@ -46,6 +46,10 @@ class RipInvoiceRowUpdatedNow implements ShouldBroadcastNow
         return [
             'id' => $this->ripInvoice->id,
 
+            'status' => $this->ripInvoice->status,
+            'status_backgroundColor' => $this->ripInvoice->status->backgroundColor(),
+            'status_description' => $this->ripInvoice->status->description(),
+
             'status_xml' => $this->ripInvoice->status_xml,
             'status_xml_backgroundColor' => $this->ripInvoice->status_xml->backgroundColor(),
             'status_xml_description' => $this->ripInvoice->status_xml->description(),
