@@ -2,7 +2,7 @@
 import { useGlobalLoading } from '@/composables/useGlobalLoading';
 import { useToast } from '@/composables/useToast';
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
-import axios from 'axios'; 
+import axios from 'axios';
 const globalLoading = useGlobalLoading();
 
 const { toast } = useToast()
@@ -27,7 +27,7 @@ interface FileUploadProps {
 
 const props = withDefaults(defineProps<FileUploadProps>(), {
   maxFileSizeMB: 5, // 5MB para archivos Excel
-  allowedExtensions: () => [".xls",".xlsx"],
+  allowedExtensions: () => [".xls", ".xlsx"],
   maxFiles: 1
 })
 
@@ -68,7 +68,7 @@ const getProgressColor = (progress: number): string => {
 
 // Computed properties
 const allFilesCompleted = computed(() => {
-  return files.value.length > 0 && files.value.every(file => file.status === 'completed')
+  return files.value.length > 0 && files.value.every(file => file.status === 'completed' || file.status === 'error')
 })
 
 // Métodos para manejar archivos
@@ -185,6 +185,7 @@ const onFileSelect = (event: Event) => {
 }
 
 const invoice = ref<any>(null);
+const rip = ref<any>(null);
 
 // Métodos para subir archivos
 const startUpload = async () => {
@@ -196,8 +197,9 @@ const startUpload = async () => {
     const formData = new FormData();
     formData.append('file', file.file);
     formData.append('company_id', String(authenticationStore.company.id));
-    formData.append('user_id', String(authenticationStore.user.id)); 
-    formData.append('invoice_id', String(invoice.value.id)); 
+    formData.append('user_id', String(authenticationStore.user.id));
+    formData.append('invoice_id', String(invoice.value?.id ?? ''));
+    formData.append('rip_id', String(rip.value?.id ?? ''));
 
     try {
       file.status = 'uploading';
@@ -230,7 +232,7 @@ const startUpload = async () => {
           reject(new Error('Subida cancelada'));
         });
 
-        xhr.open('POST', `${api.defaults.baseURL}/ripInvoice/uploadFileExcel`);
+        xhr.open('POST', `${api.defaults.baseURL}/rip/uploadExcel`);
         xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
         xhr.setRequestHeader('Accept', 'application/json');
         xhr.send(formData);
@@ -242,6 +244,12 @@ const startUpload = async () => {
       const response = JSON.parse(xhr.response)
       if (response.status == "success") {
         globalLoading.startLoading(response.batch_id);
+      }
+
+      if (response.status == "error") {
+        console.log(response);
+        file.status = 'error';
+        file.errorMessage = response.message;
       }
 
     } catch (error: any) {
@@ -258,7 +266,7 @@ const startUpload = async () => {
     await uploadSingleFile(file);
   }
 
-  if (allFilesCompleted.value) {
+  if (allFilesCompleted.value && fileInput.status == 'completed') {
     setTimeout(() => {
       successDialog.value = true
     }, 500)
@@ -345,11 +353,12 @@ const isDialogVisible = ref<boolean>(false)
 const handleDialogVisible = () => {
   isDialogVisible.value = !isDialogVisible.value;
 };
- 
-const openModal = async (data_invoice: any) => {
+
+const openModal = async (data_invoice: any, data_rip: any) => {
   handleDialogVisible();
   resetState()
   invoice.value = data_invoice;
+  rip.value = data_rip;
 
 };
 
@@ -483,7 +492,7 @@ defineExpose({
               <div v-if="file.status === 'error'" class="status-error">
                 <v-icon color="error" size="24" class="mr-2">tabler-alert-circle</v-icon>
                 <span class="text-error font-weight-medium">{{ file.errorMessage || 'Error al cargar el archivo'
-                  }}</span>
+                }}</span>
               </div>
             </div>
           </div>

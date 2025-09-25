@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -31,7 +32,7 @@ class RipXlsExport implements FromArray, WithHeadings, WithTitle
         // Agregar cada factura como una fila en el array de datos
         foreach ($this->invoices as $keyI => $invoice) {
 
-            $requiredFields = ['TipoNota', 'numNota'];
+            $requiredFields = ['tipoNota', 'numNota'];
 
             if (isset($invoice['numFactura'])) {
 
@@ -79,7 +80,7 @@ class RipXlsExport implements FromArray, WithHeadings, WithTitle
                         if (isset($user['servicios']['urgencias']) && count($user['servicios']['urgencias']) > 0) {
                             foreach ($user['servicios']['urgencias'] as $keyU => $value) {
                                 //fechaInicioAtencion NO ESTABA EN LA LISTA SE AGREGA POR PETICION DE GERMAN
-                                $requiredFields = ['consecutivo','fechaInicioAtencion'];
+                                $requiredFields = ['consecutivo', 'fechaInicioAtencion'];
                                 // Verificar si faltan campos requeridos
                                 $this->formData($data, $requiredFields, $value, $invoice['numFactura'], $keyU + 1, $user['numDocumentoIdentificacion'], $keyU + 1, 'urgencias');
                             }
@@ -98,7 +99,7 @@ class RipXlsExport implements FromArray, WithHeadings, WithTitle
                         if (isset($user['servicios']['hospitalizacion']) && count($user['servicios']['hospitalizacion']) > 0) {
                             foreach ($user['servicios']['hospitalizacion'] as $keyH => $value) {
                                 //fechaInicioAtencion NO ESTABA EN LA LISTA SE AGREGA POR PETICION DE GERMAN
-                                $requiredFields = ['consecutivo','fechaInicioAtencion'];
+                                $requiredFields = ['consecutivo', 'fechaInicioAtencion'];
                                 // Verificar si faltan campos requeridos
                                 $this->formData($data, $requiredFields, $value, $invoice['numFactura'], $keyU + 1, $user['numDocumentoIdentificacion'], $keyH + 1, 'hospitalizacion');
                             }

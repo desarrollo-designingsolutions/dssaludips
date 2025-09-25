@@ -175,7 +175,6 @@ class BuildAllDataToJson
             'codDiagnosticoCausaMuerte' => trim($datos[11]),
             'fechaEgreso' => null,
             'consecutivo' => null,
-            'numFEVPagoModerador' => trim($datos[0]),
         ];
     }
 
@@ -197,8 +196,6 @@ class BuildAllDataToJson
             'codDiagnosticoCausaMuerte' => trim($datos[16]),
             'fechaEgreso' => null,
             'consecutivo' => null,
-            'numDocumentoIdentificacion' => trim($datos[3]),
-            'numFEVPagoModerador' => trim($datos[0]),
         ];
     }
 
@@ -246,8 +243,6 @@ class BuildAllDataToJson
             'codDiagnosticoCausaMuerte' => trim($datos[14]),
             'fechaEgreso' => null,
             'consecutivo' => null,
-            'numFEVPagoModerador' => trim($datos[0]),
-            'numDocumentoIdentificacion' => trim($datos[3]),
         ];
     }
 

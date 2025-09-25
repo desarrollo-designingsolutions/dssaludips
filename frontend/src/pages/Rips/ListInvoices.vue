@@ -111,7 +111,7 @@ const openModalUploadXml = (item: any) => {
 //ModalUploadExcel
 const refModalUploadExcel = ref()
 const openModalUploadExcel = (item: any) => {
-  refModalUploadExcel.value.openModal(item)
+  refModalUploadExcel.value.openModal(item, null)
 }
 
 const echoChannel = () => {
@@ -281,7 +281,8 @@ const openModalValidateRips = (item: any) => {
 
           <template #item.status="{ item }">
             <div>
-              <VChip :color="item.status_backgroundColor">{{ item.status_description }}</VChip>
+              <VChip :color="item.status_backgroundColor">{{ item.status_description }}
+              </VChip>
             </div>
           </template>
           <template #item.status_xml="{ item }">

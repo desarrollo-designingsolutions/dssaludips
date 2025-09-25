@@ -376,3 +376,57 @@ function getLeastBusyQueue(array $queues)
 
     return $selectedQueue;
 }
+
+function parseDate($fecha)
+{
+    // Separar la fecha en día, mes y año
+    $dateType = explode('-', $fecha); // Si no funciona con '/', probar con '-'
+    if (!isset($dateType[0]) || !isset($dateType[1]) || !isset($dateType[2])) {
+        [$dia, $mes, $ano] = explode('/', $fecha);
+    }
+
+    // Crear un objeto DateTime con la fecha en el formato original
+    $datetime = DateTime::createFromFormat('d/m/Y', $fecha);
+    if (!$datetime) {
+        $datetime = DateTime::createFromFormat('d-m-Y', $fecha); // Si no funciona con '/', probar con '-'
+
+        if (!$datetime) {
+            $datetime = DateTime::createFromFormat('Y-m-d', $fecha); // Si no funciona con '/', probar con '-'
+
+            if (!$datetime) {
+                $datetime = DateTime::createFromFormat('Y/m/d', $fecha); // Si no funciona con '/', probar con '-'
+            }
+        }
+    }
+
+    // Formatear la fecha como 'Y-m-d'
+    // $fecha = $datetime->format('Y-m-d');
+
+    $fecha = Carbon::parse($datetime);
+
+    // Validar el valor devuelto
+    if (!$fecha) {
+        throw new Exception('Formato de fecha invalido1');
+    }
+
+    // Validar el valor devuelto por DateTime::createFromFormat()
+    if (!$datetime) {
+        throw new Exception('Formato de fecha invalido2');
+    }
+
+    return $fecha;
+}
+
+function calcularEdad($fechaNacimiento)
+{
+    // Parsea la fecha de nacimiento usando Carbon
+    $fechaNacimiento = Carbon::parse($fechaNacimiento);
+
+    // Obtiene la fecha actual como un objeto Carbon
+    $fechaActual = Carbon::now();
+
+    // Calcula la diferencia en años
+    $edad = $fechaActual->diffInYears($fechaNacimiento);
+
+    return $edad;
+}

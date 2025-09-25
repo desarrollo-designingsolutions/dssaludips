@@ -78,11 +78,11 @@ const downloadFileData = async (obj: any, type: string) => {
   if(type === "excel"){
     api = `/rip/downloadExcel/${obj.id}`
     ext = "xlsx"
-    nameFile = `Invoice_${obj.id}_${formattedDate}.xlsx`
+    nameFile = `Invoice_${obj.id}_${formattedDate}`
   } else {
     api = `/rip/downloadJson/${obj.id}`
     ext = "json"
-    nameFile = `Invoice_${obj.id}_${formattedDate}.json`
+    nameFile = `Invoice_${obj.id}_${formattedDate}`
   }
   
   await downloadBlob(api, nameFile, ext)
@@ -93,9 +93,19 @@ const downloadFileData = async (obj: any, type: string) => {
  //ModalUploadExcel
 const refModalUploadExcel = ref()
 const openModalUploadExcel = (item: any) => {
-  refModalUploadExcel.value.openModal(item)
+  refModalUploadExcel.value.openModal(null, item)
 }
 
+const echoChannel = () => {
+  refTableFull.value.options.tableData.forEach(element => {
+    window.Echo.channel(`rip.${element.id}`)
+      .listen('.RipRowUpdatedNow', (event: any) => {
+        element.status = event.status
+        element.status_backgroundColor = event.status_backgroundColor
+        element.status_description = event.status_description
+      });
+  });
+}
 
 </script>
 
@@ -130,7 +140,7 @@ const openModalUploadExcel = (item: any) => {
       </VCardText>
 
       <VCardText>
-        <TableFull ref="refTableFull" :options="optionsTable" @update:loading="tableLoading = $event">
+        <TableFull ref="refTableFull" :options="optionsTable" @update:loading="tableLoading = $event" @dataFetched="echoChannel">
           <template #item.type="{ item }">
             <div>
               <VChip>{{ item.type_description }}</VChip>

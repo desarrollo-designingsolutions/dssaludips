@@ -135,18 +135,20 @@ class GenerateRipInfo
         }
     }
 
-    private static function saveReloadDataInvoice($ripId, $valueJsonInvoice, $counErrorExcelInvoice = 'sinValidarExcel')
+    public static function saveReloadDataInvoice($ripId, $valueJsonInvoice, $counErrorExcelInvoice = 'sinValidarExcel')
     {
         $rip = Rip::select(["id","company_id","type"])->find($ripId);
         $type = $rip->type->value;
 
         $nameFile = $valueJsonInvoice['numFactura'] . '.xlsx';
         $routeXls = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/invoices/{$valueJsonInvoice['numFactura']}/{$nameFile}"; // Ruta donde se guardará la carpeta
-        Excel::store(new RipXlsExport([$valueJsonInvoice]), $routeXls, 'public', \Maatwebsite\Excel\Excel::XLSX);
+
+        Excel::store(new RipXlsExport([$valueJsonInvoice]), $routeXls, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
 
         $nameFile = $valueJsonInvoice['numFactura'] . '.json';
         $routeJson = 'companies/company_' . $rip->company_id . '/rips/' . $type . '/rip_' . $rip->id . '/invoices/' . $valueJsonInvoice['numFactura'] . '/' . $nameFile; // Ruta donde se guardará la carpeta
-        Storage::disk('public')->put($routeJson, json_encode($valueJsonInvoice)); //guardo el archivo
+
+        Storage::disk(Constants::DISK_FILES)->put($routeJson, json_encode($valueJsonInvoice)); //guardo el archivo
 
         //se guarda el registro en la BD tabla invoice
         $ripInvoice = RipInvoice::where(function ($query) use ($ripId, $valueJsonInvoice) {
@@ -175,7 +177,7 @@ class GenerateRipInfo
         $ripInvoice->invoice_number = $valueJsonInvoice['numFactura'];
         $ripInvoice->sumVr = self::sumVrServicio($valueJsonInvoice);
         $ripInvoice->count_users = $valueJsonInvoice['usuarios'] ? count($valueJsonInvoice['usuarios']) : 0;
-        $ripInvoice->note_type = $valueJsonInvoice['TipoNota'] ?? null;
+        $ripInvoice->note_type = $valueJsonInvoice['tipoNota'] ?? null;
         $ripInvoice->note_number = $valueJsonInvoice['numNota'] ?? null;
         $ripInvoice->status_xml = RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002;
 

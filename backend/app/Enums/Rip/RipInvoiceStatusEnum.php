@@ -14,7 +14,7 @@ enum RipInvoiceStatusEnum: string
     #[BackgroundColor('warning')]
     case RIP_INVOICE_STATUS_001 = 'RIP_INVOICE_STATUS_001';
 
-    #[Description('Sin validar')]
+    #[Description('Completado pero Sin validar json')]
     #[BackgroundColor('info')]
     case RIP_INVOICE_STATUS_002 = 'RIP_INVOICE_STATUS_002';
 
@@ -22,9 +22,9 @@ enum RipInvoiceStatusEnum: string
     #[BackgroundColor('error')]
     case RIP_INVOICE_STATUS_003 = 'RIP_INVOICE_STATUS_003';
 
-
-
-
+    #[Description('Procesando Excel')]
+    #[BackgroundColor('info')]
+    case RIP_INVOICE_STATUS_004 = 'RIP_INVOICE_STATUS_004';
 
     #[Description('En espera validación JSON')]
     #[BackgroundColor('warning')]
