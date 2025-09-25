@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Rip\RipInvoiceStatusEnum;
 use App\Enums\Rip\RipTypeEnum;
 use App\Events\ImportProgressEvent;
+use App\Events\RipValidationStatusUpdated;
 use App\Helpers\Common\ErrorCollector;
 use App\Helpers\Constants;
 use App\Http\Requests\Rip\RipUploadFileZipRequest;
@@ -11,6 +13,7 @@ use App\Http\Resources\Rip\RipPaginateResource;
 use App\Jobs\Rips\BuildJsonJob;
 use App\Jobs\Rips\ProcessZipFilesJob;
 use App\Jobs\Rips\SaveErrorsJob;
+use App\Jobs\Rips\ValidateRipInvoiceJob;
 use App\Jobs\Rips\ValidateZipJob;
 use App\Models\ProcessBatch;
 use App\Models\RipInvoice;
@@ -19,6 +22,7 @@ use App\Repositories\RipRepository;
 use App\Services\ProcessBatchService;
 use App\Services\Rips\RipsMinistryApiClient;
 use App\Traits\HttpResponseTrait;
+use Illuminate\Bus\Batch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -170,7 +174,7 @@ class RipController extends Controller
             $invoices = [];
 
             foreach ($request->ids as $id) {
-                $invoice = $this->ripInvoiceRepository->find($id, select: ["id", "validation_metadata", "invoice_number"]);
+                $invoice = $this->ripInvoiceRepository->find($id, select: ["id", "validation_metadata", "invoice_number", "status"]);
                 if ($invoice) {
                     $metadata = null;
                     if ($invoice->validation_metadata) {
@@ -178,8 +182,12 @@ class RipController extends Controller
                     }
 
                     $invoices[] = [
+                        "id" => $invoice->id,
                         "invoice_number" => $invoice->invoice_number,
                         "metadata" => $metadata,
+                        "status" => $invoice->status,
+                        "status_backgroundColor" => $invoice->status?->backgroundColor(),
+                        "status_description" => $invoice->status?->description(),
                     ];
                 }
             }
@@ -191,25 +199,48 @@ class RipController extends Controller
         });
     }
 
-
-
     public function validateRips(Request $request)
     {
         $request->validate(['ids' => 'required|array']);
-        $validateAll = $request->input('validate_all', false);
         $invoiceIds = $request->ids;
+        $batchId = uniqid('batch_' . time() . '_');
 
-        if ($validateAll) {
-            // Validar todas las facturas
-            $results = $this->ripsMinistryApiClient->validateMultipleInvoices($invoiceIds);
-        } else {
-            // Validar solo la factura específica
-            $results = [];
-            foreach ($invoiceIds as $invoiceId) {
-                $results[$invoiceId] = $this->ripsMinistryApiClient->validateInvoice($invoiceId);
-            }
-        }
+        // Seleccionar una cola disponible
+        $selectedQueue = ProcessBatchService::selectAvailableQueueRoundRobin(Constants::AVAILABLE_QUEUES_TO_VALIDATION_RIPS_MINISTERY);
 
-        return response()->json($results);
+        $jobs = collect($invoiceIds)->map(function ($invoiceId) use ($batchId) {
+            return new ValidateRipInvoiceJob($invoiceId, $batchId);
+        })->toArray();
+
+        $batch = Bus::batch($jobs)
+            ->before(function () use ($invoiceIds, $batchId) {
+                // ✅ ANTES de que empiece el batch: cambiar todas a estado 5 visualmente
+                foreach ($invoiceIds as $invoiceId) {
+                    event(new RipValidationStatusUpdated(
+                        $invoiceId,
+                        RipInvoiceStatusEnum::RIP_INVOICE_STATUS_005,
+                        null,
+                        null,
+                        $batchId,
+                    ));
+                }
+
+                $this->ripInvoiceRepository->changeStateArray($invoiceIds, RipInvoiceStatusEnum::RIP_INVOICE_STATUS_006, "status");
+            })
+            ->then(function (Batch $batch) use ($batchId) {
+                // Opcional: evento de batch completado (podrías enviarlo a un canal general)
+            })
+            ->name("RIP Validation Batch {$batchId}")
+            ->onQueue($selectedQueue)
+            ->dispatch();
+
+        return response()->json([
+            'code' => 200,
+            'batch_id' => $batchId,
+            'batch_job_id' => $batch->id,
+            'message' => 'Validación en proceso',
+            'total_jobs' => count($jobs),
+            'invoice_ids' => $invoiceIds // Para que el frontend sepa qué facturas escuchar
+        ]);
     }
 }

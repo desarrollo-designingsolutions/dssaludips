@@ -199,7 +199,7 @@ class ProcessZipFilesJob implements ShouldQueue
                 foreach ($chunks as $index => $chunk) {
                     $startRow = ($index * Constants::CHUNKSIZE) + 1;
                     $endRow = $startRow + count($chunk) - 1;
-                    Log::info("Dispatching chunk for {$file['name']} (rows {$startRow}-{$endRow})");
+                    // Log::info("Dispatching chunk for {$file['name']} (rows {$startRow}-{$endRow})");
                     ProcessChunkJob::dispatch($this->batchId, $file['name'], $chunk, $startRow)->onQueue($this->queue);
                 }
             }

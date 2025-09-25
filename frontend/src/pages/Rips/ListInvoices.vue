@@ -118,11 +118,23 @@ const echoChannel = () => {
   refTableFull.value.options.tableData.forEach(element => {
     window.Echo.channel(`rip_invoice.${element.id}`)
       .listen('.RipInvoiceRowUpdatedNow', (event: any) => {
+        element.status = event.status
+        element.status_backgroundColor = event.status_backgroundColor
+        element.status_description = event.status_description
+
         element.status_xml = event.status_xml
         element.status_xml_backgroundColor = event.status_xml_backgroundColor
         element.status_xml_description = event.status_xml_description
 
         element.path_xml = event.path_xml
+      })
+      .listen('RipValidationStatusUpdated', (event: any) => {
+        // console.log("event", event);
+
+        element.status = event.status
+        element.status_backgroundColor = event.status_backgroundColor
+        element.status_description = event.status_description
+
       });
   });
 }
@@ -172,15 +184,46 @@ const finishRips = async () => {
   }
 }
 
-const validateRips = () => {
-  refModalValidateRips.value.openModal(invoicesIds.value, true); // true = validar automáticamente todas las facturas
+const validateRips = async () => {
+  const invoicesWithXml = refTableFull.value.options.tableData
+    .filter(element =>
+      invoicesIds.value.includes(element.id) && element.path_xml
+    )
+    .map(element => element.id);
+
+
+  if (invoicesWithXml.length == 0) { 
+    toast("No se pueden enviar a validar ya que no tienen XML", "", "info")
+    return
+  }
+
+  try {
+
+
+    const { data, response } = await useAxios('/rip/validateRips').post({
+      ids: invoicesWithXml, 
+    });
+
+    if (response.status === 200 && data) {
+      toast('Validación iniciada correctamente', '', 'success');
+    } else {
+      toast('Error al validar facturas: ' + (data?.message || 'Error desconocido'), '', 'danger');
+
+    }
+  } catch (error) {
+    console.error(error);
+
+
+  } finally {
+    loading.value = false;
+  }
 };
 
 
 //ModalValidateRips
 const refModalValidateRips = ref()
-const openModalValidateRips = (item: any, autoValidateAll: boolean = false) => {
-  refModalValidateRips.value.openModal([item.id], autoValidateAll); // true = solo cargar datos existentes
+const openModalValidateRips = (item: any) => {
+  refModalValidateRips.value.openModal([item.id]);
 };
 
 </script>
@@ -228,9 +271,7 @@ const openModalValidateRips = (item: any, autoValidateAll: boolean = false) => {
                       Excel</VListItem>
                     <VListItem v-if="!item.path_xml" @click="openModalUploadXml(item)">Subir XML</VListItem>
                     <VListItem v-if="item.path_xml" @click="downloadFileData(item, 'xml')">Descargar XML</VListItem>
-                    <VListItem v-if="item.path_xml" @click="openModalValidateRips(item, false)">Ver inconsistencias
-                    </VListItem>
-                    <VListItem v-if="item.path_xml" @click="openModalValidateRips(item, true)">Validar con el ministerio
+                    <VListItem @click="openModalValidateRips(item)">Ver inconsistencias
                     </VListItem>
                   </VList>
                 </VMenu>

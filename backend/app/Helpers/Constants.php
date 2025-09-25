@@ -31,6 +31,9 @@ class Constants
     // public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_XML = ['import_rips_xml_1', 'import_rips_xml_2', 'import_rips_xml_3'];
     public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_XML = ['import_rips_xml_1'];
 
+    // public const AVAILABLE_QUEUES_TO_VALIDATION_RIPS_MINISTERY = ['validation_rips_ministery_1', 'validation_rips_ministery_2', 'validation_rips_ministery_3'];
+    public const AVAILABLE_QUEUES_TO_VALIDATION_RIPS_MINISTERY = ['validation_rips_ministery_1', 'validation_rips_ministery_2', 'validation_rips_ministery_3'];
+
 
 
     // REGLAS O CODIGOS PARA LOS SELECECTS DEL FORMULARIO DEL SERVICIO

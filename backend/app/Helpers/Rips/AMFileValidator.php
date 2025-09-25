@@ -36,7 +36,7 @@ class AMFileValidator
             'Columna 14: Valor total de medicamento',
         ];
 
-        // 1. Número de la factura (columna 0)
+        // 1. Número de la factura (columna 1)
         // Valor obligatorio
         if (empty($rowData[0] ?? '')) {
             ErrorCollector::addError(
@@ -50,7 +50,7 @@ class AMFileValidator
             );
         }
 
-        // 2. Código del prestador de servicios de salud (columna 1)
+        // 2. Código del prestador de servicios de salud (columna 2)
         // Valor obligatorio
         if (empty($rowData[1] ?? '')) {
             ErrorCollector::addError(
@@ -64,7 +64,7 @@ class AMFileValidator
             );
         }
 
-        // 3. Tipo de identificación del usuario (columna 2)
+        // 3. Tipo de identificación del usuario (columna 3)
         // Únicamente los valores permitidos
         $allowedPrefixes = ['CC', 'CE', 'CD', 'PA', 'SC', 'PE', 'RE', 'RC', 'TI', 'CN', 'AS', 'MS', 'DE', 'PT', 'SI'];
         if (!in_array($rowData[2] ?? '', $allowedPrefixes)) {
@@ -81,112 +81,112 @@ class AMFileValidator
 
         // 4. Tipo de medicamento (columna 7)
         // Valor obligatorio
-        if (empty($rowData[7] ?? '')) {
+        if (empty($rowData[6] ?? '')) {
             ErrorCollector::addError(
                 $batchId,
                 $rowNumber,
-                $titleColumn[7],
+                $titleColumn[6],
                 ErrorCodes::FILE_AM_ERROR_004['message'],
                 ErrorCodes::FILE_AM_ERROR_004['code'],
-                $rowData[7] ?? '',
+                $rowData[6] ?? '',
                 $fileName
             );
         }
 
         // Únicamente los valores permitidos
         $allowedPrefixes = ['1', '2'];
-        if (!in_array($rowData[7] ?? '', $allowedPrefixes)) {
+        if (!in_array($rowData[6] ?? '', $allowedPrefixes)) {
             ErrorCollector::addError(
                 $batchId,
                 $rowNumber,
-                $titleColumn[7],
+                $titleColumn[6],
                 ErrorCodes::FILE_AM_ERROR_005['message'],
                 ErrorCodes::FILE_AM_ERROR_005['code'],
-                $rowData[7] ?? '',
+                $rowData[6] ?? '',
                 $fileName
             );
         }
 
         // 5. Nombre genérico del medicamento (columna 8)
         // Valor obligatorio
-        if (empty($rowData[8] ?? '')) {
+        if (empty($rowData[7] ?? '')) {
             ErrorCollector::addError(
                 $batchId,
                 $rowNumber,
-                $titleColumn[8],
+                $titleColumn[7],
                 ErrorCodes::FILE_AM_ERROR_006['message'],
                 ErrorCodes::FILE_AM_ERROR_006['code'],
-                $rowData[8] ?? '',
+                $rowData[7] ?? '',
                 $fileName
             );
         }
 
         // 6. Forma farmacéutica (columna 9)
         // Valor obligatorio
-        if (empty($rowData[9] ?? '')) {
+        if (empty($rowData[8] ?? '')) {
             ErrorCollector::addError(
                 $batchId,
                 $rowNumber,
-                $titleColumn[9],
+                $titleColumn[8],
                 ErrorCodes::FILE_AM_ERROR_007['message'],
                 ErrorCodes::FILE_AM_ERROR_007['code'],
-                $rowData[9] ?? '',
+                $rowData[8] ?? '',
                 $fileName
             );
         }
 
         // 7. Concentración del medicamento (columna 10)
         // Valor obligatorio
-        if (empty($rowData[10] ?? '')) {
+        if (empty($rowData[9] ?? '')) {
             ErrorCollector::addError(
                 $batchId,
                 $rowNumber,
-                $titleColumn[10],
+                $titleColumn[9],
                 ErrorCodes::FILE_AM_ERROR_008['message'],
                 ErrorCodes::FILE_AM_ERROR_008['code'],
-                $rowData[10] ?? '',
+                $rowData[9] ?? '',
                 $fileName
             );
         }
 
         // 8. Unidad de medida del medicamento (columna 11)
         // Valor obligatorio
-        if (empty($rowData[11] ?? '')) {
+        if (empty($rowData[10] ?? '')) {
             ErrorCollector::addError(
                 $batchId,
                 $rowNumber,
-                $titleColumn[11],
+                $titleColumn[10],
                 ErrorCodes::FILE_AM_ERROR_009['message'],
                 ErrorCodes::FILE_AM_ERROR_009['code'],
-                $rowData[11] ?? '',
+                $rowData[10] ?? '',
                 $fileName
             );
         }
 
         // 9. Número de unidades (columna 12)
         // Valor obligatorio
-        if (empty($rowData[12] ?? '')) {
+        if (empty($rowData[11] ?? '')) {
             ErrorCollector::addError(
                 $batchId,
                 $rowNumber,
-                $titleColumn[12],
+                $titleColumn[11],
                 ErrorCodes::FILE_AM_ERROR_010['message'],
                 ErrorCodes::FILE_AM_ERROR_010['code'],
-                $rowData[12] ?? '',
+                $rowData[11] ?? '',
                 $fileName
             );
         }
 
         // 10. Valor total de medicamento (columna 13)
-        // Valor obligatorio
-        if (empty($rowData[13] ?? '')) {
+        // Validar que el valor sea numérico, 0 o un número con máximo 15 dígitos, sin palabras
+        if ($rowData[12] !== null && $rowData[12] !== '' && $rowData[12] !== '0' && (!is_numeric($rowData[12]) || !preg_match('/^\d{1,15}(\.\d*)?$/', $rowData[12]))) {
             ErrorCollector::addError(
                 $batchId,
                 $rowNumber,
-                $titleColumn[13],
+                $titleColumn[12],
                 ErrorCodes::FILE_AM_ERROR_011['message'],
                 ErrorCodes::FILE_AM_ERROR_011['code'],
-                $rowData[13] ?? '',
+                $rowData[12] ?? '',
                 $fileName
             );
         }
