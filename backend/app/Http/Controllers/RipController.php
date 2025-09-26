@@ -7,8 +7,6 @@ use App\Enums\Rip\RipTypeEnum;
 use App\Events\ImportProgressEvent;
 use App\Events\RipValidationStatusUpdated;
 use App\Enums\Rip\RipStatusEnum;
-use App\Enums\Rip\RipTypeEnum;
-use App\Events\ImportProgressEvent;
 use App\Events\RipInvoiceRowUpdatedNow;
 use App\Events\RipRowUpdatedNow;
 use App\Helpers\Common\ErrorCollector;

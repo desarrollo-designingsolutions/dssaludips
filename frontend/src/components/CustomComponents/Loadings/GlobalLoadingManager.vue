@@ -2,7 +2,7 @@
   <!-- Loading Principal -->
   <LoadingV2Enhanced
     v-if="globalLoading.isLoading.value && globalLoading.currentProcess.value && !globalLoading.isMinimized.value && !globalLoading.showProcessList.value"
-    :is-loading="true"
+    :is-loading="false"
     :progress="globalLoading.currentProgress.value"
     :title="title"
     :subtitle="subtitle"
@@ -15,7 +15,7 @@
 
   <!-- Estado Minimizado -->
   <div
-    v-else-if="globalLoading.isLoading.value && globalLoading.currentProcess.value && globalLoading.isMinimized.value"
+    
     class="minimized-overlay"
   >
     <v-card class="minimized-card" @click="handleRestore">

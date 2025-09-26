@@ -192,7 +192,7 @@ const validateRips = async () => {
     .map(element => element.id);
 
 
-  if (invoicesWithXml.length == 0) { 
+  if (invoicesWithXml.length == 0) {
     toast("No se pueden enviar a validar ya que no tienen XML", "", "info")
     return
   }
@@ -201,7 +201,7 @@ const validateRips = async () => {
 
 
     const { data, response } = await useAxios('/rip/validateRips').post({
-      ids: invoicesWithXml, 
+      ids: invoicesWithXml,
     });
 
     if (response.status === 200 && data) {
@@ -264,10 +264,12 @@ const openModalValidateRips = (item: any) => {
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
                     </VListItem>
-                    <VListItem v-if="item.status == 'RIP_INVOICE_STATUS_001'" @click="downloadFileData(item, 'excel')">
+                    <VListItem v-if="['RIP_INVOICE_STATUS_001', 'RIP_INVOICE_STATUS_007'].includes(item.status)"
+                      @click="downloadFileData(item, 'excel')">
                       Descargar Excel
                     </VListItem>
-                    <VListItem v-if="item.status == 'RIP_INVOICE_STATUS_001'" @click="openModalUploadExcel(item)">Subir
+                    <VListItem v-if="['RIP_INVOICE_STATUS_001', 'RIP_INVOICE_STATUS_007'].includes(item.status)"
+                      @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
                     <VListItem v-if="!item.path_xml" @click="openModalUploadXml(item)">Subir XML</VListItem>
                     <VListItem v-if="item.path_xml" @click="downloadFileData(item, 'xml')">Descargar XML</VListItem>
