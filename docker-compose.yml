@@ -8,6 +8,7 @@ services:
       context: .
       dockerfile: ./docker/dockerfiles/php.Dockerfile
     # container_name: ${COMPOSE_PROJECT_NAME}_php
+    user: "${UID}:${GID}"
     volumes:
       - ./backend:/var/www/html
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini

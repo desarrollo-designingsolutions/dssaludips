@@ -25,7 +25,8 @@ chown -R www-data:www-data /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage
 chmod -R 775 /var/www/html/bootstrap/cache
 
-
+# Cambia el propietario de los directorios de Laravel al usuario del host
+chown -R ${UID}:${GID} /var/www/html/storage /var/www/html/bootstrap/cache  # Ajusta la ruta si tu raíz de Laravel es diferente
 
 # Esperar a que MySQL esté listo
 echo "Esperando a MySQL..."
