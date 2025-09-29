@@ -186,6 +186,9 @@ class ErrorCodes
     const FILE_XML_ERROR_003 = ['code' => 'FILE_XML_ERROR_003', 'message' => 'El número de la factura informado en RIPS no coincide con el informado en la factura electrónica de venta.'];
     const FILE_XML_ERROR_004 = ['code' => 'FILE_XML_ERROR_004', 'message' => 'El nit del prestador no coincide.'];
 
+    //Errores de validaciones excel
+    const RIP_EXCEL_001 = ['code' => 'RIP_EXCEL_001', 'message' => 'Factura seleccionada no existe.'];
+
 
     /**
      * Obtiene el mensaje de error asociado a un código de error, con soporte para parámetros dinámicos.
