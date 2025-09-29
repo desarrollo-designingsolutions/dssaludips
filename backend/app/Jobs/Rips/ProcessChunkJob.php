@@ -79,10 +79,10 @@ class ProcessChunkJob implements ShouldQueue
 
 
             // --- Validar filas del chunk ---
-            foreach ($this->chunk as $offset => $row) {
-                $rowNumber = $this->start_row + $offset;
-                // $validators[$prefix]::validate($this->file_name, $row, $rowNumber, $this->batchId);
-            }
+            // foreach ($this->chunk as $offset => $row) {
+            //     $rowNumber = $this->start_row + $offset;
+            //      $validators[$prefix]::validate($this->file_name, $row, $rowNumber, $this->batchId);
+            // }
 
             // --- Actualizar processed_rows de manera atómica (sin transacción) ---
             $redis = Redis::connection('redis_6380');

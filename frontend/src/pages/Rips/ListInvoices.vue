@@ -264,13 +264,16 @@ const openModalValidateRips = (item: any) => {
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
                     </VListItem>
-                    <VListItem v-if="['RIP_INVOICE_STATUS_001', 'RIP_INVOICE_STATUS_007'].includes(item.status)"
+                    <VListItem 
                       @click="downloadFileData(item, 'excel')">
                       Descargar Excel
                     </VListItem>
-                    <VListItem v-if="['RIP_INVOICE_STATUS_001', 'RIP_INVOICE_STATUS_007'].includes(item.status)"
+                    <VListItem 
                       @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
+                    <!-- <VListItem v-if="['RIP_INVOICE_STATUS_002', 'RIP_INVOICE_STATUS_007'].includes(item.status)"
+                      @click="openModalUploadExcel(item)">Subir
+                      Excel</VListItem> -->
                     <VListItem v-if="!item.path_xml" @click="openModalUploadXml(item)">Subir XML</VListItem>
                     <VListItem v-if="item.path_xml" @click="downloadFileData(item, 'xml')">Descargar XML</VListItem>
                     <VListItem @click="openModalValidateRips(item)">Ver inconsistencias

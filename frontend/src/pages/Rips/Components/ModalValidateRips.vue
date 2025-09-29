@@ -11,6 +11,9 @@ const currentTab = ref<number>(0);
 // ✅ NUEVO: Estado específico para validación en progreso
 const validationInProgress = ref<Record<string, boolean>>({});
 
+// ✅ NUEVO: Filtro para la tabla de errores
+const errorFilter = ref<string>('');
+
 // Interfaces para los resultados de validación
 interface ValidationError {
   Clase: string;
@@ -62,6 +65,7 @@ const openModal = async (ids: string[]) => {
   currentInvoiceStatus.value = {};
   validationInProgress.value = {};
   invoiceIdToNumberMap.value = {};
+  errorFilter.value = ''; // ✅ Limpiar filtro al abrir
 
   // Primero cargar los datos existentes
   await loadExistingValidationData(ids);
@@ -116,6 +120,23 @@ const isCompleted = (invoiceNumber: string) => {
   const status = getFinalStatus(invoiceNumber);
   return status && (status.status === 'RIP_INVOICE_STATUS_001' || status.status === 'RIP_INVOICE_STATUS_007');
 };
+
+// ✅ Computada: errores filtrados
+const filteredErrors = computed(() => {
+  const searchTerm = errorFilter.value.toLowerCase();
+  const currentInvoice = facturaNums.value[currentTab.value];
+  const errors = validationResults.value[currentInvoice]?.data?.ResultadosValidacion || [];
+
+  if (!searchTerm) return errors;
+
+  return errors.filter(error =>
+    error.Clase.toLowerCase().includes(searchTerm) ||
+    error.Codigo.toLowerCase().includes(searchTerm) ||
+    error.Descripcion.toLowerCase().includes(searchTerm) ||
+    error.Observaciones.toLowerCase().includes(searchTerm) ||
+    error.PathFuente.toLowerCase().includes(searchTerm)
+  );
+});
 
 // Carga los datos de validación existentes desde el backend
 const loadExistingValidationData = async (ids: string[]) => {
@@ -190,6 +211,7 @@ const handleDialogVisible = () => {
     validationInProgress.value = {};
     invoiceIdToNumberMap.value = {};
     currentTab.value = 0;
+    errorFilter.value = '';
   }
 };
 
@@ -266,7 +288,7 @@ const echoChannel = (id: string) => {
         status: event.status,
         status_backgroundColor: event.status_backgroundColor,
         status_description: event.status_description,
-        result: event.result,
+        // result: event.result,
         error: event.error,
         timestamp: event.timestamp
       };
@@ -318,7 +340,8 @@ defineExpose({
             </VChip>
           </VToolbar>
         </div>
-        <VCardText>
+        <!-- ✅ Contenedor con scroll interno -->
+        <VCardText class="modal-content">
           <!-- ALERTA DE PROGRESO -->
           <VAlert 
             v-if="invoiceIds.length > 1" 
@@ -470,29 +493,57 @@ defineExpose({
                     </VCardActions>
                   </VCard>
 
-                  <!-- Tabla de errores -->
-                  <VCard>
-                    <VCardTitle>
+                  <!-- ✅ Tabla de errores con filtro y scroll -->
+                  <VCard class="mt-4">
+                    <VCardTitle class="d-flex align-center">
                       Inconsistencias de Validación
                       <VChip size="small" class="ml-2">
-                        {{ validationResults[numFactura].data.ResultadosValidacion.length }}
+                        {{ filteredErrors.length }} / {{ validationResults[numFactura]?.data?.ResultadosValidacion?.length || 0 }}
                       </VChip>
-                    </VCardTitle>
-                    <VCardText>
-                      <VDataTable v-if="validationResults[numFactura].data.ResultadosValidacion.length > 0"
-                        :items="validationResults[numFactura].data.ResultadosValidacion" 
-                        :headers="[
-                          { title: 'Clase', key: 'Clase' },
-                          { title: 'Código', key: 'Codigo' },
-                          { title: 'Descripción', key: 'Descripcion' },
-                        ]" 
-                        :items-per-page="10" 
+                      <VSpacer />
+                      <VTextField
+                        v-model="errorFilter"
+                        density="compact"
+                        variant="outlined"
+                        label="Buscar..."
+                        prepend-inner-icon="tabler-search"
+                        hide-details
+                        class="ms-4"
+                        style="max-width: 250px"
                       />
-                      <div v-else class="text-center py-4">
+                    </VCardTitle>
+
+                    <div class="table-container">
+                      <VDataTable
+                        v-if="filteredErrors.length > 0"
+                        :items="filteredErrors"
+                        :headers="[
+                          { title: 'Clase', key: 'Clase', sortable: true },
+                          { title: 'Código', key: 'Codigo', sortable: true },
+                          { title: 'Descripción', key: 'Descripcion', sortable: false },
+                          { title: 'Observaciones', key: 'Observaciones', sortable: false },
+                          { title: 'PathFuente', key: 'PathFuente', sortable: false },
+                        ]"
+                        :items-per-page="-1"
+                        hide-default-footer
+                        class="elevation-0"
+                      >
+                        <template #item.Descripcion="{ item }">
+                          <div class="text-wrap">{{ item.Descripcion }}</div>
+                        </template>
+                        <template #item.Observaciones="{ item }">
+                          <div class="text-wrap">{{ item.Observaciones }}</div>
+                        </template>
+                        <template #item.PathFuente="{ item }">
+                          <div class="text-wrap text-caption">{{ item.PathFuente }}</div>
+                        </template>
+                      </VDataTable>
+
+                      <div v-else-if="!isProcessing(numFactura)" class="text-center py-8">
                         <VIcon icon="tabler-check-circle" color="success" size="48" class="mb-2" />
                         <p class="text-h6 text-success">¡Sin inconsistencias!</p>
                       </div>
-                    </VCardText>
+                    </div>
                   </VCard>
                 </div>
                 
@@ -520,7 +571,7 @@ defineExpose({
         </VCardText>
 
         <!-- Botones de acción -->
-        <VCardText class="d-flex justify-end gap-3 flex-wrap mt-5">
+        <VCardText class="d-flex justify-end gap-3 flex-wrap mt-5 pt-0">
           <VBtn @click="handleDialogVisible" color="secondary" variant="outlined">
             Cerrar
           </VBtn>
@@ -546,5 +597,23 @@ defineExpose({
 }
 .pointer-events-none {
   pointer-events: none;
+}
+
+/* ✅ Scroll interno para el contenido del modal */
+.modal-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-bottom: 0;
+}
+
+/* ✅ Scroll para la tabla de errores */
+.table-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.text-wrap {
+  white-space: normal;
+  word-break: break-word;
 }
 </style>

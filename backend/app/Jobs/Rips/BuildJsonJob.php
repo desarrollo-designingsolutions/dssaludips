@@ -4,6 +4,7 @@ namespace App\Jobs\Rips;
 
 use App\Enums\Rip\RipStatusEnum;
 use App\Enums\Rip\RipTypeEnum;
+use App\Events\ImportProgressEvent;
 use App\Helpers\Common\ErrorCollector;
 use App\Helpers\Constants;
 use App\Helpers\Rips\BuildAllDataToJson;
@@ -64,6 +65,8 @@ class BuildJsonJob implements ShouldQueue
             return;
         }
 
+
+
         try {
             // Construir el JSON
             $jsonContents = BuildAllDataToJson::execute($this->batchId);
@@ -72,18 +75,30 @@ class BuildJsonJob implements ShouldQueue
             BuildAllDataToJson::generateConsecutive($jsonContents);
 
             //revisamos cuantas fcturas estan completas y cuantas estan incompletas de datos
-            $counts = BuildAllDataToJson::checkInvoiceCompleteness($jsonContents);
+            // $counts = BuildAllDataToJson::checkInvoiceCompleteness($jsonContents);
 
             if (empty($jsonContents)) {
                 throw new \Exception("El JSON generado está vacío o no se pudo construir.");
             }
 
             // Calcular facturas
-            $status = RipStatusEnum::RIP_STATUS_001;
+            $status = RipStatusEnum::RIP_STATUS_002;
             $numInvoices = count($jsonContents); // Número total de facturas (AF)
-            if ($counts["successfulInvoices"] == $numInvoices) {
-                $status = RipStatusEnum::RIP_STATUS_002;
-            }
+            // if ($counts["successfulInvoices"] == $numInvoices) {
+            //     $status = RipStatusEnum::RIP_STATUS_002;
+            // }
+
+            $metadata = $redis->hgetall("batch:{$this->batchId}:metadata");
+
+            // Evento: Inicio de construcción del JSON
+            event(new ImportProgressEvent(
+                $this->batchId,
+                "$metadata[total_rows]/$metadata[total_rows]", // Todos los registros procesados
+                "Iniciando la contrucción y guardado de Jsons y Exceles independientes", // Todos los registros procesados
+                $totalErrors, // Total de errores
+                'active',
+                "Iniciando {$numInvoices} facturas" // Progreso
+            ));
 
             // Crear registro en la tabla rips
             $rip = Rip::create([
@@ -94,19 +109,38 @@ class BuildJsonJob implements ShouldQueue
                 'path_zip' => $pathZip,
                 'nit' => $jsonContents[0]['numDocumentoIdObligado'] ?? null,
                 'numInvoices' => $numInvoices,
-                'successfulInvoices' => $counts["successfulInvoices"],
-                'failedInvoices' => $counts["failedInvoices"],
+                'successfulInvoices' => 0,
+                'failedInvoices' => $numInvoices,
                 'type' => $type,
                 'sumVr' => 0,
                 'status' => $status,
             ]);
 
-            GenerateRipInfo::saveReloadDataRips($rip->id, $jsonContents);
+            GenerateRipInfo::saveReloadDataRips($rip->id, $jsonContents, $this->batchId);
+
+
+            event(new ImportProgressEvent(
+                $this->batchId,
+                "$metadata[total_rows]/$metadata[total_rows]", // Todos los registros procesados
+                'Contruyendo JSON y Excel global',
+                $totalErrors, // Total de errores
+                'active',
+                "Generando JSON y Excel global" // Progreso
+            ));
 
             GenerateRipInfo::generateDataJsonAndExcel($rip->id);
 
             // Actualizar el batch con estado completado
             $this->updateBatchStatus('completed');
+
+            event(new ImportProgressEvent(
+                $this->batchId,
+                "$metadata[total_rows]/$metadata[total_rows]", // Todos los registros procesados
+                'Validación completada',
+                $totalErrors, // Total de errores
+                'completed',
+                "proceso finalizado" // Progreso
+            ));
 
             // Notificar al usuario
             $this->notifyUser($userId, 'JSON Construido Exitosamente', "Se generó el archivo JSON para el batch {$this->batchId} con {$numInvoices} facturas.", 'success');

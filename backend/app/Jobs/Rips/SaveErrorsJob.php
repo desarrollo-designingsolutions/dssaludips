@@ -58,7 +58,7 @@ class SaveErrorsJob implements ShouldQueue
                 "$metadata[total_rows]/$metadata[total_rows]", // Todos los registros procesados
                 'Validación completada',
                 "0", // 0 errores
-                'completed',
+                'active',
                 'Ha finalizado sin novedad' // Progreso
             ));
 
@@ -92,6 +92,16 @@ class SaveErrorsJob implements ShouldQueue
         for ($i = 0; $i < $numChunks; $i++) {
             $offset = $i * $chunkSize;
             $jobs[] = SaveErrorChunkJob::dispatch($this->batchId, $offset, $chunkSize, $this->selectedQueue, $totalErrors, $numChunks, $status)->onQueue($this->queue);
+
+            // Evento final sin errores
+            event(new ImportProgressEvent(
+                $this->batchId,
+                "$metadata[total_rows]/$metadata[total_rows]", // Todos los registros procesados
+                "Se esta guardando los errores encontrados", // Todos los registros procesados
+               $totalErrors, // Total de errores
+                'active',
+                "Guardando errores... ($i/$numChunks)" // Progreso
+            ));
         }
 
     }

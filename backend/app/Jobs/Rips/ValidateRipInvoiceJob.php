@@ -38,7 +38,6 @@ class ValidateRipInvoiceJob implements ShouldQueue
             $this->invoiceId,
             RipInvoiceStatusEnum::RIP_INVOICE_STATUS_006,
             null,
-            null,
             $this->batchId,
         ));
         $ripInvoiceRepository->changeState($this->invoiceId, RipInvoiceStatusEnum::RIP_INVOICE_STATUS_006, "status");
@@ -47,13 +46,11 @@ class ValidateRipInvoiceJob implements ShouldQueue
         try {
             $result = $ripsClient->validateInvoice($this->invoiceId);
 
-            Log::info("result",[$result]);
             if ($result["status_code"] != 200) {
                 $ripInvoiceRepository->changeState($this->invoiceId, RipInvoiceStatusEnum::RIP_INVOICE_STATUS_007, "status");
                 event(new RipValidationStatusUpdated(
                     $this->invoiceId,
                     RipInvoiceStatusEnum::RIP_INVOICE_STATUS_007,
-                    $result,
                     null,
                     $this->batchId,
                 ));
@@ -63,7 +60,6 @@ class ValidateRipInvoiceJob implements ShouldQueue
                 event(new RipValidationStatusUpdated(
                     $this->invoiceId,
                     RipInvoiceStatusEnum::RIP_INVOICE_STATUS_001,
-                    $result,
                     null,
                     $this->batchId,
                 ));

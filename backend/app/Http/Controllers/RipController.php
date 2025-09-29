@@ -445,19 +445,22 @@ class RipController extends Controller
 
             //Aqui se traspasa la informacion que esta bien segun las validaciones de excel
             $jsonInvoices = $jsonData;
-            foreach ($jsonInvoices as $key => $value) {
-                DB::beginTransaction();
-                //se guarda el xls nuevo y json independientes en la bd
-                GenerateRipInfo::saveReloadDataInvoice($rip->id, $value, $validationExcel['totalErrorMessages']);
+            GenerateRipInfo::saveReloadDataInvoices($rip->id, $jsonInvoices);
 
-                DB::commit();
-            }
 
-            //informacion del resultado de las validaciones Excel
+            // foreach ($jsonInvoices as $key => $value) {
+            //     DB::beginTransaction();
+            //     //se guarda el xls nuevo y json independientes en la bd
+            //     // GenerateRipInfo::saveReloadDataInvoice($rip->id, $value, $validationExcel['totalErrorMessages']);
 
-            GenerateRipInfo::generateDataJsonAndExcel($rip->id);
-            ExcelRequired::validateRipsStatus($rip->id);
-            RipRowUpdatedNow::dispatch($rip->id);
+            //     DB::commit();
+            // }
+
+            // //informacion del resultado de las validaciones Excel
+
+            // GenerateRipInfo::generateDataJsonAndExcel($rip->id);
+            // ExcelRequired::validateRipsStatus($rip->id);
+            // RipRowUpdatedNow::dispatch($rip->id);
 
             return $xlsCollection;
 

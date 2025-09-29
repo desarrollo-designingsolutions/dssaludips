@@ -14,15 +14,13 @@ class RipValidationStatusUpdated implements ShouldBroadcastNow
 
     public $invoiceId;
     public $status;
-    public $result;
     public $error;
     public $batchId;
 
-    public function __construct($invoiceId, $status, $result = null, $error = null, $batchId = null)
+    public function __construct($invoiceId, $status, $error = null, $batchId = null)
     {
         $this->invoiceId = $invoiceId;
         $this->status = $status;
-        $this->result = $result;
         $this->error = $error;
         $this->batchId = $batchId;
     }
@@ -43,7 +41,6 @@ class RipValidationStatusUpdated implements ShouldBroadcastNow
             'status' => $this->status?->value,
             'status_backgroundColor' => $this->status?->backgroundColor(),
             'status_description' => $this->status?->description(),
-            'result' => $this->result,
             'error' => $this->error,
             'batch_id' => $this->batchId,
             'timestamp' => now()->toISOString(),

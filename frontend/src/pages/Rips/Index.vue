@@ -27,8 +27,8 @@ const optionsTable = {
   headers: [ 
     { key: 'type', title: 'Tipo' },
     { key: 'numInvoices', title: 'Facturas' },
-    { key: 'successfulInvoices', title: 'Data Completa' },
-    { key: 'failedInvoices', title: 'Data Incompleta' }, 
+    { key: 'successfulInvoices', title: 'Validadas' },
+    { key: 'failedInvoices', title: 'No validadas' }, 
     { key: 'created_at', title: 'Fecha de creación' }, 
     { key: 'status', title: 'Estado' },
     { key: 'actions', title: 'Acciones', sortable: false },
@@ -173,9 +173,9 @@ const echoChannel = () => {
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
                     </VListItem> 
-                    <VListItem v-if="item.status == 'RIP_STATUS_001'" @click="downloadFileData(item, 'excel')">Descargar Excel
+                    <VListItem v-if="item.status == 'RIP_STATUS_002'" @click="downloadFileData(item, 'excel')">Descargar Excel
                     </VListItem>
-                    <VListItem v-if="item.status == 'RIP_STATUS_001'" @click="openModalUploadExcel(item)">Subir
+                    <VListItem v-if="item.status == 'RIP_STATUS_002'" @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
                     <VListItem @click="goView(item)">
                       Ingresar

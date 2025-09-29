@@ -16,7 +16,7 @@ enum RipStatusEnum: string
 
 
     #[Description('Sin validar')]
-    #[BackgroundColor('info')]
+    #[BackgroundColor('secondary')]
     case RIP_STATUS_002 = 'RIP_STATUS_002';
 
     #[Description('Error Excel')]
