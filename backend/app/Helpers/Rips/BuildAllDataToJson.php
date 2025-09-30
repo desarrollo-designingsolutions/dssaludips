@@ -137,6 +137,8 @@ class BuildAllDataToJson
     }
 
     // Funciones de formateo protegidas
+
+    //otrosServicios
     public function formatValueAT($datos): array
     {
         return [
@@ -152,13 +154,14 @@ class BuildAllDataToJson
             'numDocumentoIdentificacion' => trim($datos[3]),
             'vrUnitOS' => trim($datos[9]),
             'vrServicio' => trim($datos[10]),
+            'conceptoRecaudo' => null,
             'valorPagoModerador' => null,
             'numFEVPagoModerador' => trim($datos[0]),
             'consecutivo' => null,
-            'conceptoRecaudo' => null,
         ];
     }
 
+    //reciennacidos
     public function formatValueAN($datos): array
     {
         return [
@@ -176,10 +179,10 @@ class BuildAllDataToJson
             'fechaEgreso' => null,
             'consecutivo' => null,
             'numFEVPagoModerador' => trim($datos[0]),
-
         ];
     }
 
+    //hospitalizacion
     public function formatValueAH($datos): array
     {
         return [
@@ -203,6 +206,7 @@ class BuildAllDataToJson
         ];
     }
 
+    //medicamento
     public function formatValueAM($datos): array
     {
         return [
@@ -232,6 +236,7 @@ class BuildAllDataToJson
         ];
     }
 
+    //urgencia
     public function formatValueAU($datos): array
     {
         return [
@@ -252,6 +257,7 @@ class BuildAllDataToJson
         ];
     }
 
+    //procedimiento
     public function formatValueAP($datos): array
     {
         return [
@@ -278,6 +284,7 @@ class BuildAllDataToJson
         ];
     }
 
+    //usuario
     public function formatValueUS($datos): array
     {
         return [
@@ -295,6 +302,7 @@ class BuildAllDataToJson
         ];
     }
 
+    //consultas
     public function formatValueAC($datos): array
     {
         return [
@@ -322,6 +330,7 @@ class BuildAllDataToJson
         ];
     }
 
+    //Factura
     public function formatValueAF($datos): array
     {
         return [

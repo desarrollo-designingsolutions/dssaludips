@@ -78,7 +78,7 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && empty($row['servicio'])) {
-                        $requiredFields = ['codPaisOrigen', 'fechaNacimiento', 'codPaisResidencia', 'codZonaTerritorialResidencia', 'incapacidad', 'consecutivo'];
+                        $requiredFields = ['codPaisOrigen', 'fechaNacimiento', 'codPaisResidencia', 'codZonaTerritorialResidencia', 'incapacidad', 'consecutivo','tipoUsuario','codMunicipioResidencia'];
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -115,7 +115,7 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'procedimientos') {
-                        $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'idMIPRES', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
+                        $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'idMIPRES', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo','codDiagnosticoPrincipal','codComplicacion','codDiagnosticoRelacionado','finalidadTecnologiaSalud','viaIngresoServicioSalud','codPrestador','codProcedimiento'];
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -232,51 +232,54 @@ class ExcelRequired
         $dataExtra = ['numFactura' => null];
         $errorMessages = [];
         foreach ($arrayInfo as $indexInvoice => $data) {
-            $dataExtra = ['numFactura' => $data['numFactura']];
 
             // Asignar una cadena vacía en lugar de null si $data['numNota'] es cero
-            $arrayData[$indexInvoice]['numNota'] = ($data['numNota'] === "00") ? '' : $data['numNota'];
+            $arrayData[$indexInvoice]['numNota'] = ($data['numNota'] === "00") ? '' : (string)$data['numNota'];
 
             // Asignar una cadena vacía en lugar de null si $data['numNota'] es cero, si viene otro valor ejecuta la validacion
             if (($data['tipoNota'] === "00")) {
                 $arrayData[$indexInvoice]['tipoNota'] = '';
             } else {
-                $arrayData[$indexInvoice]['tipoNota'] = ($data['tipoNota'] === "00") ? '' : $data['tipoNota'];
+                $arrayData[$indexInvoice]['tipoNota'] = ($data['tipoNota'] === "00") ? '' : (string)$data['tipoNota'];
             }
 
             if (isset($data['usuarios']) && count($data['usuarios']) > 0) {
                 foreach ($data['usuarios'] as $indexUser => $usuario) {
 
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codPaisOrigen'] = $usuario['codPaisOrigen'];
+                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codPaisOrigen'] = (string)$usuario['codPaisOrigen'];
 
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codPaisResidencia'] = $usuario['codPaisResidencia'];
+                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codPaisResidencia'] = (string)$usuario['codPaisResidencia'];
 
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codZonaTerritorialResidencia'] = $usuario['codZonaTerritorialResidencia'];
+                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codZonaTerritorialResidencia'] = (string)$usuario['codZonaTerritorialResidencia'];
 
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['incapacidad'] = $usuario['incapacidad'];
+                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['incapacidad'] = (string)$usuario['incapacidad'];
 
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['fechaNacimiento'] = $usuario['fechaNacimiento'];
+                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['fechaNacimiento'] = (string)$usuario['fechaNacimiento'];
+
+                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['tipoUsuario'] = (string)$usuario['tipoUsuario'];
+
+                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codMunicipioResidencia'] = (string)$usuario['codMunicipioResidencia'];
 
                     //CONSULTAS
                     if (isset($usuario['servicios']['consultas']) && count($usuario['servicios']['consultas']) > 0) {
                         foreach ($usuario['servicios']['consultas'] as $indexQuery => $consulta) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['tipoDocumentoIdentificacion'] = $consulta['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['numDocumentoIdentificacion'] = $consulta['numDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['tipoPagoModerador'] = $consulta['tipoPagoModerador'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['numFEVPagoModerador'] = $consulta['numFEVPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['tipoDocumentoIdentificacion'] = (string)$consulta['tipoDocumentoIdentificacion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['numDocumentoIdentificacion'] = (string)$consulta['numDocumentoIdentificacion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['tipoPagoModerador'] = (string)$consulta['tipoPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['numFEVPagoModerador'] = (string)$consulta['numFEVPagoModerador'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['conceptoRecaudo'] = $consulta['conceptoRecaudo'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['conceptoRecaudo'] = (string)$consulta['conceptoRecaudo'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['modalidadGrupoServicioTecSal'] = $consulta['modalidadGrupoServicioTecSal'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['modalidadGrupoServicioTecSal'] = (string)$consulta['modalidadGrupoServicioTecSal'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['grupoServicios'] = $consulta['grupoServicios'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['grupoServicios'] = (string)$consulta['grupoServicios'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['codServicio'] = $consulta['codServicio'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['codServicio'] = (int)$consulta['codServicio'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['fechaInicioAtencion'] = $consulta['fechaInicioAtencion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['fechaInicioAtencion'] = (string)$consulta['fechaInicioAtencion'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['valorPagoModerador'] = $consulta['valorPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['valorPagoModerador'] = (float)$consulta['valorPagoModerador'];
                         }
                     }
 
@@ -284,23 +287,39 @@ class ExcelRequired
                     if (isset($usuario['servicios']['procedimientos']) && count($usuario['servicios']['procedimientos']) > 0) {
                         foreach ($usuario['servicios']['procedimientos'] as $indexProcedure => $procedimiento) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['tipoDocumentoIdentificacion'] = $procedimiento['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['numDocumentoIdentificacion'] = $procedimiento['numDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['numFEVPagoModerador'] = $procedimiento['numFEVPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['tipoDocumentoIdentificacion'] = (string)$procedimiento['tipoDocumentoIdentificacion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['numDocumentoIdentificacion'] = (string)$procedimiento['numDocumentoIdentificacion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['numFEVPagoModerador'] = (string)$procedimiento['numFEVPagoModerador'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['conceptoRecaudo'] = $procedimiento['conceptoRecaudo'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['conceptoRecaudo'] = (string)$procedimiento['conceptoRecaudo'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['idMIPRES'] = $procedimiento['idMIPRES'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['idMIPRES'] = (string)$procedimiento['idMIPRES'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['valorPagoModerador'] = $procedimiento['valorPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['valorPagoModerador'] = (float)$procedimiento['valorPagoModerador'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['modalidadGrupoServicioTecSal'] = $procedimiento['modalidadGrupoServicioTecSal'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['modalidadGrupoServicioTecSal'] = (string)$procedimiento['modalidadGrupoServicioTecSal'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['grupoServicios'] = $procedimiento['grupoServicios'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['grupoServicios'] = (string)$procedimiento['grupoServicios'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['codServicio'] = $procedimiento['codServicio'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['codServicio'] = (int)$procedimiento['codServicio'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['fechaInicioAtencion'] = $procedimiento['fechaInicioAtencion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['fechaInicioAtencion'] = (string)$procedimiento['fechaInicioAtencion'];
+
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['vrServicio'] = (float)$procedimiento['vrServicio'];
+
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['codDiagnosticoPrincipal'] = (string)$procedimiento['codDiagnosticoPrincipal'];
+
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['codComplicacion'] = (string)$procedimiento['codComplicacion'];
+
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['codDiagnosticoRelacionado'] = (string)$procedimiento['codDiagnosticoRelacionado'];
+
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['finalidadTecnologiaSalud'] = (string)$procedimiento['finalidadTecnologiaSalud'];
+
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['viaIngresoServicioSalud'] = (string)$procedimiento['viaIngresoServicioSalud'];
+
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['codPrestador'] = (string)$procedimiento['codPrestador'];
+
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['codProcedimiento'] = (string)$procedimiento['codProcedimiento'];
                         }
                     }
 
@@ -308,18 +327,18 @@ class ExcelRequired
                     if (isset($usuario['servicios']['otrosServicios']) && count($usuario['servicios']['otrosServicios']) > 0) {
                         foreach ($usuario['servicios']['otrosServicios'] as $indexOtherService => $otrosServicio) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['tipoDocumentoIdentificacion'] = $otrosServicio['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['numDocumentoIdentificacion'] = $otrosServicio['numDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['tipoPagoModerador'] = $otrosServicio['tipoPagoModerador'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['numFEVPagoModerador'] = $otrosServicio['numFEVPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['tipoDocumentoIdentificacion'] = (string)$otrosServicio['tipoDocumentoIdentificacion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['numDocumentoIdentificacion'] = (string)$otrosServicio['numDocumentoIdentificacion'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['conceptoRecaudo'] = $otrosServicio['conceptoRecaudo'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['numFEVPagoModerador'] = (string)$otrosServicio['numFEVPagoModerador'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['idMIPRES'] = $otrosServicio['idMIPRES'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['conceptoRecaudo'] = (string)$otrosServicio['conceptoRecaudo'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['valorPagoModerador'] = $otrosServicio['valorPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['idMIPRES'] = (string)$otrosServicio['idMIPRES'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['fechaSuministroTecnologia'] = $otrosServicio['fechaSuministroTecnologia'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['valorPagoModerador'] = (float)$otrosServicio['valorPagoModerador'];
+
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['fechaSuministroTecnologia'] = (string)$otrosServicio['fechaSuministroTecnologia'];
                         }
                     }
 
@@ -327,9 +346,9 @@ class ExcelRequired
                     if (isset($usuario['servicios']['urgencias']) && count($usuario['servicios']['urgencias']) > 0) {
                         foreach ($usuario['servicios']['urgencias'] as $indexUrgency => $urgencia) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['urgencias'][$indexUrgency]['fechaEgreso'] = $urgencia['fechaEgreso'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['urgencias'][$indexUrgency]['fechaEgreso'] = (string)$urgencia['fechaEgreso'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['urgencias'][$indexUrgency]['fechaInicioAtencion'] = $urgencia['fechaInicioAtencion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['urgencias'][$indexUrgency]['fechaInicioAtencion'] = (string)$urgencia['fechaInicioAtencion'];
                         }
                     }
 
@@ -337,9 +356,9 @@ class ExcelRequired
                     if (isset($usuario['servicios']['hospitalizacion']) && count($usuario['servicios']['hospitalizacion']) > 0) {
                         foreach ($usuario['servicios']['hospitalizacion'] as $indexHospitalization => $hospitalizacion) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['hospitalizacion'][$indexHospitalization]['fechaEgreso'] = $hospitalizacion['fechaEgreso'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['hospitalizacion'][$indexHospitalization]['fechaEgreso'] = (string)$hospitalizacion['fechaEgreso'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['hospitalizacion'][$indexHospitalization]['fechaInicioAtencion'] = $hospitalizacion['fechaInicioAtencion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['hospitalizacion'][$indexHospitalization]['fechaInicioAtencion'] = (string)$hospitalizacion['fechaInicioAtencion'];
                         }
                     }
 
@@ -347,12 +366,12 @@ class ExcelRequired
                     if (isset($usuario['servicios']['recienNacidos']) && count($usuario['servicios']['recienNacidos']) > 0) {
                         foreach ($usuario['servicios']['recienNacidos'] as $indexNewlyBorn => $recienNacido) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['tipoDocumentoIdentificacion'] = $recienNacido['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['numConsultasCPrenatal'] = $recienNacido['numConsultasCPrenatal'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['tipoDocumentoIdentificacion'] = (string)$recienNacido['tipoDocumentoIdentificacion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['numConsultasCPrenatal'] = (string)$recienNacido['numConsultasCPrenatal'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['fechaNacimiento'] = $recienNacido['fechaNacimiento'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['fechaNacimiento'] = (string)$recienNacido['fechaNacimiento'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['fechaEgreso'] = $recienNacido['fechaEgreso'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['fechaEgreso'] = (string)$recienNacido['fechaEgreso'];
                         }
                     }
 
@@ -360,27 +379,27 @@ class ExcelRequired
                     if (isset($usuario['servicios']['medicamentos']) && count($usuario['servicios']['medicamentos']) > 0) {
                         foreach ($usuario['servicios']['medicamentos'] as $indexMedicine => $medicamento) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['formaFarmaceutica'] = $medicamento['formaFarmaceutica'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['unidadMinDispensa'] = $medicamento['unidadMinDispensa'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['tipoDocumentoIdentificacion'] = $medicamento['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['numDocumentoIdentificacion'] = $medicamento['numDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['vrUnitMedicamento'] = $medicamento['vrUnitMedicamento'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['tipoPagoModerador'] = $medicamento['tipoPagoModerador'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['numFEVPagoModerador'] = $medicamento['numFEVPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['formaFarmaceutica'] = (string)$medicamento['formaFarmaceutica'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['unidadMinDispensa'] = (string)$medicamento['unidadMinDispensa'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['tipoDocumentoIdentificacion'] = (string)$medicamento['tipoDocumentoIdentificacion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['numDocumentoIdentificacion'] = (string)$medicamento['numDocumentoIdentificacion'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['vrUnitMedicamento'] = (string)$medicamento['vrUnitMedicamento'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['tipoPagoModerador'] = (string)$medicamento['tipoPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['numFEVPagoModerador'] = (string)$medicamento['numFEVPagoModerador'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['conceptoRecaudo'] = $medicamento['conceptoRecaudo'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['conceptoRecaudo'] = (string)$medicamento['conceptoRecaudo'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['idMIPRES'] = $medicamento['idMIPRES'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['idMIPRES'] = (string)$medicamento['idMIPRES'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['valorPagoModerador'] = $medicamento['valorPagoModerador'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['valorPagoModerador'] = (float)$medicamento['valorPagoModerador'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['diasTratamiento'] = $medicamento['diasTratamiento'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['diasTratamiento'] = (string)$medicamento['diasTratamiento'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['fechaDispensAdmon'] = $medicamento['fechaDispensAdmon'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['fechaDispensAdmon'] = (string)$medicamento['fechaDispensAdmon'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['codDiagnosticoPrincipal'] = $medicamento['codDiagnosticoPrincipal'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['codDiagnosticoPrincipal'] = (string)$medicamento['codDiagnosticoPrincipal'];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['codDiagnosticoRelacionado'] = $medicamento['codDiagnosticoRelacionado'];
+                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['codDiagnosticoRelacionado'] = (string)$medicamento['codDiagnosticoRelacionado'];
                         }
                     }
                 }

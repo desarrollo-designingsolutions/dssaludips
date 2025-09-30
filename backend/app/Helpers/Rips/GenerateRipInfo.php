@@ -58,6 +58,8 @@ class GenerateRipInfo
             }
         }
 
+
+
         //EXCELES
         $nameFile = 'rips_' . $rip->id . '.xlsx';
         $path_excel = 'companies/company_' . $rip->company_id . '/rips/' . $type . '/rip_' . $rip->id . '/' . $nameFile; // Ruta donde se guardará la carpeta
@@ -181,15 +183,11 @@ class GenerateRipInfo
 
             $nameFile = $invoiceData['numFactura'] . '.xlsx';
             $routeXls = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/invoices/{$invoiceData['numFactura']}/{$nameFile}"; // Ruta donde se guardará la carpeta
-
             Excel::store(new RipXlsExport([$invoiceData]), $routeXls, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
 
             $nameFile = $invoiceData['numFactura'] . '.json';
             $routeJson = 'companies/company_' . $rip->company_id . '/rips/' . $type . '/rip_' . $rip->id . '/invoices/' . $invoiceData['numFactura'] . '/' . $nameFile; // Ruta donde se guardará la carpeta
-
-            Log::info("Procesando factura {$invoiceData['numFactura']} para RIP {$rip->id}",[json_encode($invoiceData)]);
             Storage::disk(Constants::DISK_FILES)->put($routeJson, json_encode($invoiceData)); //guardo el archivo
-
 
             $invoiceNumber = $invoiceData['numFactura'];
             $invoiceNumbers[] = $invoiceNumber;
@@ -278,43 +276,43 @@ class GenerateRipInfo
 
 
 
-    public static function saveReloadDataInvoice($rip, $valueJsonInvoice, $ripInvoice)
-    {
+    // public static function saveReloadDataInvoice($rip, $valueJsonInvoice, $ripInvoice)
+    // {
 
-        $type = $rip->type?->value;
+    //     $type = $rip->type?->value;
 
-        $nameFile = $valueJsonInvoice['numFactura'] . '.xlsx';
-        $routeXls = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/invoices/{$valueJsonInvoice['numFactura']}/{$nameFile}"; // Ruta donde se guardará la carpeta
+    //     $nameFile = $valueJsonInvoice['numFactura'] . '.xlsx';
+    //     $routeXls = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/invoices/{$valueJsonInvoice['numFactura']}/{$nameFile}"; // Ruta donde se guardará la carpeta
 
-        Excel::store(new RipXlsExport([$valueJsonInvoice]), $routeXls, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
+    //     Excel::store(new RipXlsExport([$valueJsonInvoice]), $routeXls, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
 
-        $nameFile = $valueJsonInvoice['numFactura'] . '.json';
-        $routeJson = 'companies/company_' . $rip->company_id . '/rips/' . $type . '/rip_' . $rip->id . '/invoices/' . $valueJsonInvoice['numFactura'] . '/' . $nameFile; // Ruta donde se guardará la carpeta
+    //     $nameFile = $valueJsonInvoice['numFactura'] . '.json';
+    //     $routeJson = 'companies/company_' . $rip->company_id . '/rips/' . $type . '/rip_' . $rip->id . '/invoices/' . $valueJsonInvoice['numFactura'] . '/' . $nameFile; // Ruta donde se guardará la carpeta
 
-        Storage::disk(Constants::DISK_FILES)->put($routeJson, json_encode($valueJsonInvoice)); //guardo el archivo
+    //     Storage::disk(Constants::DISK_FILES)->put($routeJson, json_encode($valueJsonInvoice)); //guardo el archivo
 
-        //si la factura no existe la creo una instancia nueva
-        if (!$ripInvoice) {
-            $ripInvoice = RipInvoice::newModelInstance();
-        }
+    //     //si la factura no existe la creo una instancia nueva
+    //     if (!$ripInvoice) {
+    //         $ripInvoice = RipInvoice::newModelInstance();
+    //     }
 
-        $ripInvoice->rip_id = $rip->id;
-        $ripInvoice->path_json = $routeJson;
-        $ripInvoice->path_excel = $routeXls;
-        $ripInvoice->company_id = $rip->company_id;
-        $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_002;
+    //     $ripInvoice->rip_id = $rip->id;
+    //     $ripInvoice->path_json = $routeJson;
+    //     $ripInvoice->path_excel = $routeXls;
+    //     $ripInvoice->company_id = $rip->company_id;
+    //     $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_002;
 
-        $ripInvoice->invoice_number = $valueJsonInvoice['numFactura'];
-        $ripInvoice->sumVr = self::sumVrServicio($valueJsonInvoice);
-        $ripInvoice->count_users = $valueJsonInvoice['usuarios'] ? count($valueJsonInvoice['usuarios']) : 0;
-        $ripInvoice->note_type = $valueJsonInvoice['tipoNota'] ?? null;
-        $ripInvoice->note_number = $valueJsonInvoice['numNota'] ?? null;
-        $ripInvoice->status_xml = RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002;
+    //     $ripInvoice->invoice_number = $valueJsonInvoice['numFactura'];
+    //     $ripInvoice->sumVr = self::sumVrServicio($valueJsonInvoice);
+    //     $ripInvoice->count_users = $valueJsonInvoice['usuarios'] ? count($valueJsonInvoice['usuarios']) : 0;
+    //     $ripInvoice->note_type = $valueJsonInvoice['tipoNota'] ?? null;
+    //     $ripInvoice->note_number = $valueJsonInvoice['numNota'] ?? null;
+    //     $ripInvoice->status_xml = RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002;
 
 
 
-        Log::info("Se ha guardado/actualizado la factura {$ripInvoice->invoice_number} del RIP {$rip->id}");
+    //     Log::info("Se ha guardado/actualizado la factura {$ripInvoice->invoice_number} del RIP {$rip->id}");
 
-        RipInvoiceRowUpdatedNow::dispatch($ripInvoice->id);
-    }
+    //     RipInvoiceRowUpdatedNow::dispatch($ripInvoice->id);
+    // }
 }

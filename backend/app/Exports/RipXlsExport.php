@@ -42,7 +42,7 @@ class RipXlsExport implements FromArray, WithHeadings, WithTitle
                 //USUARIOS
                 if (isset($invoice['usuarios']) && count($invoice['usuarios']) > 0) {
                     foreach ($invoice['usuarios'] as $keyU => $user) {
-                        $requiredFields = ['codPaisOrigen', 'fechaNacimiento', 'codPaisResidencia', 'codZonaTerritorialResidencia', 'incapacidad'];
+                        $requiredFields = ['codPaisOrigen', 'fechaNacimiento', 'codPaisResidencia', 'codZonaTerritorialResidencia', 'incapacidad','tipoUsuario','codMunicipioResidencia','codPaisOrigen'];
                         // Verificar si faltan campos requeridos
                         $this->formData($data, $requiredFields, $user, $invoice['numFactura'], $keyU + 1, $user['numDocumentoIdentificacion']);
 
@@ -61,7 +61,7 @@ class RipXlsExport implements FromArray, WithHeadings, WithTitle
                             // dd($user["servicios"]["procedimientos"]);
                             foreach ($user['servicios']['procedimientos'] as $keyP => $value) {
                                 //fechaInicioAtencion NO ESTABA EN LA LISTA SE AGREGA POR PETICION DE GERMAN
-                                $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'idMIPRES', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'valorPagoModerador', 'numFEVPagoModerador'];
+                                $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'idMIPRES', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'valorPagoModerador', 'numFEVPagoModerador','vrServicio','codDiagnosticoPrincipal','codComplicacion','codDiagnosticoRelacionado','finalidadTecnologiaSalud','viaIngresoServicioSalud','codPrestador','codProcedimiento'];
                                 // Verificar si faltan campos requeridos
                                 $this->formData($data, $requiredFields, $value, $invoice['numFactura'], $keyU + 1, $user['numDocumentoIdentificacion'], $keyP + 1, 'procedimientos');
                             }
