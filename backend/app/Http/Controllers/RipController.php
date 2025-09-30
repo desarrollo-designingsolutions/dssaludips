@@ -288,7 +288,8 @@ class RipController extends Controller
             $rip_id     = $request->input('rip_id');       // => modo global si NO hay invoice_id
             $user_id    = $request->input('user_id');
             $company_id = $request->input('company_id');
-            $selectedQueue = 'upload_rips_excel';
+            // Seleccionar una cola disponible
+            $selectedQueue = ProcessBatchService::selectAvailableQueueRoundRobin(Constants::AVAILABLE_QUEUES_TO_IMPORTS_RIPS_EXCEL);
             $ripInvoice = null;
             $rip        = null;
 
@@ -299,15 +300,15 @@ class RipController extends Controller
             $tempSubfolder = 'temp/rips/' . $batchId;
             $filePath = $excelFile->storeAs($tempSubfolder, $uniqueFileName, Constants::DISK_FILES);
 
-            $xlsCollection = ExcelRequired::openXls($excelFile);
+            // $xlsCollection = ExcelRequired::openXls($excelFile);
             $required = ['num_factura', 'id_usuario', 'num_identificacion', 'id_servicio', 'servicio', 'campo', 'valor'];
 
-            if ($ripInvoice) {
+            if ($invoice_id) {
                 $ripInvoice = $this->ripInvoiceRepository->find($invoice_id, "rip");
-            } else {
-                $rip = $this->ripRepository->find($rip_id);
+                $rip_id = $ripInvoice->rip_id;
             }
 
+            $rip = $this->ripRepository->find($rip_id);
 
             $metadata = [
                 'file_name' => $uniqueFileName,
@@ -316,11 +317,18 @@ class RipController extends Controller
                 'total_rows' => 0,
                 'user_id' => $user_id,
                 'company_id' => $company_id,
-                'rip' => $rip,
-                'ripInvoice' => $ripInvoice,
-                'xlsCollection' => $xlsCollection,
-                'required' => $required
+                'rip' => json_encode($rip),
+                'rip_id' => $rip_id,
+                'ripInvoice' => json_encode($ripInvoice),
+                'ripInvoice_id' => $invoice_id,
+                'excelFile' => $excelFile,
+                'filePath' => $filePath,
+                'required' => json_encode($required)
             ];
+
+
+            $redis = Redis::connection('redis_6380');
+            $redis->hmset("batch:{$batchId}:metadata", $metadata);
 
             ProcessBatch::create([
                 'id' => $batchId,
@@ -333,15 +341,16 @@ class RipController extends Controller
                 'metadata' => json_encode($metadata),
             ]);
 
-            Bus::batch(
-                new ValidateExcelJob($batchId, $user_id, $metadata, $selectedQueue),
-                new RipInvoiceValidationJob($batchId, $user_id, $metadata, $selectedQueue),
-            )
-                ->onQueue('upload_rips_excel') // ¡Importante!
-                ->then(function () {
-                    Log::Info("termino proceso");
-                    // dispatch($finalJob->onQueue('upload_rips_excel'));
+            Bus::chain([
+                new ValidateExcelJob($batchId, $selectedQueue),
+                new RipInvoiceValidationJob($batchId, $selectedQueue),
+            ])
+                ->catch(function (\Throwable $e) use ($batchId) {
+                    Log::error("Validation failed for batch {$batchId}: {$e->getMessage()}");
+                    ErrorCollector::saveErrorsToDatabase($batchId, 'failed');
+                    event(new ImportProgressEvent($batchId, 0, 'Error en validación', count(ErrorCollector::getErrors($batchId)), 'failed', 'error'));
                 })
+                ->onQueue($selectedQueue) // ¡Importante!
                 ->dispatch();
 
             return [

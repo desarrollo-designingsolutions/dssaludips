@@ -4,9 +4,13 @@ namespace App\Jobs\Rips;
 
 use App\Events\ImportProgressEvent;
 use App\Helpers\Common\ErrorCollector;
+use App\Helpers\Rips\ErrorCodes;
+use App\Helpers\Rips\ExcelRequired;
+use App\Helpers\Rips\ExcelValidator;
 use App\Models\ProcessBatch;
 use App\Models\User;
 use App\Notifications\BellNotification;
+use Error;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,7 +19,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Bus\Batchable;
-use Illuminate\Support\Str;
 
 class ValidateExcelJob implements ShouldQueue
 {
@@ -28,69 +31,41 @@ class ValidateExcelJob implements ShouldQueue
 
     public function __construct(
         string $customBatchId,
-        string $userId,
-        array $metadata,
         string $selectedQueue,
     ) {
         $this->customBatchId   = $customBatchId;
-        $this->userId    = $userId;
-        $this->metadata   = $metadata;
         $this->onQueue($selectedQueue);
     }
 
     public function handle()
     {
+        $redis = Redis::connection('redis_6380');
+        $this->metadata = $redis->hgetall("batch:{$this->customBatchId}:metadata");
+        $this->userId = $this->metadata['user_id'] ?? null;
+
+        $xlsCollection = ExcelRequired::openXls($this->metadata['filePath']);
+
+        $metadata = $this->metadata;
+        $metadata['total_rows'] = $xlsCollection->count();
+        $redis->hmset("batch:{$this->customBatchId}:metadata", $metadata);
+
         $errors = false;
         event(new ImportProgressEvent(
             $this->customBatchId,
             0,
-            "Iniciando validación Excel...",
+            "Iniciando validación de estructura del Excel...",
             0,
             'active',
             "Leyendo archivo Excel...",
         ));
 
         try {
-            if ($this->metadata['xlsCollection']->isEmpty()) {
-                Log::Info("entra if", [$this->metadata['xlsCollection']]);
 
-                event(new ImportProgressEvent(
-                    $this->customBatchId,
-                    0,
-                    'El archivo no cuenta con datos registrados',
-                    1,
-                    'failed',
-                    'El archivo no contiene filas.'
-                ));
-                $errors = true;
-            }
-
-            $normalize = fn($s) => Str::of($s)->lower()->replace(' ', '')->toString();
-            $headers = collect(array_keys($this->metadata['xlsCollection']->first()))->map($normalize);
-            $missing = collect($this->metadata['required'])->diff($headers);
-            if ($missing->isNotEmpty() && !$errors) {
-                // Convierte claves faltantes a nombres legibles
-                $cols = $missing->map(fn($k) => $k)->values()->all();
-
-                // Formatea: "a, b y c"
-                $last = array_pop($cols);
-                $colsStr = $last ? (count($cols) ? implode(', ', $cols) . ' y ' . $last : $last) : '';
-
-                event(new ImportProgressEvent(
-                    $this->customBatchId,
-                    0,
-                    'Estructura invalida en el excel',
-                    1,
-                    'failed',
-                    "Estructura inválida en el Excel. Faltan columnas requeridas: {$colsStr}."
-                ));
-
-                $errors = true;
-            }
+            $errors = ExcelValidator::validateAll($this->customBatchId, $xlsCollection, json_decode($this->metadata['required'], 1));
 
             if ($errors) {
                 ProcessBatch::where('batch_id', $this->customBatchId)->update([
-                    'error_count' => 1,
+                    'error_count' => ErrorCollector::countErrors($this->customBatchId),
                     'status' => 'failed',
                     'metadata' => json_encode($this->metadata),
                     'updated_at' => now(),

@@ -15,28 +15,31 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ExcelRequired
 {
-
-    public static function openXls($file)
+    public static function openXls($filePath)
     {
+        // Construir la ruta absoluta
+        $absolutePath = storage_path('app/public/' . $filePath);
+
+        // Verificar si el archivo existe
+        if (!file_exists($absolutePath)) {
+            throw new \Exception("El archivo no existe en la ruta: " . $absolutePath);
+        }
+
         // Leer el archivo XLS usando Laravel Excel
-        $data = Excel::toArray([], $file);
+        $data = Excel::toArray([], $absolutePath);
 
         // Procesar los datos obtenidos del archivo XLS
         $keys = $data[0][0]; // Los títulos se encuentran en la primera fila
         $excelData = array_slice($data[0], 1); // Eliminar la primera fila (encabezados)
 
-        // Crear una colección con los datos del XLS junto con los números de fila
-        $xlsCollection = collect($excelData)->map(function ($row, $index) use ($keys, $file) {
+        // Crear una colección con los datos del XLS
+        $xlsCollection = collect($excelData)->map(function ($row, $index) use ($keys) {
             $dataWithKeys = array_combine($keys, $row);
-            // $dataWithKeys['row'] = $index + 2; // Sumar 2 para ajustar al número de fila real
-            // $dataWithKeys['file'] = $file->getClientOriginalName();
-
             return $dataWithKeys;
         });
 
         return $xlsCollection;
     }
-
 
     public static function groupByNumFactura($csvCollection)
     {

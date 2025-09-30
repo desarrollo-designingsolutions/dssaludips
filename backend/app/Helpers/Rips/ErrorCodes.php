@@ -188,6 +188,13 @@ class ErrorCodes
 
     //Errores de validaciones excel
     const RIP_EXCEL_001 = ['code' => 'RIP_EXCEL_001', 'message' => 'Factura seleccionada no existe.'];
+    const RIP_EXCEL_002 = ['code' => 'RIP_EXCEL_002', 'message' => 'La factura seleccionada no aparece en el Excel.'];
+    const RIP_EXCEL_003 = ['code' => 'RIP_EXCEL_003', 'message' => 'RIP no encontrado.'];
+    const RIP_EXCEL_004 = ['code' => 'RIP_EXCEL_004', 'message' => 'No se encontraron números de factura en el Excel.'];
+    const RIP_EXCEL_005 = ['code' => 'RIP_EXCEL_005', 'message' => 'Las siguientes facturas del Excel no existen en el sistema: %s.'];
+    const RIP_EXCEL_006 = ['code' => 'RIP_EXCEL_006', 'message' => 'El Excel contiene facturas que no pertenecen al RIP seleccionado: %s.'];
+    const RIP_EXCEL_007 = ['code' => 'RIP_EXCEL_007', 'message' => 'El archivo no contiene filas.'];
+    const RIP_EXCEL_008 = ['code' => 'RIP_EXCEL_008', 'message' => 'Estructura inválida en el Excel. Faltan columnas requeridas: %s.'];
 
 
     /**
