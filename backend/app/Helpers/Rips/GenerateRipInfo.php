@@ -22,7 +22,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class GenerateRipInfo
 {
-    const CHUNK_SIZE = 10; // Tamaño del chunk configurable
+    const CHUNK_SIZE = 100; // Tamaño del chunk configurable
     const REDIS_KEY_PREFIX = 'rip_invoice_batch:';
 
     public static function saveReloadDataRips($ripId, $arrayJsonInvoices, $batchId = null)

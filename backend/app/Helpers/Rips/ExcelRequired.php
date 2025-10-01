@@ -15,28 +15,31 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ExcelRequired
 {
-
-    public static function openXls($file)
+    public static function openXls($filePath)
     {
+        // Construir la ruta absoluta
+        $absolutePath = storage_path('app/public/' . $filePath);
+
+        // Verificar si el archivo existe
+        if (!file_exists($absolutePath)) {
+            throw new \Exception("El archivo no existe en la ruta: " . $absolutePath);
+        }
+
         // Leer el archivo XLS usando Laravel Excel
-        $data = Excel::toArray([], $file);
+        $data = Excel::toArray([], $absolutePath);
 
         // Procesar los datos obtenidos del archivo XLS
         $keys = $data[0][0]; // Los títulos se encuentran en la primera fila
         $excelData = array_slice($data[0], 1); // Eliminar la primera fila (encabezados)
 
-        // Crear una colección con los datos del XLS junto con los números de fila
-        $xlsCollection = collect($excelData)->map(function ($row, $index) use ($keys, $file) {
+        // Crear una colección con los datos del XLS
+        $xlsCollection = collect($excelData)->map(function ($row, $index) use ($keys) {
             $dataWithKeys = array_combine($keys, $row);
-            // $dataWithKeys['row'] = $index + 2; // Sumar 2 para ajustar al número de fila real
-            // $dataWithKeys['file'] = $file->getClientOriginalName();
-
             return $dataWithKeys;
         });
 
         return $xlsCollection;
     }
-
 
     public static function groupByNumFactura($csvCollection)
     {
@@ -97,7 +100,7 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'consultas') {
-                        $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
+                        $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -115,7 +118,7 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'procedimientos') {
-                        $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'idMIPRES', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo','codDiagnosticoPrincipal','codComplicacion','codDiagnosticoRelacionado','finalidadTecnologiaSalud','viaIngresoServicioSalud','codPrestador','codProcedimiento'];
+                        $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'idMIPRES', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo','codDiagnosticoPrincipal','codComplicacion','codDiagnosticoRelacionado','finalidadTecnologiaSalud','viaIngresoServicioSalud','codPrestador','codProcedimiento'];
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -133,7 +136,7 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'medicamentos') {
-                        $requiredFields = ['conceptoRecaudo', 'idMIPRES', 'fechaDispensAdmon', 'codDiagnosticoPrincipal', 'codDiagnosticoRelacionado', 'formaFarmaceutica', 'unidadMinDispensa', 'diasTratamiento', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'vrUnitMedicamento', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
+                        $requiredFields = ['conceptoRecaudo', 'idMIPRES', 'fechaDispensAdmon', 'codDiagnosticoPrincipal', 'codDiagnosticoRelacionado', 'formaFarmaceutica', 'unidadMinDispensa', 'diasTratamiento', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'vrUnitMedicamento', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -151,7 +154,7 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'otrosServicios') {
-                        $requiredFields = ['conceptoRecaudo', 'idMIPRES', 'fechaSuministroTecnologia', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
+                        $requiredFields = ['conceptoRecaudo', 'idMIPRES', 'fechaSuministroTecnologia', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -266,7 +269,7 @@ class ExcelRequired
 
                             $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['tipoDocumentoIdentificacion'] = (string)$consulta['tipoDocumentoIdentificacion'];
                             $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['numDocumentoIdentificacion'] = (string)$consulta['numDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['tipoPagoModerador'] = (string)$consulta['tipoPagoModerador'];
+
                             $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['numFEVPagoModerador'] = (string)$consulta['numFEVPagoModerador'];
 
                             $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['conceptoRecaudo'] = (string)$consulta['conceptoRecaudo'];
@@ -384,7 +387,6 @@ class ExcelRequired
                             $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['tipoDocumentoIdentificacion'] = (string)$medicamento['tipoDocumentoIdentificacion'];
                             $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['numDocumentoIdentificacion'] = (string)$medicamento['numDocumentoIdentificacion'];
                             $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['vrUnitMedicamento'] = (string)$medicamento['vrUnitMedicamento'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['tipoPagoModerador'] = (string)$medicamento['tipoPagoModerador'];
                             $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['numFEVPagoModerador'] = (string)$medicamento['numFEVPagoModerador'];
 
                             $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['conceptoRecaudo'] = (string)$medicamento['conceptoRecaudo'];

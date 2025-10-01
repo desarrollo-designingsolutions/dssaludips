@@ -3,11 +3,14 @@
 namespace App\Jobs\Rips;
 
 use App\Enums\Rip\RipInvoiceStatusEnum;
+use App\Enums\Rip\RipStatusEnum;
 use App\Events\ImportProgressEvent;
 use App\Events\RipInvoiceRowUpdatedNow;
+use App\Events\RipRowUpdatedNow;
 use App\Helpers\Common\ErrorCollector;
 use App\Helpers\Rips\ErrorCodes;
 use App\Helpers\Rips\ExcelRequired;
+use App\Helpers\Rips\GenerateRipInfo;
 use App\Models\ProcessBatch;
 use App\Models\Rip;
 use App\Models\RipInvoice;
@@ -19,8 +22,11 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Sleep;
 
 class RipInvoiceValidationJob implements ShouldQueue
 {
@@ -38,68 +44,74 @@ class RipInvoiceValidationJob implements ShouldQueue
     /** Para marcar si hubo errores en la corrida */
     protected bool $hasErrors = false;
 
+    protected $idsByNumber = null;
+
     public function __construct(
         string $customBatchId,
-        string $userId,
-        array $metadata,
         string $selectedQueue = 'default'
     ) {
         $this->customBatchId = $customBatchId;
-        $this->userId        = $userId;
-        $this->metadata      = $metadata;
         $this->onQueue($selectedQueue);
     }
 
     public function handle(): void
     {
-        // Inicio: limpiar errores previos y notificar progreso
-        ErrorCollector::clear($this->customBatchId);
+        $redis = Redis::connection('redis_6380');
+        $this->metadata = $redis->hgetall("batch:{$this->customBatchId}:metadata");
+        $this->userId = $this->metadata['user_id'] ?? null;
+
+        $xlsCollection = ExcelRequired::openXls($this->metadata['filePath']);
 
         event(new ImportProgressEvent(
             $this->customBatchId,
             0,
             'Iniciando validación de Excel...',
-            0,
+            ErrorCollector::countErrors($this->customBatchId),
             'active',
             'Leyendo archivo Excel...'
         ));
 
         try {
             // Agrupar por número de factura
-            $groupedByFactura = ExcelRequired::groupByNumFactura($this->metadata['xlsCollection']); // Collection keyed by num_facti
-            $total = $groupedByFactura->count();
-            $processed = 0;
+            $groupedByFactura = ExcelRequired::groupByNumFactura($xlsCollection); // Collection keyed by num_facti
 
-            Log::Info($this->metadata['ripInvoice']);
+            $metadata = $this->metadata;
+            $metadata['total_rows'] = $groupedByFactura->count();
+            $redis->hmset("batch:{$this->customBatchId}:metadata", $metadata);
+            $processed = 0;
+            $xlsCollection = [];
 
             // Lógica de alcance
-            if ($this->metadata['ripInvoice']) { // INDEPENDIENTE: solo la factura seleccionada
-                $ripInvoice = RipInvoice::find($this->metadata['ripInvoice']['id'], "rip");
+            if ($this->metadata['ripInvoice_id']) { // INDEPENDIENTE: solo la factura seleccionada
+                $ripInvoice = RipInvoice::with('rip')->find($this->metadata['ripInvoice_id']);
                 $rip = $ripInvoice->rip;
                 if (!$ripInvoice) {
+                    $this->hasErrors = true;
                     $this->pushError($processed, 'numFactura', 0, [], ErrorCodes::getMessage('RIP_EXCEL_001'), ErrorCodes::RIP_EXCEL_001['code']);
                 }
                 $numFacturaSel = (string) $ripInvoice->invoice_number;
 
                 if (!$groupedByFactura->has($numFacturaSel)) {
-                    $this->pushError($processed, 'numFactura', 0, [], 'La factura seleccionada no aparece en el Excel.', 'RIP_EXCEL_002');
+                    $this->hasErrors = true;
+                    $this->pushError($processed, 'numFactura', 0, [], ErrorCodes::getMessage('RIP_EXCEL_002'), ErrorCodes::RIP_EXCEL_002['code']);
+                } else {
+                    // Deja en $xlsCollection SOLO ese grupo (aunque el archivo sea masivo)
+                    $xlsCollection = collect([$numFacturaSel => $groupedByFactura->get($numFacturaSel)]);
                 }
-
-                // Deja en $xlsCollection SOLO ese grupo (aunque el archivo sea masivo)
-                $xlsCollection = collect([$numFacturaSel => $groupedByFactura->get($numFacturaSel)]);
             } else {
                 // GLOBAL: valida que TODAS las facturas del Excel existan y pertenezcan al RIP
-                $rip = Rip::find($this->metadata['rip']);
+                $rip = Rip::find($this->metadata['rip_id']);
                 if (!$rip) {
-                    // return ['code' => 404, 'status' => 'error', 'message' => 'RIP no encontrado.'];
-                    $this->pushError($processed, 'numFactura', 0, [], 'RIP no encontrado.', 'RIP_EXCEL_003');
+                    $this->hasErrors = true;
+                    $this->pushError($processed, 'numFactura', 0, [], ErrorCodes::getMessage('RIP_EXCEL_003'), ErrorCodes::RIP_EXCEL_003['code']);
                 }
 
                 // Facturas detectadas en el Excel (claves del groupBy)
                 $excelInvoices = $groupedByFactura->keys()->map(fn($n) => (string) $n)->values();
 
                 if ($excelInvoices->isEmpty()) {
-                    $this->pushError($processed, 'numFactura', 0, [], 'No se encontraron números de factura en el Excel.', 'RIP_EXCEL_004');
+                    $this->hasErrors = true;
+                    $this->pushError($processed, 'numFactura', 0, [], ErrorCodes::getMessage('RIP_EXCEL_004'), ErrorCodes::RIP_EXCEL_004['code']);
                 }
 
                 // --- 1) Verificar que EXISTAN en BD (en cualquier RIP) ---
@@ -115,12 +127,13 @@ class RipInvoiceValidationJob implements ShouldQueue
                     $last = array_pop($cols);
                     $list = $last ? (count($cols) ? implode(', ', $cols) . ' y ' . $last : $last) : '';
 
-                    $this->pushError($processed, 'numFactura', 0, [], "Las siguientes facturas del Excel no existen en el sistema: {$list}.", 'RIP_EXCEL_005');
+                    $this->hasErrors = true;
+                    $this->pushError($processed, 'numFactura', 0, [], ErrorCodes::getMessage('RIP_EXCEL_005', $list), ErrorCodes::RIP_EXCEL_005['code']);
                 }
 
                 // --- 2) Verificar que PERTENEZCAN al RIP seleccionado ---
                 $validForRip = RipInvoice::query()
-                    ->where('rip_id', $this->metadata['rip'])
+                    ->where('rip_id', $this->metadata['rip_id'])
                     ->pluck('invoice_number')
                     ->map(fn($n) => (string) $n);
 
@@ -130,93 +143,178 @@ class RipInvoiceValidationJob implements ShouldQueue
                     $last = array_pop($cols);
                     $list = $last ? (count($cols) ? implode(', ', $cols) . ' y ' . $last : $last) : '';
 
-                    $this->pushError($processed, 'numFactura', 0, [], "El Excel contiene facturas que no pertenecen al RIP seleccionado: {$list}.", 'RIP_EXCEL_006');
+                    $this->hasErrors = true;
+                    $this->pushError($processed, 'numFactura', 0, [], ErrorCodes::getMessage('RIP_EXCEL_006', $list), ErrorCodes::RIP_EXCEL_006['code']);
                 }
 
                 $xlsCollection = $groupedByFactura;
             }
 
-            // if ($invoice_id) {
-            //     $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_004->value;
-            //     $ripInvoice->save();
-            //     RipInvoiceRowUpdatedNow::dispatch($ripInvoice->id);
-            //     $jsonData = openFileJson($ripInvoice->path_json);
-            //     $jsonData = [$jsonData]; // aqui lo hacemos asi para que me siga funcionando la funcion proccessData cunado es independiente
+            if ($this->metadata['ripInvoice_id']) {
+                $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_004->value;
+                $ripInvoice->save();
+                RipInvoiceRowUpdatedNow::dispatch($ripInvoice->id);
+                $jsonData = openFileJson($ripInvoice->path_json);
+                $jsonData = [$jsonData]; // aqui lo hacemos asi para que me siga funcionando la funcion proccessData cunado es independiente
+
+                $this->idsByNumber = collect();
+                $this->idsByNumber->put((string)$ripInvoice->invoice_number, $ripInvoice->id);
+            } else {
+                $rip->status = RipStatusEnum::RIP_STATUS_004->value;
+                $rip->save();
+                RipRowUpdatedNow::dispatch($rip->id);
+                $jsonData = openFileJson($rip->path_json);
 
 
-            // } else {
-            //     $rip->status = RipStatusEnum::RIP_STATUS_004->value;
-            //     $rip->save();
-            //     RipRowUpdatedNow::dispatch($rip->id);
-            //     $jsonData = openFileJson($rip->path_json);
 
+                $firstKey = $xlsCollection->keys()->first();
+                if (is_int($firstKey)) {
+                    $xlsCollection = $xlsCollection->groupBy(fn($r) => (string)($r['num_factura'] ?? $r['num_facti'] ?? ''));
+                }
 
+                $invoiceNumbers = $xlsCollection->keys()->map(fn($n) => (string) $n)->values();
 
-            //     $firstKey = $xlsCollection->keys()->first();
-            //     if (is_int($firstKey)) {
-            //         $xlsCollection = $xlsCollection->groupBy(fn($r) => (string)($r['num_factura'] ?? $r['num_facti'] ?? ''));
-            //     }
+                $this->idsByNumber = RipInvoice::query()
+                    ->where('rip_id', $rip->id)
+                    ->whereIn('invoice_number', $invoiceNumbers)
+                    ->pluck('id', 'invoice_number');
 
-            //     $invoiceNumbers = $xlsCollection->keys()->map(fn($n) => (string) $n)->values();
+                foreach ($xlsCollection as $numFactura => $rows) {
+                    $ripInvoiceId = $this->idsByNumber->get((string) $numFactura);
+                    $ripInvoice = RipInvoice::find($ripInvoiceId);
 
-            //     $idsByNumber = RipInvoice::query()
-            //         ->where('rip_id', $rip_id)
-            //         ->whereIn('invoice_number', $invoiceNumbers)
-            //         ->pluck('id', 'invoice_number');
+                    if ($ripInvoice) {
+                        $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_004->value;
+                        $ripInvoice->save();
+                        RipInvoiceRowUpdatedNow::dispatch($ripInvoiceId);
+                    }
+                }
+            }
 
-            //     foreach ($xlsCollection as $numFactura => $rows) {
-            //         $ripInvoiceId = $idsByNumber->get((string) $numFactura);
-            //         $ripInvoice = $this->ripInvoiceRepository->find($ripInvoiceId);
+            if (!$this->hasErrors) {
 
-            //         $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_004->value;
-            //         $ripInvoice->save();
-            //         RipInvoiceRowUpdatedNow::dispatch($ripInvoice->id);
-            //     }
-            // }
+                $countErrors = ErrorCollector::countErrors($this->customBatchId);
 
-            // //aqui pasamos toda la data encontrada en el archivo xls al array general de las facturas
-            // $jsonInfo = ExcelRequired::processData($jsonData, $xlsCollection);
+                event(new ImportProgressEvent(
+                    $this->customBatchId,
+                    0,
+                    'Pasando información del excel a un clon del json.',
+                    $countErrors,
+                    'active',
+                    'Iniciando proceso de transferencia de datos.'
+                ));
 
-            // $validationExcel = ExcelRequired::validateDataFilesExcel($jsonInfo, $jsonData);
+                //aqui pasamos toda la data encontrada en el archivo xls al array general de las facturas
+                $jsonInfo = ExcelRequired::processData($jsonData, $xlsCollection);
 
-            // if ($validationExcel['totalErrorMessages'] > 0) {
-            //     return [
-            //         'code'    => 422,
-            //         'status'  => 'error',
-            //         'message' => "Se encontraron {$validationExcel['totalErrorMessages']} errores en la validacion del excel.",
-            //     ];
-            // }
+                event(new ImportProgressEvent(
+                    $this->customBatchId,
+                    0,
+                    'Validando información del clon del json transferido.',
+                    $countErrors,
+                    'active',
+                    'Iniciando proceso validación.'
+                ));
 
-            // //Aqui se traspasa la informacion que esta bien segun las validaciones de excel
-            // return $jsonInvoices = $jsonData;
-            // foreach ($jsonInvoices as $key => $value) {
-            //     DB::beginTransaction();
-            //     //se guarda el xls nuevo y json independientes en la bd
-            //     GenerateRipInfo::saveReloadDataInvoice($rip->id, $value, $validationExcel['totalErrorMessages']);
+                $validationExcel = ExcelRequired::validateDataFilesExcel($jsonInfo, $jsonData);
 
-            //     DB::commit();
-            // }
+                if ($validationExcel['totalErrorMessages'] > 0) {
 
-            // //informacion del resultado de las validaciones Excel
+                    foreach ($validationExcel['errorMessages'] as $key => $value) {
+                        // $this->pushError($processed, 'numFactura', 0, [], ErrorCodes::getMessage('RIP_EXCEL_006', $list), ErrorCodes::RIP_EXCEL_006['code']);
+                    }
 
-            // GenerateRipInfo::generateDataJsonAndExcel($rip->id);
-            // ExcelRequired::validateRipsStatus($rip->id);
-            // RipRowUpdatedNow::dispatch($rip->id);
+                    $this->fail(new \Exception('Validación Excel crítica fallida'));
+                }
+
+                event(new ImportProgressEvent(
+                    $this->customBatchId,
+                    0,
+                    'Transfiriendo información al json original.',
+                    $countErrors,
+                    'active',
+                    'Iniciando proceso tranferencia.'
+                ));
+
+                //Aqui se traspasa la informacion que esta bien segun las validaciones de excel
+                $jsonInvoices = $jsonData;
+                GenerateRipInfo::saveReloadDataInvoices($rip->id, $jsonInvoices);
+
+                event(new ImportProgressEvent(
+                    $this->customBatchId,
+                    $metadata['total_rows'],
+                    'Generando el excel y json global.',
+                    $countErrors,
+                    'active',
+                    "Generando archivos finales del RIPS.",
+                ));
+
+                GenerateRipInfo::generateDataJsonAndExcel($rip->id);
+
+                event(new ImportProgressEvent(
+                    $this->customBatchId,
+                    $metadata['total_rows'],
+                    'Verificando estados de facturas y el rips en general.',
+                    $countErrors,
+                    'active',
+                    "Verificando estados de facturas y el rips en general.",
+                ));
+
+                // ExcelRequired::validateRipsStatus($rip->id);
+                RipRowUpdatedNow::dispatch($rip->id);
+            }
         } catch (\Throwable $e) {
             // Error inesperado
             Log::error("Error en RipInvoiceValidationJob: {$e->getMessage()}", [
                 'customBatchId' => $this->customBatchId,
                 'trace' => $e->getTraceAsString(),
             ]);
+            $this->pushError(0, 'trycatch', null, [], $e->getMessage(), $e->getCode());
             $this->updateBatchStatus('failed');
             $this->notifyUser($this->userId, 'Error en Validacion de datos del Excel', "Error en Validacion de datos del Excel: {$e->getMessage()}", 'error');
-            $this->fail($e);
         } finally {
             // Persistir errores a BD y actualizar process_batches/rip_batch
-            ErrorCollector::saveErrorsToDatabase(
+            $countErrors = ErrorCollector::countErrors($this->customBatchId);
+
+            Log::info('dentro del finaly', ['countErrors' => $countErrors, 'hasErrors' => $this->hasErrors]);
+
+            $status = $countErrors > 0 ? 'completed_with_errors' : 'completed';
+
+            event(new ImportProgressEvent(
                 $this->customBatchId,
-                $this->hasErrors ? 'failed' : 'completed'
-            );
+                0,
+                'Finalizando proceso.',
+                $countErrors,
+                $status,
+                'Finalizando proceso de validación.'
+            ));
+
+            ErrorCollector::saveErrorsToDatabase($this->customBatchId, $status);
+
+            Log::info("idsByNumber ", [$this->idsByNumber]);
+            foreach ($xlsCollection as $numFactura => $rows) {
+                $ripInvoiceId = $this->idsByNumber->get((string) $numFactura);
+                $ripInvoice = RipInvoice::find($ripInvoiceId);
+
+                if ($ripInvoice) {
+                    $ripInvoice->status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_002->value;
+                    $ripInvoice->save();
+                    RipInvoiceRowUpdatedNow::dispatch($ripInvoiceId);
+                }
+            }
+            $rip->status = RipStatusEnum::RIP_STATUS_002->value;
+            $rip->save();
+            RipRowUpdatedNow::dispatch($rip->id);
+
+
+            event(new ImportProgressEvent(
+                $this->customBatchId,
+                0,
+                'Proceso de validación finalizado.',
+                $countErrors,
+                $status,
+                'Validación de Excel finalizada.'
+            ));
         }
     }
 
@@ -238,7 +336,7 @@ class RipInvoiceValidationJob implements ShouldQueue
         $excelRowNumber = $processedRowIndex + 1; // processed=1 -> Excel row 2
 
         ErrorCollector::addError(
-            batchId: $this->batchId,
+            batchId: $this->customBatchId,
             rowNumber: $excelRowNumber,
             columnName: $columnKey, // p.ej. 'tipo_de_documento', 'fecha_de_nacimiento'
             errorMessage: $message,
@@ -271,4 +369,5 @@ class RipInvoiceValidationJob implements ShouldQueue
             Log::warning("Usuario no encontrado para notificación: {$userId}");
         }
     }
+
 }
