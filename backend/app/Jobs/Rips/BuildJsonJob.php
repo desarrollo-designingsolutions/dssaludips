@@ -116,8 +116,8 @@ class BuildJsonJob implements ShouldQueue
                 'status' => $status,
             ]);
 
-            GenerateRipInfo::saveReloadDataRips($rip->id, $jsonContents, $this->batchId);
 
+            GenerateRipInfo::saveReloadDataRips($rip->id, $jsonContents, $this->batchId);
 
             event(new ImportProgressEvent(
                 $this->batchId,

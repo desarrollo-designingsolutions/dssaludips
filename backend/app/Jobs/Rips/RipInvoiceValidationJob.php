@@ -238,6 +238,8 @@ class RipInvoiceValidationJob implements ShouldQueue
 
                 //Aqui se traspasa la informacion que esta bien segun las validaciones de excel
                 $jsonInvoices = $jsonData;
+
+
                 GenerateRipInfo::saveReloadDataInvoices($rip->id, $jsonInvoices);
 
                 event(new ImportProgressEvent(

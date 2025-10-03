@@ -7,7 +7,7 @@ use App\Enums\Rip\RipInvoiceStatusXmlEnum;
 use App\Enums\Rip\RipTypeEnum;
 use App\Events\ImportProgressEvent;
 use App\Events\RipInvoiceRowUpdatedNow;
-use App\Exports\RipXlsExport;
+use App\Exports\Rips\RipXlsExport;
 use App\Helpers\Constants;
 use App\Models\Rip;
 use App\Models\RipInvoice;
@@ -44,7 +44,7 @@ class GenerateRipInfo
     }
 
     //genero el excel y json global
-    public static function generateDataJsonAndExcel($ripId, $type = RipTypeEnum::RIP_TYPE_001->value)
+    public static function generateDataJsonAndExcel($ripId, $type = RipTypeEnum::RIP_TYPE_001->value, $fileExcel = false)
     {
         //generamos el archivo xls con los campos que faltan para todas las facturas
 
@@ -59,11 +59,14 @@ class GenerateRipInfo
         }
 
 
+        $path_excel = null;
 
-        //EXCELES
-        $nameFile = 'rips_' . $rip->id . '.xlsx';
-        $path_excel = 'companies/company_' . $rip->company_id . '/rips/' . $type . '/rip_' . $rip->id . '/' . $nameFile; // Ruta donde se guardará la carpeta
-        Excel::store(new RipXlsExport($jsonContents), $path_excel, 'public', \Maatwebsite\Excel\Excel::XLSX);
+        if ($fileExcel === true) {
+            //EXCELES
+            $nameFile = 'rips_' . $rip->id . '.xlsx';
+            $path_excel = 'companies/company_' . $rip->company_id . '/rips/' . $type . '/rip_' . $rip->id . '/' . $nameFile; // Ruta donde se guardará la carpeta
+            Excel::store(new RipXlsExport($jsonContents), $path_excel, 'public', \Maatwebsite\Excel\Excel::XLSX);
+        }
 
         //JSONS
         // Nombre del archivo en el sistema de archivos
@@ -128,8 +131,12 @@ class GenerateRipInfo
                 foreach ($services as $service) {
                     if (isset($user['servicios'][$service]) && count($user['servicios'][$service]) > 0) {
                         foreach ($user['servicios'][$service] as $keyH => &$value) {
-                            unset($value['numDocumentoIdentificacion']);
-                            unset($value['numFEVPagoModerador']);
+                            if(isset($value['numDocumentoIdentificacion'])){
+                                unset($value['numDocumentoIdentificacion']);
+                            }
+                            if(isset($value['numDocumentoIdentificacion'])){
+                                unset($value['numDocumentoIdentificacion']);
+                            }
                         }
                     }
                 }
@@ -178,15 +185,17 @@ class GenerateRipInfo
 
         foreach ($chunkData as $invoiceData) {
 
-
             $type = $rip->type?->value;
 
-            $nameFile = $invoiceData['numFactura'] . '.xlsx';
-            $routeXls = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/invoices/{$invoiceData['numFactura']}/{$nameFile}"; // Ruta donde se guardará la carpeta
-            Excel::store(new RipXlsExport([$invoiceData]), $routeXls, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
+            // $nameFile = $invoiceData['numFactura'] . '.xlsx';
+            $routeXls = null;
+            // $routeXls = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/invoices/{$invoiceData['numFactura']}/{$nameFile}"; // Ruta donde se guardará la carpeta
+            // Excel::store(new RipXlsExport([$invoiceData]), $routeXls, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
+
 
             $nameFile = $invoiceData['numFactura'] . '.json';
             $routeJson = 'companies/company_' . $rip->company_id . '/rips/' . $type . '/rip_' . $rip->id . '/invoices/' . $invoiceData['numFactura'] . '/' . $nameFile; // Ruta donde se guardará la carpeta
+
             Storage::disk(Constants::DISK_FILES)->put($routeJson, json_encode($invoiceData)); //guardo el archivo
 
             $invoiceNumber = $invoiceData['numFactura'];
@@ -218,7 +227,7 @@ class GenerateRipInfo
         // Upsert masivo usando Eloquent
         self::bulkUpsertSimple($batchData, $rip->id);
 
-        if($batchId) {
+        if ($batchId) {
             $redis = Redis::connection('redis_6380');
             $metadata = $redis->hgetall("batch:{$batchId}:metadata");
             $totalErrors = $metadata['total_errors'] ?? 0;
@@ -232,7 +241,6 @@ class GenerateRipInfo
                 "Guardando registros... (" . ($chunkIndex + 1) . "/$totalChunks)" // Progreso
             ));
         }
-
     }
 
     private static function bulkUpsertSimple($batchData, $ripId)

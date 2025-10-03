@@ -4,8 +4,9 @@ namespace App\Jobs\Rips;
 
 use App\Enums\Rip\RipInvoiceStatusEnum;
 use App\Events\RipValidationStatusUpdated;
-use App\Exports\RipXlsExport;
+use App\Exports\Rips\RipXlsExport;
 use App\Helpers\Constants;
+use App\Helpers\Rips\GenerateRipInfo;
 use App\Models\RipInvoice;
 use App\Repositories\RipInvoiceRepository;
 use App\Services\Rips\RipsMinistryApiClient;
@@ -54,6 +55,11 @@ class ValidateRipInvoiceJob implements ShouldQueue
             $invoice = $ripInvoiceRepository->find($this->invoiceId);
             $this->changeJsonValues($invoice);
 
+
+            GenerateRipInfo::generateDataJsonAndExcel($invoice->rip_id,fileExcel:true);
+
+
+
             if ($result["status_code"] != 200) {
                 $status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_007;
             } else {
@@ -98,7 +104,7 @@ class ValidateRipInvoiceJob implements ShouldQueue
         $validation_metadata = json_decode($invoice->validation_metadata, true);
         $resultadosValidacion = $validation_metadata['ResultadosValidacion'] ?? [];
 
-        Log::info("Resultados de validación para RipInvoice ID: {$invoice->id}", $resultadosValidacion);
+        // Log::info("Resultados de validación para RipInvoice ID: {$invoice->id}", $resultadosValidacion);
 
         // Extraer PathFuente únicos (solo RECHAZADO)
         $pathFuentes = array_unique(array_filter(array_map(function ($item) {
@@ -107,7 +113,7 @@ class ValidateRipInvoiceJob implements ShouldQueue
                 : null;
         }, $resultadosValidacion)));
 
-        Log::info("PathFuente a procesar para RipInvoice ID: {$invoice->id}", $pathFuentes);
+        // Log::info("PathFuente a procesar para RipInvoice ID: {$invoice->id}", $pathFuentes);
 
         if (empty($pathFuentes)) {
             Log::info("No hay PathFuente para procesar en RipInvoice ID: {$invoice->id}");
@@ -116,7 +122,7 @@ class ValidateRipInvoiceJob implements ShouldQueue
 
         // Modificar JSON seteando campos a null
         foreach ($pathFuentes as $path) {
-            Log::debug("JSON antes de modificar:", $json);
+            // Log::debug("JSON antes de modificar:", $json);
             self::setNullByPath($json, $path);
         }
 
@@ -128,6 +134,9 @@ class ValidateRipInvoiceJob implements ShouldQueue
         $routeXls = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/invoices/{$numFactura}/{$nameFile}";
 
         Excel::store(new RipXlsExport([$json]), $routeXls, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
+
+        $invoice->path_excel = $routeXls;
+        $invoice->save();
     }
 
     /**
@@ -143,45 +152,40 @@ class ValidateRipInvoiceJob implements ShouldQueue
             $path = substr($path, 5);
         }
 
-        Log::info("Path a procesar: {$path}");
-
         $parts = [];
         preg_match_all('/([^\.\[\]]+|\[\d+\])/', $path, $matches);
         $parts = $matches[0];
 
-        Log::debug("Partes del path:", $parts);
-        Log::debug("Estructura actual del array:", $array);
-
         $current = &$array;
 
         foreach ($parts as $i => $part) {
-            Log::debug("Procesando parte {$i}: {$part}");
+            // Log::debug("Procesando parte {$i}: {$part}");
 
             if (preg_match('/^\[(\d+)\]$/', $part, $indexMatch)) {
                 $index = (int)$indexMatch[1];
-                Log::debug("Buscando índice [{$index}] en array");
+                // Log::debug("Buscando índice [{$index}] en array");
 
-                if (!isset($current[$index])) {
-                    Log::warning("Índice [{$index}] no existe");
+                if (!array_key_exists($index, $current)) {  // CAMBIO AQUÍ
+                    // Log::warning("Índice [{$index}] no existe");
                     return;
                 }
                 $current = &$current[$index];
             } else {
-                Log::debug("Buscando clave '{$part}' en: ", [json_encode(array_keys($current))]);
+                // Log::debug("Buscando clave '{$part}'");
 
-                if (!isset($current[$part])) {
-                    Log::warning("Clave '{$part}' no encontrada");
+                if (!array_key_exists($part, $current)) {  // CAMBIO AQUÍ
+                    // Log::warning("Clave '{$part}' no encontrada");
                     return;
                 }
                 $current = &$current[$part];
             }
 
-            Log::debug("Valor actual después de parte {$i}:", [$current]);
+            // Log::debug("Navegado exitosamente");
         }
 
-        Log::info("Campo encontrado, valor actual: ", [json_encode($current)]);
-        $current = null;
-        Log::info("Campo seteado a null exitosamente");
+        // Log::info("Campo encontrado, seteando a null");
+        $current = Constants::EXCEL_GENERATION_KEY; // Valor especial para solicitar el campo en el excel a descargar
+        // Log::info("Campo seteado a null exitosamente");
     }
 
     public function failed(\Throwable $exception)

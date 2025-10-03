@@ -37,6 +37,7 @@ class Constants
     // public const AVAILABLE_QUEUES_TO_VALIDATION_RIPS_MINISTERY = ['validation_rips_ministery_1', 'validation_rips_ministery_2', 'validation_rips_ministery_3'];
     public const AVAILABLE_QUEUES_TO_VALIDATION_RIPS_MINISTERY = ['validation_rips_ministery_1'];
 
+    public const EXCEL_GENERATION_KEY  = "b8Rt3Y7pK9Lm2Q4xF5vN"; // Valor especial para solicitar el campo en el excel a descargar
 
 
     // REGLAS O CODIGOS PARA LOS SELECECTS DEL FORMULARIO DEL SERVICIO
