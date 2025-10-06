@@ -214,11 +214,6 @@ const goViewFurips2 = (data: any) => {
 const goViewFurtran = (data: any) => {
   router.push({ name: "Invoice-Furtran", params: { action: data.furtran_id ? 'view' : 'create', invoice_id: data.id, id: data.furtran_id } })
 }
-
-//Visualizar usuarios
-const goViewUsers = (data: any) => {
-  router.push({ name: "Invoice-ListUsers", params: { invoice_id: data.id } })
-}
 </script>
 
 <template>
@@ -326,12 +321,6 @@ const goViewUsers = (data: any) => {
                     <VIcon icon="tabler-upload"></VIcon>
                   </template>
                   Subir XML
-                </VListItem>
-                <VListItem @click="goViewUsers(item)">
-                  <template #prepend>
-                    <VIcon icon="tabler-users"></VIcon>
-                  </template>
-                  Ver Usuarios
                 </VListItem>
                 <VListItem v-if="item.type == 'INVOICE_TYPE_002'" @click="() => { }">
 

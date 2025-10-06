@@ -1432,19 +1432,4 @@ class InvoiceController extends Controller
 
         return $invoice;
     }
-
-    public function paginatedUsers(Request $request, $invoiceId)
-    {
-        return $this->execute(function () use ($request, $invoiceId) {
-            $invoice = $this->invoiceRepository->find($invoiceId, select: ['id', 'invoice_number']);
-
-            $getPaginatedDataRedis = GenerateValues::getPaginatedDataRedis($request, $invoiceId, $this->invoiceRepository);
-
-            return [
-                'invoice' => $invoice,
-                'dataUsers' => $getPaginatedDataRedis['data'],
-                'pagination' => $getPaginatedDataRedis['pagination'],
-            ];
-        });
-    }
 }

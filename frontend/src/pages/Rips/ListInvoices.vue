@@ -3,6 +3,8 @@ import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 import ModalUploadExcel from '@/pages/Rips/Components/ModalUploadExcel.vue';
 import ModalUploadXml from '@/pages/Rips/Components/ModalUploadXml.vue';
 import ModalValidateRips from '@/pages/Rips/Components/ModalValidateRips.vue';
+import { router } from '@/plugins/1.router';
+
 const { toast } = useToast();
 
 definePage({
@@ -226,6 +228,11 @@ const openModalValidateRips = (item: any) => {
   refModalValidateRips.value.openModal([item.id]);
 };
 
+//Visualizar usuarios
+const goViewUsers = (data: any) => {
+  console.log("data", data);
+  router.push({ name: "Invoice-ListUsers", params: { invoice_id: data.id } })
+}
 </script>
 
 <template>
@@ -264,12 +271,10 @@ const openModalValidateRips = (item: any) => {
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
                     </VListItem>
-                    <VListItem 
-                      @click="downloadFileData(item, 'excel')">
+                    <VListItem @click="downloadFileData(item, 'excel')">
                       Descargar Excel
                     </VListItem>
-                    <VListItem 
-                      @click="openModalUploadExcel(item)">Subir
+                    <VListItem @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
                     <!-- <VListItem v-if="['RIP_INVOICE_STATUS_002', 'RIP_INVOICE_STATUS_007'].includes(item.status)"
                       @click="openModalUploadExcel(item)">Subir
@@ -277,6 +282,9 @@ const openModalValidateRips = (item: any) => {
                     <VListItem v-if="!item.path_xml" @click="openModalUploadXml(item)">Subir XML</VListItem>
                     <VListItem v-if="item.path_xml" @click="downloadFileData(item, 'xml')">Descargar XML</VListItem>
                     <VListItem @click="openModalValidateRips(item)">Ver inconsistencias
+                    </VListItem>
+                    <VListItem @click="goViewUsers(item)">
+                      Ver Usuarios
                     </VListItem>
                   </VList>
                 </VMenu>

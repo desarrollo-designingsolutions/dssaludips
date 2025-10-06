@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Redis;
 
 class GenerateValues
 {
-    public static function getPaginatedDataRedis(Request $request, $invoiceId, $model, $redisPrefix = 'invoice')
+    public static function getPaginatedDataRedis(Request $request, $invoiceId, $model, $redisPrefix = 'ripInvoice')
     {
         // Parámetros de paginación y ordenamiento
         $perPage = $request->input('per_page', 10);
@@ -43,7 +43,7 @@ class GenerateValues
             // logMessage('no deberia entrar aqui');
 
             // Guardar el elemnto de la factura en Redis
-            $redisKeyInvoice = "invoice:{$invoice->id}:dataBd";
+            $redisKeyInvoice = "ripInvoice:{$invoice->id}:dataBd";
             Redis::set($redisKeyInvoice, json_encode($invoice));
             Redis::expire($redisKeyInvoice, 2592000); // 30 días en segundos (60 * 60 * 24 * 30)
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useInvoiceUserStore } from "@/pages/Invoice/Components/useInvoiceUserStore";
+import { useRipInvoiceUserStore } from "@/pages/Rips/Components/useRipInvoiceUserStore";
 import { router } from "@/plugins/1.router";
 import { useRoute } from 'vue-router';
 
@@ -13,7 +13,7 @@ definePage({
   },
 });
 
-const { dataUser, servicesCount, dataInvoice } = storeToRefs(useInvoiceUserStore());
+const { dataUser, servicesCount, dataInvoice } = storeToRefs(useRipInvoiceUserStore());
 
 
 const route = useRoute();
@@ -60,7 +60,7 @@ const fetchUsers = async (opts = {}) => {
   const { page, itemsPerPage, sortBy, sortDesc } = opts;
 
   try {
-    const { data, response } = await useAxios(`/invoice/${invoiceId.value}/paginatedUsers`).get({
+    const { data, response } = await useAxios(`/ripInvoice/${invoiceId.value}/paginatedUsers`).get({
       params: {
         page: page || options.value.page,
         per_page: itemsPerPage || options.value.itemsPerPage,

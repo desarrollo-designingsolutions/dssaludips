@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 
-export const useInvoiceUserStore = defineStore('useInvoiceUserStore', {
+export const useRipInvoiceUserStore = defineStore('useRipInvoiceUserStore', {
   state: () => ({
     dataUser: {
       arrayData: [] as Array<object>

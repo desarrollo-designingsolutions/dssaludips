@@ -12,6 +12,7 @@ use App\Models\ProcessBatch;
 use App\Services\ProcessBatchService;
 use App\Events\ImportProgressEvent;
 use App\Helpers\Common\ErrorCollector;
+use App\Helpers\Common\GenerateValues;
 use App\Jobs\Rips\ProcessXmlFileJob;
 use App\Jobs\Rips\ValidationXmlFilesJob;
 use App\Jobs\Rips\SaveErrorsJob;
@@ -215,6 +216,21 @@ class RipInvoiceController extends Controller
                 'code' => 200,
                 'countRipInvoicesWithoutXml' => $countRipInvoicesWithoutXml,
                 'totalInvoices' => count($invoices_ids), // Añadimos el total de facturas enviadas
+            ];
+        });
+    }
+
+    public function paginatedUsers(Request $request, $invoiceId)
+    {
+        return $this->execute(function () use ($request, $invoiceId) {
+            $invoice = $this->ripInvoiceRepository->find($invoiceId, select: ['id', 'invoice_number']);
+
+            $getPaginatedDataRedis = GenerateValues::getPaginatedDataRedis($request, $invoiceId, $this->ripInvoiceRepository);
+
+            return [
+                'invoice' => $invoice,
+                'dataUsers' => $getPaginatedDataRedis['data'],
+                'pagination' => $getPaginatedDataRedis['pagination'],
             ];
         });
     }

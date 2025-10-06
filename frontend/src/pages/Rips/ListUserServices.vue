@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import Emergencies from "@/pages/Invoice/ServicesView/Emergencies.vue";
-import Hospitalization from "@/pages/Invoice/ServicesView/Hospitalization.vue";
-import Medicines from "@/pages/Invoice/ServicesView/Medicines.vue";
-import NewlyBorn from "@/pages/Invoice/ServicesView/NewlyBorn.vue";
-import OtherServices from "@/pages/Invoice/ServicesView/OtherServices.vue";
-import Procedure from "@/pages/Invoice/ServicesView/Procedure.vue";
-import Queries from "@/pages/Invoice/ServicesView/Queries.vue";
-import { useInvoiceUserStore } from "@/pages/Invoice/Components/useInvoiceUserStore";
+import Emergencies from "@/pages/Rips/ServicesView/Emergencies.vue";
+import Hospitalization from "@/pages/Rips/ServicesView/Hospitalization.vue";
+import Medicines from "@/pages/Rips/ServicesView/Medicines.vue";
+import NewlyBorn from "@/pages/Rips/ServicesView/NewlyBorn.vue";
+import OtherServices from "@/pages/Rips/ServicesView/OtherServices.vue";
+import Procedure from "@/pages/Rips/ServicesView/Procedure.vue";
+import Queries from "@/pages/Rips/ServicesView/Queries.vue";
+import { useRipInvoiceUserStore } from "@/pages/Rips/Components/useRipInvoiceUserStore";
 import { router } from "@/plugins/1.router";
 
 definePage({
@@ -19,7 +19,7 @@ definePage({
   },
 });
 
-const { dataUser, servicesCount, dataInvoice } = storeToRefs(useInvoiceUserStore());
+const { dataUser, servicesCount, dataInvoice } = storeToRefs(useRipInvoiceUserStore());
 
 const route = useRoute();
 onMounted(async () => {

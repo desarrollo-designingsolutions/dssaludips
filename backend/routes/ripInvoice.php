@@ -24,4 +24,6 @@ Route::middleware(['check.permission:rips.index'])->group(function () {
 
     Route::post('/ripInvoice/getCountRipInvoicestoValidate', [RipInvoiceController::class, 'getCountRipInvoicestoValidate']);
 
+    Route::get('/ripInvoice/{invoiceId}/paginatedUsers', [RipInvoiceController::class, 'paginatedUsers']);
+
 });
