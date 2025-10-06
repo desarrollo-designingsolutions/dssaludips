@@ -43,4 +43,6 @@ Route::middleware(['check.permission:menu.invoice'])->group(function () {
     Route::post('/invoice/uploadJson', [InvoiceController::class, 'uploadJson']);
 
     Route::post('/invoice/jsonToForm', [InvoiceController::class, 'jsonToForm']);
+
+    Route::get('/invoice/{invoiceId}/paginatedUsers', [InvoiceController::class, 'paginatedUsers']);
 });

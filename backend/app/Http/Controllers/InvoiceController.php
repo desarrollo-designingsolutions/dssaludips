@@ -8,6 +8,7 @@ use App\Enums\Service\TypeServiceEnum;
 use App\Events\InvoiceRowUpdatedNow;
 use App\Exports\Invoice\InvoiceExcelErrorsValidationXmlExport;
 use App\Exports\Invoice\InvoiceExcelExport;
+use App\Helpers\Common\GenerateValues;
 use App\Helpers\Constants;
 use App\Helpers\Invoice\JsonStructureValidation;
 use App\Http\Requests\Invoice\InvoiceStoreRequest;
@@ -1430,5 +1431,20 @@ class InvoiceController extends Controller
         }
 
         return $invoice;
+    }
+
+    public function paginatedUsers(Request $request, $invoiceId)
+    {
+        return $this->execute(function () use ($request, $invoiceId) {
+            $invoice = $this->invoiceRepository->find($invoiceId, select: ['id', 'invoice_number']);
+
+            $getPaginatedDataRedis = GenerateValues::getPaginatedDataRedis($request, $invoiceId, $this->invoiceRepository);
+
+            return [
+                'invoice' => $invoice,
+                'dataUsers' => $getPaginatedDataRedis['data'],
+                'pagination' => $getPaginatedDataRedis['pagination'],
+            ];
+        });
     }
 }
