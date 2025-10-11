@@ -173,9 +173,9 @@ const echoChannel = () => {
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
                     </VListItem> 
-                    <VListItem v-if="item.status == 'RIP_STATUS_002'" @click="downloadFileData(item, 'excel')">Descargar Excel
+                    <VListItem  @click="downloadFileData(item, 'excel')">Descargar Excel
                     </VListItem>
-                    <VListItem v-if="item.status == 'RIP_STATUS_002'" @click="openModalUploadExcel(item)">Subir
+                    <VListItem  @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
                     <VListItem @click="goView(item)">
                       Ingresar

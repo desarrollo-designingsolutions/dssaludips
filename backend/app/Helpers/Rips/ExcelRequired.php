@@ -51,8 +51,8 @@ class ExcelRequired
 
     public static function processData($build, $groupedData)
     {
-        // return$groupedData;
         $buildData = json_decode(collect($build), true);
+
 
         //recorremos el array agrupado del csv
         foreach ($groupedData as $key => $group) {
@@ -68,7 +68,9 @@ class ExcelRequired
 
                     // Verificar si se está validando una factura o un usuario
                     if (!empty($row['num_factura']) && empty($row['num_identificacion'])) {
-                        $requiredFields = ['tipoNota', 'numNota'];
+
+                        $requiredFields = self::structureAF();
+
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -81,7 +83,9 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && empty($row['servicio'])) {
-                        $requiredFields = ['codPaisOrigen', 'fechaNacimiento', 'codPaisResidencia', 'codZonaTerritorialResidencia', 'incapacidad', 'consecutivo'];
+
+                        $requiredFields = self::structureUS();
+
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -100,9 +104,13 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'consultas') {
-                        $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
+
+                        $requiredFields = self::structureAC();
+
+
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
+
                             //recorremos internamente la factura del csv
                             //si existen los key pasamos la data del csv al build general
                             if ($row['campo'] == $valueF) {
@@ -118,7 +126,9 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'procedimientos') {
-                        $requiredFields = ['conceptoRecaudo', 'fechaInicioAtencion', 'idMIPRES', 'modalidadGrupoServicioTecSal', 'grupoServicios', 'codServicio', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
+
+                        $requiredFields = self::structureAP();
+
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -136,25 +146,31 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'medicamentos') {
-                        $requiredFields = ['conceptoRecaudo', 'idMIPRES', 'fechaDispensAdmon', 'codDiagnosticoPrincipal', 'codDiagnosticoRelacionado', 'formaFarmaceutica', 'unidadMinDispensa', 'diasTratamiento', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'vrUnitMedicamento', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
+
+                        $requiredFields = self::structureAM();
+
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
                             //si existen los key pasamos la data del csv al build general
                             if ($row['campo'] == $valueF) {
+
                                 $indexU = collect($buildData[$index]['usuarios'])->search(function ($objeto, $clave) use ($row) {
 
                                     return $objeto['numDocumentoIdentificacion'] == $row['num_identificacion'];
                                 });
 
                                 if (!empty($row['valor'])) {
+
                                     $buildData[$index]['usuarios'][$indexU]['servicios']['medicamentos'][$row['id_servicio'] - 1][$valueF] = $row['valor'];
                                 }
                             }
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'otrosServicios') {
-                        $requiredFields = ['conceptoRecaudo', 'idMIPRES', 'fechaSuministroTecnologia', 'tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'tipoPagoModerador', 'valorPagoModerador', 'numFEVPagoModerador', 'consecutivo'];
+
+                        $requiredFields = self::structureAT();
+
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -173,7 +189,9 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'urgencias') {
-                        $requiredFields = ['consecutivo', 'fechaInicioAtencion'];
+
+                        $requiredFields = self::structureAU();
+
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -190,7 +208,9 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'hospitalizacion') {
-                        $requiredFields = ['consecutivo', 'fechaInicioAtencion'];
+
+                        $requiredFields = self::structureAH();
+
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -207,7 +227,9 @@ class ExcelRequired
                         }
                     }
                     if (!empty($row['num_factura']) && !empty($row['num_identificacion']) && $row['servicio'] == 'recienNacidos') {
-                        $requiredFields = ['tipoDocumentoIdentificacion', 'numDocumentoIdentificacion', 'numConsultasCPrenatal', 'consecutivo'];
+
+                        $requiredFields = self::structureAN();
+
                         //recorremos los dos campos obligatorios
                         foreach ($requiredFields as $keyF => $valueF) {
                             //recorremos internamente la factura del csv
@@ -232,78 +254,84 @@ class ExcelRequired
 
     public static function validateDataFilesExcel($arrayInfo, &$arrayData)
     {
-        $dataExtra = ['numFactura' => null];
         $errorMessages = [];
+
         foreach ($arrayInfo as $indexInvoice => $data) {
-            $dataExtra = ['numFactura' => $data['numFactura']];
 
-            // Asignar una cadena vacía en lugar de null si $data['numNota'] es cero
-            $arrayData[$indexInvoice]['numNota'] = ($data['numNota'] === "00") ? '' : $data['numNota'];
+            // Obtener claves reales de $data = factura raiz
+            $clavesReales = self::structureAF();
 
-            // Asignar una cadena vacía en lugar de null si $data['numNota'] es cero, si viene otro valor ejecuta la validacion
-            if (($data['tipoNota'] === "00")) {
-                $arrayData[$indexInvoice]['tipoNota'] = '';
-            } else {
-                $arrayData[$indexInvoice]['tipoNota'] = ($data['tipoNota'] === "00") ? '' : $data['tipoNota'];
+            // Mapeo de tipos (solo para campos específicos; el resto string por defecto)
+            $mapeoTipos = [];
+
+            foreach ($clavesReales as $key) {
+                $tipo = $mapeoTipos[$key] ?? "string";  // Default: string
+                $valorCasteado = self::castValue($data[$key] ?? null, $tipo);
+                $arrayData[$indexInvoice][$key] = $valorCasteado;
             }
 
             if (isset($data['usuarios']) && count($data['usuarios']) > 0) {
                 foreach ($data['usuarios'] as $indexUser => $usuario) {
 
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codPaisOrigen'] = $usuario['codPaisOrigen'];
+                    // Obtener claves reales de $usuario
+                    $clavesReales = self::structureUS();
 
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codPaisResidencia'] = $usuario['codPaisResidencia'];
+                    // Mapeo de tipos (solo para campos específicos; el resto string por defecto)
+                    $mapeoTipos = [
+                        'consecutivo' => "int",
+                    ];
 
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['codZonaTerritorialResidencia'] = $usuario['codZonaTerritorialResidencia'];
+                    foreach ($clavesReales as $key) {
 
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['incapacidad'] = $usuario['incapacidad'];
-
-                    $arrayData[$indexInvoice]['usuarios'][$indexUser]['fechaNacimiento'] = $usuario['fechaNacimiento'];
+                        $tipo = $mapeoTipos[$key] ?? "string";  // Default: string
+                        $valorCasteado = self::castValue($usuario[$key] ?? null, $tipo);
+                        $arrayData[$indexInvoice]['usuarios'][$indexUser][$key] = $valorCasteado;
+                    }
 
                     //CONSULTAS
                     if (isset($usuario['servicios']['consultas']) && count($usuario['servicios']['consultas']) > 0) {
                         foreach ($usuario['servicios']['consultas'] as $indexQuery => $consulta) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['tipoDocumentoIdentificacion'] = $consulta['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['numDocumentoIdentificacion'] = $consulta['numDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['tipoPagoModerador'] = $consulta['tipoPagoModerador'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['numFEVPagoModerador'] = $consulta['numFEVPagoModerador'];
+                            // Obtener claves reales de $consulta
+                            $clavesReales = array_keys($consulta);
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['conceptoRecaudo'] = $consulta['conceptoRecaudo'];
+                            // Mapeo de tipos (solo para campos específicos; el resto string por defecto)
+                            $mapeoTipos = [
+                                'consecutivo' => "int",
+                                'codServicio' => "int",
+                                'valorPagoModerador' => "float",
+                                'vrServicio' => "float",
+                            ];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['modalidadGrupoServicioTecSal'] = $consulta['modalidadGrupoServicioTecSal'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['grupoServicios'] = $consulta['grupoServicios'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['codServicio'] = $consulta['codServicio'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['fechaInicioAtencion'] = $consulta['fechaInicioAtencion'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery]['valorPagoModerador'] = $consulta['valorPagoModerador'];
+                            foreach ($clavesReales as $key) {
+                                $tipo = $mapeoTipos[$key] ?? "string";  // Default: string
+                                $valorCasteado = self::castValue($consulta[$key] ?? null, $tipo);
+                                $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['consultas'][$indexQuery][$key] = $valorCasteado;
+                            }
                         }
                     }
+
 
                     //PROCEDIMIENTOS
                     if (isset($usuario['servicios']['procedimientos']) && count($usuario['servicios']['procedimientos']) > 0) {
                         foreach ($usuario['servicios']['procedimientos'] as $indexProcedure => $procedimiento) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['tipoDocumentoIdentificacion'] = $procedimiento['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['numDocumentoIdentificacion'] = $procedimiento['numDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['numFEVPagoModerador'] = $procedimiento['numFEVPagoModerador'];
+                            // Obtener claves reales de $procedimiento
+                            $clavesReales = array_keys($procedimiento);
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['conceptoRecaudo'] = $procedimiento['conceptoRecaudo'];
+                            // Mapeo de tipos (solo para campos específicos; el resto string por defecto)
+                            $mapeoTipos = [
+                                'consecutivo' => "int",
+                                'codServicio' => "int",
+                                'valorPagoModerador' => "float",
+                                'vrServicio' => "float",
+                            ];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['idMIPRES'] = $procedimiento['idMIPRES'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['valorPagoModerador'] = $procedimiento['valorPagoModerador'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['modalidadGrupoServicioTecSal'] = $procedimiento['modalidadGrupoServicioTecSal'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['grupoServicios'] = $procedimiento['grupoServicios'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['codServicio'] = $procedimiento['codServicio'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure]['fechaInicioAtencion'] = $procedimiento['fechaInicioAtencion'];
+                            foreach ($clavesReales as $key) {
+                                $tipo = $mapeoTipos[$key] ?? "string";  // Default: string
+                                $valorCasteado = self::castValue($procedimiento[$key] ?? null, $tipo);
+                                $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['procedimientos'][$indexProcedure][$key] = $valorCasteado;
+                            }
                         }
                     }
 
@@ -311,18 +339,23 @@ class ExcelRequired
                     if (isset($usuario['servicios']['otrosServicios']) && count($usuario['servicios']['otrosServicios']) > 0) {
                         foreach ($usuario['servicios']['otrosServicios'] as $indexOtherService => $otrosServicio) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['tipoDocumentoIdentificacion'] = $otrosServicio['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['numDocumentoIdentificacion'] = $otrosServicio['numDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['tipoPagoModerador'] = $otrosServicio['tipoPagoModerador'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['numFEVPagoModerador'] = $otrosServicio['numFEVPagoModerador'];
+                            // Obtener claves reales de $otrosServicio
+                            $clavesReales = array_keys($otrosServicio);
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['conceptoRecaudo'] = $otrosServicio['conceptoRecaudo'];
+                            // Mapeo de tipos (solo para campos específicos; el resto string por defecto)
+                            $mapeoTipos = [
+                                'cantidadOS' => "int",
+                                'consecutivo' => "int",
+                                'vrUnitOS' => "float",
+                                'valorPagoModerador' => "float",
+                                'vrServicio' => "float",
+                            ];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['idMIPRES'] = $otrosServicio['idMIPRES'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['valorPagoModerador'] = $otrosServicio['valorPagoModerador'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService]['fechaSuministroTecnologia'] = $otrosServicio['fechaSuministroTecnologia'];
+                            foreach ($clavesReales as $key) {
+                                $tipo = $mapeoTipos[$key] ?? "string";  // Default: string
+                                $valorCasteado = self::castValue($otrosServicio[$key] ?? null, $tipo);
+                                $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['otrosServicios'][$indexOtherService][$key] = $valorCasteado;
+                            }
                         }
                     }
 
@@ -330,9 +363,19 @@ class ExcelRequired
                     if (isset($usuario['servicios']['urgencias']) && count($usuario['servicios']['urgencias']) > 0) {
                         foreach ($usuario['servicios']['urgencias'] as $indexUrgency => $urgencia) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['urgencias'][$indexUrgency]['fechaEgreso'] = $urgencia['fechaEgreso'];
+                            // Obtener claves reales de $urgencia
+                            $clavesReales = array_keys($urgencia);
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['urgencias'][$indexUrgency]['fechaInicioAtencion'] = $urgencia['fechaInicioAtencion'];
+                            // Mapeo de tipos (solo para campos específicos; el resto string por defecto)
+                            $mapeoTipos = [
+                                'consecutivo' => "int",
+                            ];
+
+                            foreach ($clavesReales as $key) {
+                                $tipo = $mapeoTipos[$key] ?? "string";  // Default: string
+                                $valorCasteado = self::castValue($urgencia[$key] ?? null, $tipo);
+                                $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['urgencias'][$indexUrgency][$key] = $valorCasteado;
+                            }
                         }
                     }
 
@@ -340,9 +383,19 @@ class ExcelRequired
                     if (isset($usuario['servicios']['hospitalizacion']) && count($usuario['servicios']['hospitalizacion']) > 0) {
                         foreach ($usuario['servicios']['hospitalizacion'] as $indexHospitalization => $hospitalizacion) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['hospitalizacion'][$indexHospitalization]['fechaEgreso'] = $hospitalizacion['fechaEgreso'];
+                            // Obtener claves reales de $hospitalizacion
+                            $clavesReales = array_keys($hospitalizacion);
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['hospitalizacion'][$indexHospitalization]['fechaInicioAtencion'] = $hospitalizacion['fechaInicioAtencion'];
+                            // Mapeo de tipos (solo para campos específicos; el resto string por defecto)
+                            $mapeoTipos = [
+                                'consecutivo' => "int",
+                            ];
+
+                            foreach ($clavesReales as $key) {
+                                $tipo = $mapeoTipos[$key] ?? "string";  // Default: string
+                                $valorCasteado = self::castValue($hospitalizacion[$key] ?? null, $tipo);
+                                $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['hospitalizacion'][$indexHospitalization][$key] = $valorCasteado;
+                            }
                         }
                     }
 
@@ -350,12 +403,19 @@ class ExcelRequired
                     if (isset($usuario['servicios']['recienNacidos']) && count($usuario['servicios']['recienNacidos']) > 0) {
                         foreach ($usuario['servicios']['recienNacidos'] as $indexNewlyBorn => $recienNacido) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['tipoDocumentoIdentificacion'] = $recienNacido['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['numConsultasCPrenatal'] = $recienNacido['numConsultasCPrenatal'];
+                            // Obtener claves reales de $recienNacido
+                            $clavesReales = array_keys($recienNacido);
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['fechaNacimiento'] = $recienNacido['fechaNacimiento'];
+                            // Mapeo de tipos (solo para campos específicos; el resto string por defecto)
+                            $mapeoTipos = [
+                                'consecutivo' => "int",
+                            ];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn]['fechaEgreso'] = $recienNacido['fechaEgreso'];
+                            foreach ($clavesReales as $key) {
+                                $tipo = $mapeoTipos[$key] ?? "string";  // Default: string
+                                $valorCasteado = self::castValue($recienNacido[$key] ?? null, $tipo);
+                                $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['recienNacidos'][$indexNewlyBorn][$key] = $valorCasteado;
+                            }
                         }
                     }
 
@@ -363,27 +423,27 @@ class ExcelRequired
                     if (isset($usuario['servicios']['medicamentos']) && count($usuario['servicios']['medicamentos']) > 0) {
                         foreach ($usuario['servicios']['medicamentos'] as $indexMedicine => $medicamento) {
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['formaFarmaceutica'] = $medicamento['formaFarmaceutica'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['unidadMinDispensa'] = $medicamento['unidadMinDispensa'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['tipoDocumentoIdentificacion'] = $medicamento['tipoDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['numDocumentoIdentificacion'] = $medicamento['numDocumentoIdentificacion'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['vrUnitMedicamento'] = $medicamento['vrUnitMedicamento'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['tipoPagoModerador'] = $medicamento['tipoPagoModerador'];
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['numFEVPagoModerador'] = $medicamento['numFEVPagoModerador'];
+                            // Obtener claves reales de $medicamento
+                            $clavesReales = array_keys($medicamento);
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['conceptoRecaudo'] = $medicamento['conceptoRecaudo'];
+                            // Mapeo de tipos (solo para campos específicos; el resto string por defecto)
+                            $mapeoTipos = [
+                                'vrUnitMedicamento' => "float",
+                                'diasTratamiento' => "int",
+                                'cantidadMedicamento' => "int",
+                                'unidadMinDispensa' => "int",
+                                'unidadMedida' => "int",
+                                'concentracionMedicamento' => "int",
+                                'consecutivo' => "int",
+                                "valorPagoModerador" => "float",
+                                'vrServicio' => "float",
+                            ];
 
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['idMIPRES'] = $medicamento['idMIPRES'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['valorPagoModerador'] = $medicamento['valorPagoModerador'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['diasTratamiento'] = $medicamento['diasTratamiento'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['fechaDispensAdmon'] = $medicamento['fechaDispensAdmon'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['codDiagnosticoPrincipal'] = $medicamento['codDiagnosticoPrincipal'];
-
-                            $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine]['codDiagnosticoRelacionado'] = $medicamento['codDiagnosticoRelacionado'];
+                            foreach ($clavesReales as $key) {
+                                $tipo = $mapeoTipos[$key] ?? "string";  // Default: string
+                                $valorCasteado = self::castValue($medicamento[$key] ?? null, $tipo);
+                                $arrayData[$indexInvoice]['usuarios'][$indexUser]['servicios']['medicamentos'][$indexMedicine][$key] = $valorCasteado;
+                            }
                         }
                     }
                 }
@@ -457,4 +517,223 @@ class ExcelRequired
             return;
         }
     }
+
+    // Helper para castear valores (método privado de la clase)
+    private static function castValue($valor, $tipo = 'string')
+    {
+        switch ($tipo) {
+            case 'string':
+                return (string) $valor;
+            case 'int':
+                return (int) $valor;
+            case 'float':
+                return (float) $valor;
+                // Agrega más tipos si necesitas (ej. 'bool' => (bool)$valor)
+            default:
+                Log::warning("Tipo de casteo no soportado: {$tipo}. Usando string por defecto.");
+                return (string) $valor;
+        }
+    }
+
+
+    //otrosServicios (listo)
+    public static function structureAT(): array
+    {
+        return [
+            'codPrestador',
+            'numAutorizacion',
+            'idMIPRES',
+            'fechaSuministroTecnologia',
+            'tipoOS',
+            'codTecnologiaSalud',
+            'nomTecnologiaSalud',
+            'cantidadOS',
+            'tipoDocumentoIdentificacion',
+            'numDocumentoIdentificacion',
+            'vrUnitOS',
+            'vrServicio',
+            'conceptoRecaudo',
+            'valorPagoModerador',
+            'numFEVPagoModerador',
+            'consecutivo',
+        ];
+    }
+
+    // reciennacidos (listo)
+    public static function structureAN(): array
+    {
+        return [
+            'codPrestador',
+            'tipoDocumentoIdentificacion',
+            'numDocumentoIdentificacion',
+            'fechaNacimiento',
+            'edadGestacional',
+            'numConsultasCPrenatal',
+            'codSexoBiologico',
+            'peso',
+            'codDiagnosticoPrincipal',
+            'condicionDestinoUsuarioEgreso',
+            'codDiagnosticoCausaMuerte',
+            'fechaEgreso',
+            'consecutivo',
+        ];
+    }
+
+    // hospitalizacion (listo)
+    public static function structureAH(): array
+    {
+        return [
+            'codPrestador',
+            'viaIngresoServicioSalud',
+            'fechaInicioAtencion',
+            'numAutorizacion',
+            'causaMotivoAtencion',
+            'codDiagnosticoPrincipal',
+            'codDiagnosticoPrincipalE',
+            'codDiagnosticoRelacionadoE1',
+            'codDiagnosticoRelacionadoE2',
+            'codDiagnosticoRelacionadoE3',
+            'codComplicacion',
+            'condicionDestinoUsuarioEgreso',
+            'codDiagnosticoCausaMuerte',
+            'fechaEgreso',
+            'consecutivo',
+        ];
+    }
+
+    // medicamento (listo)
+    public static function structureAM(): array
+    {
+        return [
+            'codPrestador',
+            'numAutorizacion',
+            'idMIPRES',
+            'fechaDispensAdmon',
+            'codDiagnosticoPrincipal',
+            'codDiagnosticoRelacionado',
+            'tipoMedicamento',
+            'codTecnologiaSalud',
+            'nomTecnologiaSalud',
+            'concentracionMedicamento',
+            'unidadMedida',
+            'formaFarmaceutica',
+            'unidadMinDispensa',
+            'cantidadMedicamento',
+            'diasTratamiento',
+            'tipoDocumentoIdentificacion',
+            'numDocumentoIdentificacion',
+            'vrUnitMedicamento',
+            'vrServicio',
+            'conceptoRecaudo',
+            'valorPagoModerador',
+            'numFEVPagoModerador',
+            'consecutivo',
+        ];
+    }
+
+    //urgencia (listo)
+    public static function structureAU(): array
+    {
+        return [
+            'codPrestador',
+            'fechaInicioAtencion',
+            'causaMotivoAtencion',
+            'codDiagnosticoPrincipal',
+            'codDiagnosticoPrincipalE',
+            'codDiagnosticoRelacionadoE1',
+            'codDiagnosticoRelacionadoE2',
+            'codDiagnosticoRelacionadoE3',
+            'condicionDestinoUsuarioEgreso',
+            'codDiagnosticoCausaMuerte',
+            'fechaEgreso',
+            'consecutivo',
+        ];
+    }
+
+    //procedimiento (listo)
+    public static function structureAP(): array
+    {
+        return [
+            'codPrestador',
+            'fechaInicioAtencion',
+            'idMIPRES',
+            'numAutorizacion',
+            'codProcedimiento',
+            'viaIngresoServicioSalud',
+            'modalidadGrupoServicioTecSal',
+            'grupoServicios',
+            'codServicio',
+            'finalidadTecnologiaSalud',
+            'tipoDocumentoIdentificacion',
+            'numDocumentoIdentificacion',
+            'codDiagnosticoPrincipal',
+            'codDiagnosticoRelacionado',
+            'codComplicacion',
+            'vrServicio',
+            'conceptoRecaudo',
+            'valorPagoModerador',
+            'numFEVPagoModerador',
+            'consecutivo',
+        ];
+    }
+
+    //usuario (listo)
+    public static function structureUS(): array
+    {
+        return [
+            'tipoDocumentoIdentificacion',
+            'numDocumentoIdentificacion',
+            'tipoUsuario',
+            'fechaNacimiento',
+            'codSexo',
+            'codPaisResidencia',
+            'codMunicipioResidencia',
+            'codZonaTerritorialResidencia',
+            'incapacidad',
+            'codPaisOrigen',
+            'consecutivo',
+        ];
+    }
+
+    //consultas (listo)
+    public static function structureAC(): array
+    {
+        return [
+            'codPrestador',
+            'fechaInicioAtencion',
+            'numAutorizacion',
+            'codConsulta',
+            'modalidadGrupoServicioTecSal',
+            'grupoServicios',
+            'codServicio',
+            'finalidadTecnologiaSalud',
+            'causaMotivoAtencion',
+            'codDiagnosticoPrincipal',
+            'codDiagnosticoRelacionado1',
+            'codDiagnosticoRelacionado2',
+            'codDiagnosticoRelacionado3',
+            'tipoDiagnosticoPrincipal',
+            'tipoDocumentoIdentificacion',
+            'numDocumentoIdentificacion',
+            'vrServicio',
+            'conceptoRecaudo',
+            'valorPagoModerador',
+            'numFEVPagoModerador',
+            'consecutivo',
+        ];
+    }
+
+    //Factura (listo)
+    public static function structureAF(): array
+    {
+        return [
+            'numDocumentoIdObligado',
+            'numFactura',
+            'tipoNota',
+            'numNota',
+        ];
+    }
+
+
+
 }

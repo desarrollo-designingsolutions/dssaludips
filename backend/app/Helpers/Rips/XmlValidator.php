@@ -102,7 +102,7 @@ class XmlValidator
             ErrorCollector::addError(
                 $batchId,
                 0,
-                'AttachedDocument -> cac:SenderParty -> cac:PartyTaxScheme -> cbc:CompanyID -> cbc:ID',
+                'AttachedDocument -> cac:SenderParty -> cac:PartyTaxScheme -> cbc:CompanyID',
                 ErrorCodes::getMessage('FILE_XML_ERROR_004'),
                 ErrorCodes::FILE_XML_ERROR_004['code'],
                 null,

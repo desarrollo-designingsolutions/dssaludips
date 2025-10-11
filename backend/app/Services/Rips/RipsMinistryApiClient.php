@@ -65,10 +65,6 @@ class RipsMinistryApiClient
         // Verificar si el token en caché es válido
 
         if ($cachedToken) {
-            Log::info('LLAVE recuperado desde Redis: ' . $this->cacheKeyRedis);
-            Log::info('DATA recuperado desde Redis: ' , [$cachedToken]);
-            Log::info('DATA recuperado desde Redis: ' , [unserialize($cachedToken)]);
-
             $cachedToken = unserialize($cachedToken);
             return $cachedToken;
         }
@@ -145,7 +141,7 @@ class RipsMinistryApiClient
             $token = $tokenData['token'];
         }
 
-        Log::info("Validando factura ID: {$invoiceId} con token: {$token}");
+        // Log::info("Validando factura ID: {$invoiceId} con token: {$token}");
 
         $pathJson = $invoice->path_json;
 

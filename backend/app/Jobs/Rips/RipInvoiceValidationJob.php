@@ -44,6 +44,8 @@ class RipInvoiceValidationJob implements ShouldQueue
     /** Para marcar si hubo errores en la corrida */
     protected bool $hasErrors = false;
 
+    protected $idsByNumber = null;
+
     public function __construct(
         string $customBatchId,
         string $selectedQueue = 'default'
@@ -154,6 +156,9 @@ class RipInvoiceValidationJob implements ShouldQueue
                 RipInvoiceRowUpdatedNow::dispatch($ripInvoice->id);
                 $jsonData = openFileJson($ripInvoice->path_json);
                 $jsonData = [$jsonData]; // aqui lo hacemos asi para que me siga funcionando la funcion proccessData cunado es independiente
+
+                $this->idsByNumber = collect();
+                $this->idsByNumber->put((string)$ripInvoice->invoice_number, $ripInvoice->id);
             } else {
                 $rip->status = RipStatusEnum::RIP_STATUS_004->value;
                 $rip->save();
@@ -169,13 +174,13 @@ class RipInvoiceValidationJob implements ShouldQueue
 
                 $invoiceNumbers = $xlsCollection->keys()->map(fn($n) => (string) $n)->values();
 
-                $idsByNumber = RipInvoice::query()
+                $this->idsByNumber = RipInvoice::query()
                     ->where('rip_id', $rip->id)
                     ->whereIn('invoice_number', $invoiceNumbers)
                     ->pluck('id', 'invoice_number');
 
                 foreach ($xlsCollection as $numFactura => $rows) {
-                    $ripInvoiceId = $idsByNumber->get((string) $numFactura);
+                    $ripInvoiceId = $this->idsByNumber->get((string) $numFactura);
                     $ripInvoice = RipInvoice::find($ripInvoiceId);
 
                     if ($ripInvoice) {
@@ -233,33 +238,13 @@ class RipInvoiceValidationJob implements ShouldQueue
 
                 //Aqui se traspasa la informacion que esta bien segun las validaciones de excel
                 $jsonInvoices = $jsonData;
-                foreach ($jsonInvoices as $key => $value) {
-                    DB::beginTransaction();
 
-                    $ripInvoice = RipInvoice::query()
-                        ->where('rip_id', $rip->id)
-                        ->where('invoice_number', $value['numFactura'])
-                        ->first();
 
-                    //se guarda el xls nuevo y json independientes en la bd
-                    GenerateRipInfo::saveReloadDataInvoice($rip, $value, $ripInvoice);
-
-                    DB::commit();
-
-                    event(new ImportProgressEvent(
-                        $this->customBatchId,
-                        $key + 1,
-                        'Transfiriendo información al json original.',
-                        $countErrors,
-                        'active',
-                        "Facturas procesadas: " . ($key + 1) . " de " . count($jsonInvoices),
-                    ));
-                    Sleep(5);
-                }
+                GenerateRipInfo::saveReloadDataInvoices($rip->id, $jsonInvoices);
 
                 event(new ImportProgressEvent(
                     $this->customBatchId,
-                    $key + 1,
+                    $metadata['total_rows'],
                     'Generando el excel y json global.',
                     $countErrors,
                     'active',
@@ -270,7 +255,7 @@ class RipInvoiceValidationJob implements ShouldQueue
 
                 event(new ImportProgressEvent(
                     $this->customBatchId,
-                    $key + 1,
+                    $metadata['total_rows'],
                     'Verificando estados de facturas y el rips en general.',
                     $countErrors,
                     'active',
@@ -308,8 +293,9 @@ class RipInvoiceValidationJob implements ShouldQueue
 
             ErrorCollector::saveErrorsToDatabase($this->customBatchId, $status);
 
+            Log::info("idsByNumber ", [$this->idsByNumber]);
             foreach ($xlsCollection as $numFactura => $rows) {
-                $ripInvoiceId = $idsByNumber->get((string) $numFactura);
+                $ripInvoiceId = $this->idsByNumber->get((string) $numFactura);
                 $ripInvoice = RipInvoice::find($ripInvoiceId);
 
                 if ($ripInvoice) {
@@ -318,10 +304,10 @@ class RipInvoiceValidationJob implements ShouldQueue
                     RipInvoiceRowUpdatedNow::dispatch($ripInvoiceId);
                 }
             }
-
             $rip->status = RipStatusEnum::RIP_STATUS_002->value;
             $rip->save();
             RipRowUpdatedNow::dispatch($rip->id);
+
 
             event(new ImportProgressEvent(
                 $this->customBatchId,
@@ -385,4 +371,5 @@ class RipInvoiceValidationJob implements ShouldQueue
             Log::warning("Usuario no encontrado para notificación: {$userId}");
         }
     }
+
 }

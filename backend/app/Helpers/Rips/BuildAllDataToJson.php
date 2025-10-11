@@ -137,6 +137,8 @@ class BuildAllDataToJson
     }
 
     // Funciones de formateo protegidas
+
+    //otrosServicios (listo)
     public function formatValueAT($datos): array
     {
         return [
@@ -152,13 +154,14 @@ class BuildAllDataToJson
             'numDocumentoIdentificacion' => trim($datos[3]),
             'vrUnitOS' => trim($datos[9]),
             'vrServicio' => trim($datos[10]),
+            'conceptoRecaudo' => null,
             'valorPagoModerador' => null,
             'numFEVPagoModerador' => trim($datos[0]),
             'consecutivo' => null,
-            'conceptoRecaudo' => null,
         ];
     }
 
+    // reciennacidos (listo)
     public function formatValueAN($datos): array
     {
         return [
@@ -175,11 +178,12 @@ class BuildAllDataToJson
             'codDiagnosticoCausaMuerte' => trim($datos[11]),
             'fechaEgreso' => null,
             'consecutivo' => null,
-            'numFEVPagoModerador' => trim($datos[0]),
 
+            'numFEVPagoModerador' => trim($datos[0]),
         ];
     }
 
+    // hospitalizacion (listo)
     public function formatValueAH($datos): array
     {
         return [
@@ -198,11 +202,13 @@ class BuildAllDataToJson
             'codDiagnosticoCausaMuerte' => trim($datos[16]),
             'fechaEgreso' => null,
             'consecutivo' => null,
+
             'numDocumentoIdentificacion' => trim($datos[3]),
             'numFEVPagoModerador' => trim($datos[0]),
         ];
     }
 
+    // medicamento (listo)
     public function formatValueAM($datos): array
     {
         return [
@@ -225,13 +231,14 @@ class BuildAllDataToJson
             'numDocumentoIdentificacion' => trim($datos[3]),
             'vrUnitMedicamento' => trim($datos[12]),
             'vrServicio' => trim($datos[13]),
+            'conceptoRecaudo' => null,
             'valorPagoModerador' => null,
             'numFEVPagoModerador' => trim($datos[0]),
             'consecutivo' => null,
-            'conceptoRecaudo' => null,
         ];
     }
 
+    //urgencia (listo)
     public function formatValueAU($datos): array
     {
         return [
@@ -247,11 +254,15 @@ class BuildAllDataToJson
             'codDiagnosticoCausaMuerte' => trim($datos[14]),
             'fechaEgreso' => null,
             'consecutivo' => null,
-            'numFEVPagoModerador' => trim($datos[0]),
+
             'numDocumentoIdentificacion' => trim($datos[3]),
+            'numFEVPagoModerador' => trim($datos[0]),
         ];
+
+
     }
 
+    //procedimiento (listo)
     public function formatValueAP($datos): array
     {
         return [
@@ -271,13 +282,14 @@ class BuildAllDataToJson
             'codDiagnosticoRelacionado' => trim($datos[10]),
             'codComplicacion' => trim($datos[11]),
             'vrServicio' => trim($datos[14]),
+            'conceptoRecaudo' => null,
             'valorPagoModerador' => null,
             'numFEVPagoModerador' => trim($datos[0]),
             'consecutivo' => null,
-            'conceptoRecaudo' => null,
         ];
     }
 
+    //usuario (listo)
     public function formatValueUS($datos): array
     {
         return [
@@ -290,11 +302,12 @@ class BuildAllDataToJson
             'codMunicipioResidencia' => trim($datos[12]),
             'codZonaTerritorialResidencia' => $this->transformCodZonaTerritorialResidencia(trim($datos[13])),
             'incapacidad' => null,
-            'consecutivo' => null,
             'codPaisOrigen' => null,
+            'consecutivo' => null,
         ];
     }
 
+    //consultas (listo)
     public function formatValueAC($datos): array
     {
         return [
@@ -315,13 +328,14 @@ class BuildAllDataToJson
             'tipoDocumentoIdentificacion' => trim($datos[2]),
             'numDocumentoIdentificacion' => trim($datos[3]),
             'vrServicio' => trim($datos[14]),
+            'conceptoRecaudo' => null,
             'valorPagoModerador' => trim($datos[15]),
             'numFEVPagoModerador' => trim($datos[0]),
             'consecutivo' => null,
-            'conceptoRecaudo' => null,
         ];
     }
 
+    //Factura (listo)
     public function formatValueAF($datos): array
     {
         return [
@@ -376,7 +390,7 @@ class BuildAllDataToJson
                     $j = 1;
                     if (isset($user['servicios'][$service]) && count($user['servicios'][$service]) > 0) {
                         $user['servicios'][$service] = array_map(function ($value) use (&$j) {
-                            $value['consecutivo'] = $j;
+                            $value['consecutivo'] = (int)$j;
                             $j++;
 
                             return $value;

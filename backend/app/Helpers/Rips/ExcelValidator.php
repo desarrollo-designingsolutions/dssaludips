@@ -12,7 +12,6 @@ class ExcelValidator
     {
         $errors = false;
 
-
         //Validando que el excel no este vacio
         if ($xlsCollection->isEmpty()) {
 
