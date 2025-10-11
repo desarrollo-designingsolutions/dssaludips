@@ -1,6 +1,8 @@
 networks:
   ministerio_fevrips-net:
     external: true
+    name: ministerio_fevrips-net
+    # El nombre de la red debe ser: el nombre de la carpeta que contiene el codigo del ministerio (si la carpeta tiene separacion de espacios se debe unificar con _) "ministerio_" + el nombre de la red que esta en el yml del ministerio "fevrips-net"
 
 services:
   php:
