@@ -56,9 +56,9 @@ class ValidateRipInvoiceJob implements ShouldQueue
             $this->changeJsonValues($invoice);
 
 
-            GenerateRipInfo::generateDataJsonAndExcel($invoice->rip_id,fileExcel:true);
+            GenerateRipInfo::generateDataJsonAndExcel($invoice->rip_id, fileExcel: true);
 
-
+            self::generateGlobalExcelForRip($invoice->rip);
 
             if ($result["status_code"] != 200) {
                 $status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_007;
@@ -137,6 +137,85 @@ class ValidateRipInvoiceJob implements ShouldQueue
 
         $invoice->path_excel = $routeXls;
         $invoice->save();
+    }
+
+    protected static function generateGlobalExcelForRip($rip): void
+    {
+        try {
+            $invoices = \App\Models\RipInvoice::where('rip_id', $rip->id)
+                ->whereNotNull('validation_metadata')
+                ->where('validation_metadata', '<>', '')
+                ->get();
+
+            $rows = [];
+
+            foreach ($invoices as $inv) {
+                // 1) Validación útil
+                $vm = json_decode($inv->validation_metadata, true);
+                $rv = $vm['ResultadosValidacion'] ?? null;
+                if (empty($rv) || (is_array($rv) && count($rv) === 0)) {
+                    continue; // saltar facturas sin validación útil
+                }
+
+                // 2) Cargar JSON fuente
+                if (!Storage::disk(Constants::DISK_FILES)->exists($inv->path_json)) {
+                    Log::warning("No se encontró path_json para RipInvoice ID: {$inv->id}");
+                    continue;
+                }
+                $json = json_decode(Storage::disk(Constants::DISK_FILES)->get($inv->path_json), true);
+                if (!$json || !is_array($json)) {
+                    Log::warning("Error al decodificar path_json para RipInvoice ID: {$inv->id}");
+                    continue;
+                }
+
+                // 3) Aplicar PathFuente únicos
+                $pathFuentes = array_unique(array_filter(array_map(function ($item) {
+                    return isset($item['PathFuente']) ? $item['PathFuente'] : null;
+                }, is_array($rv) ? $rv : [])));
+
+                foreach ($pathFuentes as $path) {
+                    self::setNullByPath($json, $path);
+                }
+
+                $rows[] = $json;
+            }
+
+            logMessage($rows);
+
+            if (empty($rows)) {
+                Log::info("No hay filas válidas para Excel global del RIP ID: {$rip->id}");
+                return;
+            }
+
+            $type        = $rip->type->value ?? 'unknown';
+            $globalName  = "rips_{$rip->id}.xlsx";
+            $globalRoute = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/{$globalName}";
+
+            // Borrar anterior (por permisos/caché de FS)
+            try {
+                if (Storage::disk(Constants::DISK_FILES)->exists($globalRoute)) {
+                    // Storage::disk(Constants::DISK_FILES)->delete($globalRoute);
+                }
+            } catch (\Throwable $delEx) {
+                Log::warning("No se pudo borrar el global previo ({$globalRoute}): " . $delEx->getMessage());
+            }
+
+            // Escribir nuevo
+            Excel::store(new RipXlsExport($rows), $globalRoute, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
+
+            // Verificar
+            $exists = Storage::disk(Constants::DISK_FILES)->exists($globalRoute);
+            $size   = $exists ? Storage::disk(Constants::DISK_FILES)->size($globalRoute) : 0;
+            Log::info("Excel global regenerado: {$globalRoute} (exists={$exists}, size={$size})");
+
+            // Guardar ruta en BD (ajusta el campo si se llama distinto)
+            if (property_exists($rip, 'path_excel')) {
+                $rip->path_excel = $globalRoute;
+                $rip->save();
+            }
+        } catch (\Throwable $e) {
+            Log::error("Error generando Excel global para RIP ID: {$rip->id}. {$e->getMessage()}");
+        }
     }
 
     /**
