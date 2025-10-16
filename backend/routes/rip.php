@@ -25,4 +25,6 @@ Route::middleware(['check.permission:rips.index'])->group(function () {
     Route::post('/rip/getValidationMetadata', [RipController::class, 'getValidationMetadata']);
 
     Route::post('/rip/validateRips', [RipController::class, 'validateRips']);
+
+    Route::post('/rip/validateRipGlobal', [RipController::class, 'validateRipGlobal']);
 });

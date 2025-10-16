@@ -81,6 +81,10 @@ class RipInvoiceValidationJob implements ShouldQueue
             $processed = 0;
             $xlsCollection = [];
 
+            ProcessBatch::where('batch_id', $this->customBatchId)->update([
+                'total_records' => $metadata['total_rows'],
+            ]);
+
             // Lógica de alcance
             if ($this->metadata['ripInvoice_id']) { // INDEPENDIENTE: solo la factura seleccionada
                 $ripInvoice = RipInvoice::with('rip')->find($this->metadata['ripInvoice_id']);
@@ -277,6 +281,9 @@ class RipInvoiceValidationJob implements ShouldQueue
         } finally {
             // Persistir errores a BD y actualizar process_batches/rip_batch
             $countErrors = ErrorCollector::countErrors($this->customBatchId);
+            $metadata['processed_records'] = $metadata['total_rows'];
+
+            $redis->hmset("batch:{$this->customBatchId}:metadata", $metadata);
 
             Log::info('dentro del finaly', ['countErrors' => $countErrors, 'hasErrors' => $this->hasErrors]);
 
@@ -284,7 +291,7 @@ class RipInvoiceValidationJob implements ShouldQueue
 
             event(new ImportProgressEvent(
                 $this->customBatchId,
-                0,
+                $metadata['total_rows'],
                 'Finalizando proceso.',
                 $countErrors,
                 $status,
@@ -311,7 +318,7 @@ class RipInvoiceValidationJob implements ShouldQueue
 
             event(new ImportProgressEvent(
                 $this->customBatchId,
-                0,
+                $metadata['total_rows'],
                 'Proceso de validación finalizado.',
                 $countErrors,
                 $status,
@@ -371,5 +378,4 @@ class RipInvoiceValidationJob implements ShouldQueue
             Log::warning("Usuario no encontrado para notificación: {$userId}");
         }
     }
-
 }

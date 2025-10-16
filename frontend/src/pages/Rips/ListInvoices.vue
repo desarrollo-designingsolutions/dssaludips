@@ -4,6 +4,9 @@ import ModalUploadExcel from '@/pages/Rips/Components/ModalUploadExcel.vue';
 import ModalUploadXml from '@/pages/Rips/Components/ModalUploadXml.vue';
 import ModalValidateRips from '@/pages/Rips/Components/ModalValidateRips.vue';
 import { router } from '@/plugins/1.router';
+import { useGlobalLoading } from '@/composables/useGlobalLoading';
+
+const globalLoading = useGlobalLoading();
 
 const { toast } = useToast();
 
@@ -92,8 +95,6 @@ const downloadFileData = async (obj: any, type: string) => {
 
   loading.downloadFile = false;
 };
-
-
 
 const tableLoading = ref(false); // Estado de carga de la tabla
 
@@ -204,10 +205,13 @@ const validateRips = async () => {
 
     const { data, response } = await useAxios('/rip/validateRips').post({
       ids: invoicesWithXml,
+      company_id: authenticationStore.company.id,
+      user_id: authenticationStore.user.id,
     });
 
     if (response.status === 200 && data) {
-      toast('Validación iniciada correctamente', '', 'success');
+        globalLoading.startLoading(data.batch_id);
+      // toast('Validación iniciada correctamente', '', 'success');
     } else {
       toast('Error al validar facturas: ' + (data?.message || 'Error desconocido'), '', 'danger');
 
@@ -271,7 +275,7 @@ const goViewUsers = (data: any) => {
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
                     </VListItem>
-                    <VListItem @click="downloadFileData(item, 'excel')">
+                    <VListItem v-if="item.path_excel" @click="downloadFileData(item, 'excel')">
                       Descargar Excel
                     </VListItem>
                     <VListItem @click="openModalUploadExcel(item)">Subir

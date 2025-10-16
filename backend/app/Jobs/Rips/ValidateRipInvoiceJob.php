@@ -55,10 +55,7 @@ class ValidateRipInvoiceJob implements ShouldQueue
             $invoice = $ripInvoiceRepository->find($this->invoiceId);
             $this->changeJsonValues($invoice);
 
-
-            GenerateRipInfo::generateDataJsonAndExcel($invoice->rip_id, fileExcel: true);
-
-            self::generateGlobalExcelForRip($invoice->rip);
+            GenerateRipInfo::generateDataJsonAndExcel($invoice->rip_id);
 
             if ($result["status_code"] != 200) {
                 $status = RipInvoiceStatusEnum::RIP_INVOICE_STATUS_007;
@@ -88,134 +85,78 @@ class ValidateRipInvoiceJob implements ShouldQueue
      */
     public static function changeJsonValues($invoice)
     {
-        // Cargar path_json desde disco
+        // 1) Cargar JSON fuente
         if (!Storage::disk(Constants::DISK_FILES)->exists($invoice->path_json)) {
             Log::warning("No se encontró path_json para RipInvoice ID: {$invoice->id}");
             return;
         }
 
         $json = json_decode(Storage::disk(Constants::DISK_FILES)->get($invoice->path_json), true);
-        if (!$json) {
+        if (!$json || !is_array($json)) {
             Log::warning("Error al decodificar path_json para RipInvoice ID: {$invoice->id}");
             return;
         }
 
-        // Cargar validation_metadata
-        $validation_metadata = json_decode($invoice->validation_metadata, true);
-        $resultadosValidacion = $validation_metadata['ResultadosValidacion'] ?? [];
+        // 2) Cargar metadata de validación
+        $validation = json_decode($invoice->validation_metadata, true) ?: [];
+        $rv = $validation['ResultadosValidacion'] ?? [];
 
-        // Log::info("Resultados de validación para RipInvoice ID: {$invoice->id}", $resultadosValidacion);
+        // 3) Construir mapa de observaciones: campo => "mensaje..."
+        $obsByField = [];
+        foreach ((array)$rv as $item) {
+            $path = $item['PathFuente'] ?? null;
+            if (!$path) continue;
 
-        // Extraer PathFuente únicos (solo RECHAZADO)
-        $pathFuentes = array_unique(array_filter(array_map(function ($item) {
-            return (isset($item['PathFuente']))
-                ? $item['PathFuente']
-                : null;
-        }, $resultadosValidacion)));
+            // Mensaje (ajusta llaves si tu API trae otros nombres)
+            $msg = $item['Observaciones']
+                ?? $item['Mensaje']
+                ?? $item['Descripcion']
+                ?? $item['Codigo']
+                ?? 'Error de validación';
 
-        // Log::info("PathFuente a procesar para RipInvoice ID: {$invoice->id}", $pathFuentes);
+            // Tomar el último segmento del path como nombre de campo
+            // Ej: usuarios[0].servicios.procedimientos[2].codDiagnosticoPrincipal -> codDiagnosticoPrincipal
+            if (preg_match('/([A-Za-z0-9_]+)(?:\]?)$/', $path, $m)) {
+                $field = $m[1];
+                $obsByField[$field] = isset($obsByField[$field]) && $obsByField[$field]
+                    ? ($obsByField[$field] . ' | ' . $msg)
+                    : $msg;
+            }
+        }
+
+        // 4) Marcar los campos en el JSON con la clave especial (para el export)
+        $pathFuentes = array_unique(array_filter(array_map(
+            fn($i) => $i['PathFuente'] ?? null,
+            is_array($rv) ? $rv : []
+        )));
 
         if (empty($pathFuentes)) {
             Log::info("No hay PathFuente para procesar en RipInvoice ID: {$invoice->id}");
             return;
         }
 
-        // Modificar JSON seteando campos a null
         foreach ($pathFuentes as $path) {
-            // Log::debug("JSON antes de modificar:", $json);
-            self::setNullByPath($json, $path);
+            self::setNullByPath($json, $path); // pone Constants::EXCEL_GENERATION_KEY en el campo
         }
 
-        // Generar Excel
-        $type = $invoice->rip->type->value ?? 'unknown';
-        $rip = $invoice->rip;
+        // 5) Generar Excel ENRIQUECIDO
+        $rip       = $invoice->rip;
+        $type      = $rip->type->value ?? 'unknown';
         $numFactura = $json['numFactura'] ?? 'unknown';
-        $nameFile = "{$numFactura}.xlsx";
-        $routeXls = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/invoices/{$numFactura}/{$nameFile}";
+        $nameFile  = "{$numFactura}.xlsx";
+        $routeXls  = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/invoices/{$numFactura}/{$nameFile}";
 
-        Excel::store(new RipXlsExport([$json]), $routeXls, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
+        // ⚠️ Enviar el wrapper enriquecido que tu export ya sabe manejar
+        $row = [
+            'data'       => $json,
+            'obsByField' => $obsByField,
+        ];
 
+        Excel::store(new RipXlsExport([$row]), $routeXls, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
+
+        // 6) Persistir ruta
         $invoice->path_excel = $routeXls;
         $invoice->save();
-    }
-
-    protected static function generateGlobalExcelForRip($rip): void
-    {
-        try {
-            $invoices = \App\Models\RipInvoice::where('rip_id', $rip->id)
-                ->whereNotNull('validation_metadata')
-                ->where('validation_metadata', '<>', '')
-                ->get();
-
-            $rows = [];
-
-            foreach ($invoices as $inv) {
-                // 1) Validación útil
-                $vm = json_decode($inv->validation_metadata, true);
-                $rv = $vm['ResultadosValidacion'] ?? null;
-                if (empty($rv) || (is_array($rv) && count($rv) === 0)) {
-                    continue; // saltar facturas sin validación útil
-                }
-
-                // 2) Cargar JSON fuente
-                if (!Storage::disk(Constants::DISK_FILES)->exists($inv->path_json)) {
-                    Log::warning("No se encontró path_json para RipInvoice ID: {$inv->id}");
-                    continue;
-                }
-                $json = json_decode(Storage::disk(Constants::DISK_FILES)->get($inv->path_json), true);
-                if (!$json || !is_array($json)) {
-                    Log::warning("Error al decodificar path_json para RipInvoice ID: {$inv->id}");
-                    continue;
-                }
-
-                // 3) Aplicar PathFuente únicos
-                $pathFuentes = array_unique(array_filter(array_map(function ($item) {
-                    return isset($item['PathFuente']) ? $item['PathFuente'] : null;
-                }, is_array($rv) ? $rv : [])));
-
-                foreach ($pathFuentes as $path) {
-                    self::setNullByPath($json, $path);
-                }
-
-                $rows[] = $json;
-            }
-
-            logMessage($rows);
-
-            if (empty($rows)) {
-                Log::info("No hay filas válidas para Excel global del RIP ID: {$rip->id}");
-                return;
-            }
-
-            $type        = $rip->type->value ?? 'unknown';
-            $globalName  = "rips_{$rip->id}.xlsx";
-            $globalRoute = "companies/company_{$rip->company_id}/rips/{$type}/rip_{$rip->id}/{$globalName}";
-
-            // Borrar anterior (por permisos/caché de FS)
-            try {
-                if (Storage::disk(Constants::DISK_FILES)->exists($globalRoute)) {
-                    // Storage::disk(Constants::DISK_FILES)->delete($globalRoute);
-                }
-            } catch (\Throwable $delEx) {
-                Log::warning("No se pudo borrar el global previo ({$globalRoute}): " . $delEx->getMessage());
-            }
-
-            // Escribir nuevo
-            Excel::store(new RipXlsExport($rows), $globalRoute, Constants::DISK_FILES, \Maatwebsite\Excel\Excel::XLSX);
-
-            // Verificar
-            $exists = Storage::disk(Constants::DISK_FILES)->exists($globalRoute);
-            $size   = $exists ? Storage::disk(Constants::DISK_FILES)->size($globalRoute) : 0;
-            Log::info("Excel global regenerado: {$globalRoute} (exists={$exists}, size={$size})");
-
-            // Guardar ruta en BD (ajusta el campo si se llama distinto)
-            if (property_exists($rip, 'path_excel')) {
-                $rip->path_excel = $globalRoute;
-                $rip->save();
-            }
-        } catch (\Throwable $e) {
-            Log::error("Error generando Excel global para RIP ID: {$rip->id}. {$e->getMessage()}");
-        }
     }
 
     /**

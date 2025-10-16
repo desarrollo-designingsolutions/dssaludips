@@ -3,6 +3,10 @@ import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 import ModalUploadZip from '@/pages/Rips/Components/ModalUploadZip.vue';
 import ModalUploadExcel from '@/pages/Rips/Components/ModalUploadExcel.vue';
 import { router } from "@/plugins/1.router";
+import { useGlobalLoading } from '@/composables/useGlobalLoading';
+
+const globalLoading = useGlobalLoading();
+const { toast } = useToast();
 
 definePage({
   name: "Rips-Index",
@@ -107,6 +111,29 @@ const echoChannel = () => {
   });
 }
 
+const validateWithMinistry = async (rip: any) => {
+  loading.downloadFile = true;
+
+  try {
+    const { data, response } = await useAxios('/rip/validateRipGlobal').post({
+      rip_id: rip.id,
+      company_id: authenticationStore.company.id,
+      user_id: authenticationStore.user.id,
+    });
+
+    if (response.status === 200 && data) {
+      // toast('Validación iniciada correctamente', '', 'success');
+        globalLoading.startLoading(data.batch_id);
+    } else {
+      toast('Error al validar facturas: ' + (data?.message || 'Error desconocido'), '', 'danger');
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    loading.downloadFile = false;
+  }
+};
+
 </script>
 
 <template>
@@ -167,16 +194,17 @@ const echoChannel = () => {
 
           <template #item.actions="{ item }">
             <div>
-              <VBtn icon color="primary">
+              <VBtn icon color="primary" :loading="loading.downloadFile" :disabled="loading.downloadFile">
                 <VIcon icon="tabler-square-rounded-chevron-down"></VIcon>
                 <VMenu activator="parent">
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
                     </VListItem> 
-                    <VListItem  @click="downloadFileData(item, 'excel')">Descargar Excel
+                    <VListItem v-if="item.path_excel"  @click="downloadFileData(item, 'excel')">Descargar Excel
                     </VListItem>
                     <VListItem  @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
+                    <VListItem  @click="validateWithMinistry(item)">Validar con el ministerio</VListItem>
                     <VListItem @click="goView(item)">
                       Ingresar
                     </VListItem>

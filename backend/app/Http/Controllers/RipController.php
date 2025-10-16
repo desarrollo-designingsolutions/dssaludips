@@ -16,6 +16,7 @@ use App\Helpers\Rips\GenerateRipInfo;
 use App\Http\Requests\Rip\RipUploadFileZipRequest;
 use App\Http\Resources\Rip\RipPaginateResource;
 use App\Jobs\Rips\BuildJsonJob;
+use App\Jobs\Rips\GenerateExcelGlobalRipJob;
 use App\Jobs\Rips\ProcessZipFilesJob;
 use App\Jobs\Rips\RipInvoiceValidationJob;
 use App\Jobs\Rips\SaveErrorsJob;
@@ -209,7 +210,7 @@ class RipController extends Controller
             $invoices = [];
 
             foreach ($request->ids as $id) {
-                $invoice = $this->ripInvoiceRepository->find($id, select: ["id", "validation_metadata", "invoice_number", "status"]);
+                $invoice = $this->ripInvoiceRepository->find($id, select: ["id", "validation_metadata", "invoice_number", "status", "path_excel"]);
                 if ($invoice) {
                     $metadata = null;
                     if ($invoice->validation_metadata) {
@@ -219,6 +220,7 @@ class RipController extends Controller
                     $invoices[] = [
                         "id" => $invoice->id,
                         "invoice_number" => $invoice->invoice_number,
+                        "path_excel" => $invoice->path_excel,
                         "metadata" => $metadata,
                         "status" => $invoice->status,
                         "status_backgroundColor" => $invoice->status?->backgroundColor(),
@@ -236,9 +238,12 @@ class RipController extends Controller
 
     public function validateRips(Request $request)
     {
+        $company_id = $request->input('company_id');
+        $user_id = $request->input('user_id');
         $request->validate(['ids' => 'required|array']);
         $invoiceIds = $request->ids;
         $batchId = uniqid('batch_' . time() . '_');
+        $ripInvoice = $this->ripInvoiceRepository->find($invoiceIds[0]);
 
         // Seleccionar una cola disponible
         $selectedQueue = ProcessBatchService::selectAvailableQueueRoundRobin(Constants::AVAILABLE_QUEUES_TO_VALIDATION_RIPS_MINISTERY);
@@ -262,8 +267,8 @@ class RipController extends Controller
 
                 $this->ripInvoiceRepository->changeStateArray($invoiceIds, RipInvoiceStatusEnum::RIP_INVOICE_STATUS_006, "status");
             })
-            ->then(function (Batch $batch) use ($batchId) {
-                // Opcional: evento de batch completado (podrías enviarlo a un canal general)
+            ->then(function (Batch $batch) use ($batchId, $ripInvoice, $company_id, $user_id, $selectedQueue) {
+                dispatch(new GenerateExcelGlobalRipJob($batchId, $ripInvoice->rip, $company_id, $user_id, $selectedQueue));
             })
             ->name("RIP Validation Batch {$batchId}")
             ->onQueue($selectedQueue)
@@ -360,5 +365,29 @@ class RipController extends Controller
                 'status' => 'success',
             ];
         });
+    }
+
+    public function validateRipGlobal(Request $request)
+    {
+        $ripId = $request->input('rip_id');
+        $company_id = $request->input('company_id');
+        $user_id = $request->input('user_id');
+        $invoiceIds = RipInvoice::where('rip_id', $ripId)->pluck('id')->toArray();
+
+        if (empty($invoiceIds)) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'El RIP no tiene facturas asociadas para validar.'
+            ], 404);
+        }
+
+        // Crear una Request interna con el payload que espera validateRips: ['ids' => [...]]
+        $forward = Request::create('/rip/validateRips', 'POST', ['ids' => $invoiceIds, 'company_id' => $company_id, 'user_id' => $user_id]);
+
+        // Conservar el contexto de usuario/autenticación/resolución de ruta
+        $forward->setUserResolver($request->getUserResolver());
+        $forward->setRouteResolver($request->getRouteResolver());
+
+        return $this->validateRips($forward);
     }
 }
