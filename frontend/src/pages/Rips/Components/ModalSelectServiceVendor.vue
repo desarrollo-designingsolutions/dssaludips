@@ -1,63 +1,95 @@
 <script setup lang="ts">
+import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
+import IErrorsBack from "@/interfaces/Axios/IErrorsBack";
+
+const errorsBack = ref<IErrorsBack>({});
+const authenticationStore = useAuthenticationStore();
 const emits = defineEmits(["success", "cancel"]);
 
 const componentData = reactive({
   isDialogVisible: false,
   isLoading: false,
-  principalIcon: "tabler-alert-circle",
-  title: "¿Está seguro que desea proceder con esta acción?",
-  subTitle: "",
-  html: null,
-  btnSuccessText: "Si",
-  btnSuccessIcon: "tabler-check",
-  btnCancelText: "Cancelar",
-  btnCancelIcon: "tabler-x",
-  showActions: true,
-  showBtnCancel: true,
-  showBtnSuccess: true,
-  dialogMaxWidth: '40rem',
-  id: null as number | string | null,
 });
+
+const disabledFiledsView = ref<boolean>(false)
+
+const serviceVendors_arrayInfo = ref([])
+
+const form = ref({
+  service_vendor_id: null as null | string,
+  company_id: authenticationStore.company.id,
+  user_id: authenticationStore.user.id
+})
 
 const handleIsDialogVisible = () => {
   componentData.isDialogVisible = !componentData.isDialogVisible;
 };
 
 const openModal = async (id: number | string | null = null) => {
+  form.value = {};
   handleIsDialogVisible();
-  componentData.id = id;
 };
 
 const handleSubmit = async () => {
-  handleIsDialogVisible();
-  emits("success", componentData.id);
-};
+  const url = `/rip/createRipManual`
 
-const handleCancel = async () => {
-  handleIsDialogVisible();
-  emits("cancel");
+  componentData.isLoading = true
+  const { data, response } = await useAxios(`${url}`).post(form.value);
+
+  if (response.status == 200 && data && data.code === 200) {
+    handleIsDialogVisible();
+    emits("success");
+  }
+
+  if (data.code == 422) {
+    errorsBack.value = data.errors ?? {}
+  }
+
+  componentData.isLoading = false
 };
 
 defineExpose({
   openModal,
   componentData,
 });
+
+const paramsSelectInfinite = {
+  company_id: authenticationStore.company.id,
+}
 </script>
 
 <template>
-  <VDialog v-model="componentData.isDialogVisible" :max-width="componentData.dialogMaxWidth" persistent
-    transition="dialog-bottom-transition" class="confirmation-dialog">
+  <VDialog v-model="componentData.isDialogVisible" max-width="30rem" persistent transition="dialog-bottom-transition"
+    class="confirmation-dialog">
     <DialogCloseBtn @click="handleIsDialogVisible()" class="close-btn" />
     <VCard :loading="componentData.isLoading" class="rounded-lg">
-      <VCardText class="text-center pt-8 pb-4">
+      <div>
+        <VToolbar color="primary">
+          <VToolbarTitle>
+            Crear Rip
+          </VToolbarTitle>
+        </VToolbar>
+      </div>
+      <VCardText class="d-flex justify-center gap-4 pb-6 px-6">
         <VRow>
           <VCol cols="12">
-            <AppSelectRemote :disabled="disabledFiledsView" label="Prestadores" v-model="form.service_vendor_ids"
+            <AppSelectRemote :disabled="disabledFiledsView" v-model="form.service_vendor_id"
               url="/selectInfiniteServiceVendor" arrayInfo="serviceVendors" clearable :params="paramsSelectInfinite"
-              :itemsData="serviceVendors_arrayInfo" :firstFetch="false" multiple>
+              :itemsData="serviceVendors_arrayInfo" :rules="[requiredValidator]"
+              :error-messages="errorsBack.service_vendor_id" @input="errorsBack.service_vendor_id = ''">
             </AppSelectRemote>
           </VCol>
         </VRow>
+      </VCardText>
+
+      <VCardText class="d-flex justify-end gap-3 flex-wrap">
+        <v-btn @click="handleIsDialogVisible()">
+          Cancelar
+        </v-btn>
+
+        <v-btn color="primary" @click="handleSubmit()">
+          Crear
+        </v-btn>
       </VCardText>
     </VCard>
   </VDialog>

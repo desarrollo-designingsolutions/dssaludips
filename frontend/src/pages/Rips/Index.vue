@@ -232,7 +232,7 @@ const openModalSelectServiceVendor = () => {
 
     <ModalUploadExcel ref="refModalUploadExcel" :maxFileSizeMB="200" />
 
-    <ModalSelectServiceVendor ref="refModalSelectServiceVendor" />
+    <ModalSelectServiceVendor ref="refModalSelectServiceVendor" @success="refreshTable" />
 
   </div>
 </template>

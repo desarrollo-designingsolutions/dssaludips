@@ -15,6 +15,7 @@ use App\Helpers\Rips\ExcelRequired;
 use App\Helpers\Rips\GenerateRipInfo;
 use App\Http\Requests\Rip\RipUploadFileZipRequest;
 use App\Http\Resources\Rip\RipPaginateResource;
+use App\Http\Requests\Rip\RipCreateManualRequest;
 use App\Jobs\Rips\BuildJsonJob;
 use App\Jobs\Rips\GenerateExcelGlobalRipJob;
 use App\Jobs\Rips\ProcessZipFilesJob;
@@ -27,6 +28,7 @@ use App\Models\ProcessBatch;
 use App\Models\RipInvoice;
 use App\Repositories\RipInvoiceRepository;
 use App\Repositories\RipRepository;
+use App\Repositories\ServiceVendorRepository;
 use App\Services\ProcessBatchService;
 use App\Services\Rips\RipsMinistryApiClient;
 use App\Traits\HttpResponseTrait;
@@ -46,6 +48,7 @@ class RipController extends Controller
         private RipRepository $ripRepository,
         private RipInvoiceRepository $ripInvoiceRepository,
         private RipsMinistryApiClient $ripsMinistryApiClient,
+        private ServiceVendorRepository $serviceVendorRepository,
     ) {}
 
     public function paginate(Request $request)
@@ -390,4 +393,39 @@ class RipController extends Controller
 
         return $this->validateRips($forward);
     }
+
+
+    public function createRipManual(RipCreateManualRequest $request)
+    {
+        return $this->runTransaction(function () use ($request) {
+
+            $companyId = $request->input('company_id');
+            $userId = $request->input('user_id');
+            $serviceVendorId = $request->input('service_vendor_id');
+            $serviceVendor = $this->serviceVendorRepository->find($serviceVendorId);
+
+            $status = RipStatusEnum::RIP_STATUS_002;
+            $type = RipTypeEnum::RIP_TYPE_002;
+
+            $rip = $this->ripRepository->store([
+                'company_id' => $companyId,
+                'user_id' => $userId,
+                'process_batch_id' => null,
+                'path_zip' => null,
+                'nit' => $serviceVendor->nit,
+                'numInvoices' => 0,
+                'successfulInvoices' => 0,
+                'failedInvoices' => 0,
+                'type' => $type,
+                'sumVr' => 0,
+                'status' => $status,
+            ]);
+
+            return [
+                'code' => 200,
+                'rip' => $rip,
+            ];
+        });
+    }
+
 }
