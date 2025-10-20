@@ -421,11 +421,12 @@ class RipController extends Controller
                 'status' => $status,
             ]);
 
+            GenerateRipInfo::generateDataJsonAndExcel($rip->id, $type->value);
+
             return [
                 'code' => 200,
                 'rip' => $rip,
             ];
         });
     }
-
 }

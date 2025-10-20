@@ -26,8 +26,18 @@ const handleIsDialogVisible = () => {
 };
 
 const openModal = async (id: number | string | null = null) => {
-  form.value = {};
+  handleClearForm();
   handleIsDialogVisible();
+};
+
+const handleClearForm = () => {
+  form.value = {
+    service_vendor_id: null,
+    company_id: authenticationStore.company.id,
+    user_id: authenticationStore.user.id
+  };
+
+  errorsBack.value = {}
 };
 
 const handleSubmit = async () => {
