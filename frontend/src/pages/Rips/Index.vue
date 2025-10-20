@@ -2,6 +2,7 @@
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 import ModalUploadZip from '@/pages/Rips/Components/ModalUploadZip.vue';
 import ModalUploadExcel from '@/pages/Rips/Components/ModalUploadExcel.vue';
+import ModalSelectServiceVendor from '@/pages/Rips/Components/ModalSelectServiceVendor.vue';
 import { router } from "@/plugins/1.router";
 import { useGlobalLoading } from '@/composables/useGlobalLoading';
 
@@ -134,6 +135,11 @@ const validateWithMinistry = async (rip: any) => {
   }
 };
 
+//ModalSelectServiceVendor
+const refModalSelectServiceVendor = ref()
+const openModalSelectServiceVendor = () => {
+  refModalSelectServiceVendor.value.openModal()
+}
 </script>
 
 <template>
@@ -152,6 +158,11 @@ const validateWithMinistry = async (rip: any) => {
               </VBtn>
             </template>
 
+            <VList>
+              <VListItem @click="openModalSelectServiceVendor()">
+                Manual
+              </VListItem> 
+            </VList>
             <VList>
               <VListItem @click="openModalUploadZip()">
                 Añadir ZIP
@@ -221,6 +232,7 @@ const validateWithMinistry = async (rip: any) => {
 
     <ModalUploadExcel ref="refModalUploadExcel" :maxFileSizeMB="200" />
 
+    <ModalSelectServiceVendor ref="refModalSelectServiceVendor" />
 
   </div>
 </template>
