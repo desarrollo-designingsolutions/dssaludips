@@ -55,6 +55,7 @@ class RipInvoiceRowUpdatedNow implements ShouldBroadcastNow
             'status_xml_description' => $this->ripInvoice->status_xml->description(),
 
             'path_xml' => $this->ripInvoice->path_xml,
+            'path_excel' => $this->ripInvoice->path_excel,
         ];
     }
 }

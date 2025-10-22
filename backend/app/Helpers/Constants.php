@@ -28,6 +28,9 @@ class Constants
     // public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_ZIP = ['import_rips_zip_1', 'import_rips_zip_2', 'import_rips_zip_3'];
     public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_ZIP = ['import_rips_zip_1'];
 
+    // public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_CSV = ['import_rips_csv_1', 'import_rips_csv_2', 'import_rips_csv_3'];
+    public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_CSV = ['import_rips_csv_1'];
+
     // public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_EXCEL = ['upload_rips_excel_1', 'upload_rips_excel_2', 'upload_rips_excel_3'];
     public const AVAILABLE_QUEUES_TO_IMPORTS_RIPS_EXCEL = ['upload_rips_excel_1'];
 

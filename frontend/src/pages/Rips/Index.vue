@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 import ModalUploadZip from '@/pages/Rips/Components/ModalUploadZip.vue';
+import ModalUploadCsv from '@/pages/Rips/Components/ModalUploadCsv.vue';
 import ModalUploadExcel from '@/pages/Rips/Components/ModalUploadExcel.vue';
 import { router } from "@/plugins/1.router";
 import { useGlobalLoading } from '@/composables/useGlobalLoading';
@@ -134,6 +135,12 @@ const validateWithMinistry = async (rip: any) => {
   }
 };
 
+
+//ModalUploadCsv
+const refModalUploadCsv = ref()
+const openModalUploadCsv = () => {
+  refModalUploadCsv.value.openModal()
+}
 </script>
 
 <template>
@@ -155,6 +162,9 @@ const validateWithMinistry = async (rip: any) => {
             <VList>
               <VListItem @click="openModalUploadZip()">
                 Añadir ZIP
+              </VListItem> 
+              <VListItem @click="openModalUploadCsv()">
+                Añadir CSV
               </VListItem> 
             </VList>
           </VMenu>
@@ -218,6 +228,8 @@ const validateWithMinistry = async (rip: any) => {
     </VCard>  
 
     <ModalUploadZip ref="refModalUploadZip" :maxFileSizeMB="200" />
+
+    <ModalUploadCsv ref="refModalUploadCsv" :maxFileSizeMB="200" />
 
     <ModalUploadExcel ref="refModalUploadExcel" :maxFileSizeMB="200" />
 

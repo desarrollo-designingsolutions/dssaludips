@@ -196,6 +196,24 @@ class ErrorCodes
     const RIP_EXCEL_007 = ['code' => 'RIP_EXCEL_007', 'message' => 'El archivo no contiene filas.'];
     const RIP_EXCEL_008 = ['code' => 'RIP_EXCEL_008', 'message' => 'Estructura inválida en el Excel. Faltan columnas requeridas: %s.'];
 
+    // Errores de validaciones CSV RIPS (estructura/archivo, NO por fila)
+    const RIP_CSV_001 = ['code' => 'RIP_CSV_001', 'message' => 'Archivo CSV vacío o sin contenido.'];
+    const RIP_CSV_002 = ['code' => 'RIP_CSV_002', 'message' => 'Faltan columnas requeridas: %s.'];
+    const RIP_CSV_003 = ['code' => 'RIP_CSV_003', 'message' => 'Cantidad de columnas inválida. Esperadas: %d, detectadas: %d.'];
+    const RIP_CSV_004 = ['code' => 'RIP_CSV_004', 'message' => 'Se detectaron columnas no esperadas: %s.'];
+    const RIP_CSV_005 = ['code' => 'RIP_CSV_005', 'message' => 'Delimitador del CSV no reconocido o inconsistente.'];
+    const RIP_CSV_006 = ['code' => 'RIP_CSV_006', 'message' => 'Encabezados con caracteres inválidos o BOM detectado.'];
+    const RIP_CSV_010 = ['code' => 'RIP_CSV_010', 'message' => 'Error general de lectura del CSV: %s.'];
+
+    // Errores relacionados a archivo/método de lectura (archivo no encontrado / path / permisos)
+    const RIP_CSV_011 = ['code' => 'RIP_CSV_011', 'message' => 'file_path no encontrado en Redis ni en BD.'];
+    const RIP_CSV_012 = ['code' => 'RIP_CSV_012', 'message' => 'Archivo no existe en storage: %s.'];
+    const RIP_CSV_013 = ['code' => 'RIP_CSV_013', 'message' => 'No se pudo abrir el archivo para lectura: %s.'];
+    const RIP_CSV_014 = ['code' => 'RIP_CSV_014', 'message' => 'No se encontró registro del batch en base de datos.'];
+
+
+
+
 
     /**
      * Obtiene el mensaje de error asociado a un código de error, con soporte para parámetros dinámicos.

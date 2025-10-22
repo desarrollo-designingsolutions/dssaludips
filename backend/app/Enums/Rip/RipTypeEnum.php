@@ -11,4 +11,7 @@ enum RipTypeEnum: string
 
     #[Description('Rips Zip')]
     case RIP_TYPE_001 = 'RIP_TYPE_001';
+
+    #[Description('Rips Csv')]
+    case RIP_TYPE_002 = 'RIP_TYPE_002';
 }

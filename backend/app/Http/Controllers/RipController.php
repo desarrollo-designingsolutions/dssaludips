@@ -13,10 +13,12 @@ use App\Helpers\Common\ErrorCollector;
 use App\Helpers\Constants;
 use App\Helpers\Rips\ExcelRequired;
 use App\Helpers\Rips\GenerateRipInfo;
+use App\Http\Requests\Rip\RipUploadFileCsvRequest;
 use App\Http\Requests\Rip\RipUploadFileZipRequest;
 use App\Http\Resources\Rip\RipPaginateResource;
 use App\Jobs\Rips\BuildJsonJob;
 use App\Jobs\Rips\GenerateExcelGlobalRipJob;
+use App\Jobs\Rips\ImportCsv\ValidateStructureJob;
 use App\Jobs\Rips\ProcessZipFilesJob;
 use App\Jobs\Rips\RipInvoiceValidationJob;
 use App\Jobs\Rips\SaveErrorsJob;
@@ -389,5 +391,74 @@ class RipController extends Controller
         $forward->setRouteResolver($request->getRouteResolver());
 
         return $this->validateRips($forward);
+    }
+
+    public function uploadFileCsv(RipUploadFileCsvRequest $request)
+    {
+        // Mantienes tu envoltura de transacción
+        return $this->runTransaction(function () use ($request) {
+            $company_id = $request->input('company_id');
+            $user_id = $request->input('user_id');
+            $uploadedFile = $request->file('file');
+
+            // Generar batchId único
+            $batchId = (string) Str::uuid();
+
+            // Generar nombre único y ruta temporal (ya lo tenías así)
+            $fileNameWithExtension = strtolower($uploadedFile->getClientOriginalName());
+            $fileName = pathinfo($fileNameWithExtension, PATHINFO_FILENAME);
+            $fileExtension = strtolower($uploadedFile->getClientOriginalExtension());
+            $uniqueFileName = $fileName . '_' . time() . '.' . $fileExtension;
+            $tempSubfolder = 'temp/rips/' . $batchId;
+            $filePath = $uploadedFile->storeAs($tempSubfolder, $uniqueFileName, Constants::DISK_FILES);
+
+            // Ruta completa en servidor (si la necesitas)
+            $fullPath = storage_path('app/' . $filePath); // ojo: usé storage_path('app/...') para respetar disco configurado
+
+            // Metadata que vas a guardar en Redis (igual a lo que tenías)
+            $metadata = [
+                'file_name' => $uniqueFileName,
+                'file_size' => $uploadedFile->getSize(),
+                'started_at' => now()->toDateTimeString(),
+                'total_rows' => 0,
+                'total_sheets' => 1,
+                'current_sheet' => 1,
+                'user_id' => $user_id,
+                'company_id' => $company_id,
+                'file_path' => $filePath, // guardar path para que jobs lo encuentren
+                'type' => "ripsCsv",
+            ];
+
+            // Conexión a Redis (mantener la tuya)
+            $redis = Redis::connection('redis_6380');
+            $redisKey = "batch:{$batchId}:metadata";
+            $redis->hmset($redisKey, $metadata);
+
+            // Crear registro en BD (tu modelo ProcessBatch)
+            ProcessBatch::create([
+                'id' => $batchId,
+                'batch_id' => $batchId,
+                'company_id' => $company_id,
+                'user_id' => $user_id,
+                'total_records' => 0,
+                'error_count' => 0,
+                'status' => 'active', // estado inicial
+                'metadata' => json_encode($metadata),
+            ]);
+
+            // Despachar job de validación de estructura (asíncrono)
+            $selectedQueue = ProcessBatchService::selectAvailableQueueRoundRobin(Constants::AVAILABLE_QUEUES_TO_IMPORTS_RIPS_CSV);
+
+            Bus::dispatch((new ValidateStructureJob($batchId))->onQueue($selectedQueue));
+
+
+
+            return [
+                'code' => 200,
+                'message' => 'Archivo subido y encolado para validación de estructura.',
+                'batch_id' => $batchId,
+                'status' => 'success',
+            ];
+        });
     }
 }

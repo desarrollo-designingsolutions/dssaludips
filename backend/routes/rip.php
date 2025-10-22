@@ -27,4 +27,13 @@ Route::middleware(['check.permission:rips.index'])->group(function () {
     Route::post('/rip/validateRips', [RipController::class, 'validateRips']);
 
     Route::post('/rip/validateRipGlobal', [RipController::class, 'validateRipGlobal']);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Method CSV
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post('/rip/uploadFileCsv', [RipController::class, 'uploadFileCsv']);
 });

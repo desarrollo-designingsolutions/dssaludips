@@ -325,7 +325,7 @@ const downloadFileData = async (type: string) => {
               Subir Excel
             </VBtn>
             <VBtn v-if="pathExcel" :disabled="isProcessing" :loading="isProcessing" @click="downloadFileData('excel')" color="primary" variant="outlined" size="small">
-              <VIcon icon="tabler-upload" class="mr-1" />
+              <VIcon icon="tabler-download" class="mr-1" />
               Descargar Excel
             </VBtn>
           </VCardActions>
