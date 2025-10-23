@@ -140,18 +140,16 @@ const validateWithMinistry = async (rip: any) => {
   }
 };
 
-<<<<<<< HEAD
+//ModalSelectServiceVendor
+const refModalSelectServiceVendor = ref()
+const openModalSelectServiceVendor = () => {
+  refModalSelectServiceVendor.value.openModal()
+}
 
 //ModalUploadCsv
 const refModalUploadCsv = ref()
 const openModalUploadCsv = () => {
   refModalUploadCsv.value.openModal()
-=======
-//ModalSelectServiceVendor
-const refModalSelectServiceVendor = ref()
-const openModalSelectServiceVendor = () => {
-  refModalSelectServiceVendor.value.openModal()
->>>>>>> origin/feature/import-manual-charge-rips
 }
 </script>
 

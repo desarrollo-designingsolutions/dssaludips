@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import EmergenciesForm from '@/pages/Rips/Manual/Components/EmergenciesForm.vue';
-import HospitalizationForm from '@/pages/Rips/Manual/Components/HospitalizationForm.vue';
-import MedicinesForm from '@/pages/Rips/Manual/Components/MedicinesForm.vue';
-import NewlyBornForm from '@/pages/Rips/Manual/Components/NewlyBornForm.vue';
-import OtherServicesForm from '@/pages/Rips/Manual/Components/OtherServicesForm.vue';
-import ProcedureForm from '@/pages/Rips/Manual/Components/ProcedureForm.vue';
+// import EmergenciesForm from '@/pages/Rips/Manual/Components/EmergenciesForm.vue';
+// import HospitalizationForm from '@/pages/Rips/Manual/Components/HospitalizationForm.vue';
+// import MedicinesForm from '@/pages/Rips/Manual/Components/MedicinesForm.vue';
+// import NewlyBornForm from '@/pages/Rips/Manual/Components/NewlyBornForm.vue';
+// import OtherServicesForm from '@/pages/Rips/Manual/Components/OtherServicesForm.vue';
+// import ProcedureForm from '@/pages/Rips/Manual/Components/ProcedureForm.vue';
 import MedicalConsultationForm from '@/pages/Rips/Components/Manual/MedicalConsultationForm.vue';
 import { useRipStore } from "@/pages/Rips/Store/useRipStore";
 import { useRipManualStore } from "@/pages/Rips/Store/useRipManualStore";
