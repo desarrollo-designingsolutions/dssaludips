@@ -35,4 +35,19 @@ Route::middleware(['check.permission:rips.index'])->group(function () {
     */
 
     Route::post('/rip/createRipManual', [RipController::class, 'createRipManual']);
+
+    Route::get('/rip/getManualInfoRipInvoice/{rip_id}', [RipController::class, 'getManualInfoRipInvoice']);
+
+    Route::post('/rip/storeInvoice', [RipController::class, 'storeInvoice']);
+
+    Route::get('/rip/getManualInfoUsers/{ripInvoice_id}', [RipController::class, 'getManualInfoUsers']);
+
+    Route::post('/rip/storeUsers', [RipController::class, 'storeUsers']);
+
+    Route::get('/rip/ripInvoiceServicesSelectsInfinite', [RipController::class, 'ripInvoiceServicesSelectsInfinite']);
+
+    Route::get('/rip/getManualInfoServices/{ripInvoiceUser_id}', [RipController::class, 'getManualInfoServices']);
+
+    Route::post('/rip/storeServices', [RipController::class, 'storeServices']);
+
 });

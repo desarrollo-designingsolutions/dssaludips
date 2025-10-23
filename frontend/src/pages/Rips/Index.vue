@@ -62,8 +62,12 @@ const openModalUploadZip = () => {
   refModalUploadZip.value.openModal()
 }
 
-const goView = (item: any) => {
+const goViewRipZip = (item: any) => {
   router.push({ name: "Rips-ListInvoices", params: { id: item.id } })
+}
+
+const goViewRipManual = (item: any) => {
+  router.push({ name: "Rips-Manual-ListInvoices", params: { id: item.id } })
 }
 
 //descarga de archivos
@@ -216,7 +220,10 @@ const openModalSelectServiceVendor = () => {
                     <VListItem  @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
                     <VListItem  @click="validateWithMinistry(item)">Validar con el ministerio</VListItem>
-                    <VListItem @click="goView(item)">
+                    <VListItem v-if="item.type == 'RIP_TYPE_001'" @click="goViewRipZip(item)">
+                      Ingresar
+                    </VListItem>
+                    <VListItem v-else-if="item.type == 'RIP_TYPE_002'" @click="goViewRipManual(item)">
                       Ingresar
                     </VListItem>
                   </VList>

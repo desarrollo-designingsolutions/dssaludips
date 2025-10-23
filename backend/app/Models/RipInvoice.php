@@ -32,4 +32,14 @@ class RipInvoice extends Model
     {
         return $this->belongsTo(Rip::class);
     }
+
+    public function ripUsers()
+    {
+        return $this->hasMany(RipInvoiceUser::class);
+    }
+
+    public function tipoNota()
+    {
+        return $this->belongsTo(TipoNota::class, 'note_type');
+    }
 }
