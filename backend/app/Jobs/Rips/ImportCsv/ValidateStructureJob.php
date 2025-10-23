@@ -259,7 +259,7 @@ class ValidateStructureJob implements ShouldQueue
                     ErrorCollector::saveErrorsToDatabase($this->batchId, $status);
                 }else{
 
-                    $cantChunks = 1000;
+                    $cantChunks = 50;
                     Bus::dispatch(new CreateChunksJob($this->batchId, $filePath, $diskName, $cantChunks));
                 }
 

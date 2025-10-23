@@ -65,7 +65,6 @@ class MergeGroupsJob implements ShouldQueue
 
             return; // Salir si no hay facturas
         }
-        // ========== FIN LOGS DE DIAGNÓSTICO ==========
 
         Log::info("MergeGroupsJob: iniciando merge batch={$this->batchId} batchSize={$this->batchSize}");
 
@@ -133,10 +132,22 @@ class MergeGroupsJob implements ShouldQueue
                 $processedInvoices++;
                 $processedThisRun++;
 
+                // ACTUALIZAR CONTADOR DE MERGE
+                $redis->hincrby($metaKey, 'merge_invoices_processed', 1);
+
                 // Emitir progreso cada N facturas
                 if ($processedThisRun % 10 === 0) {
-                    $rowsProcessed = (int) $redis->hget($metaKey, 'rows_processed');
-                    event(new ImportProgressEvent($this->batchId, $rowsProcessed, "Merge parcial: {$processedThisRun} facturas", $processedInvoices, 'merging', 'MERGE'));
+                    $invoicesProcessed = (int) $redis->hget($metaKey, 'merge_invoices_processed');
+                    $totalInvoices = (int) $redis->hget($metaKey, 'merge_total_invoices');
+
+                    event(new ImportProgressEvent(
+                        $this->batchId,
+                        $invoicesProcessed,  // ← Progreso basado en facturas procesadas
+                        'MERGING',
+                        ErrorCollector::countErrors($this->batchId),
+                        'active',
+                        "Merge: {$invoicesProcessed}/{$totalInvoices} facturas procesadas",
+                    ));
                 }
 
                 if ($processedThisRun >= $this->batchSize) {
@@ -146,21 +157,36 @@ class MergeGroupsJob implements ShouldQueue
         } while ($cursor != '0');
 
         // Actualizar meta y emitir evento final
-        $rowsProcessed = (int) $redis->hget($metaKey, 'rows_processed');
+        $invoicesProcessed = (int) $redis->hget($metaKey, 'merge_invoices_processed');
+        $totalInvoices = (int) $redis->hget($metaKey, 'merge_total_invoices');
         $remaining = (int) $redis->scard($invoicesSet);
 
         $redis->hset($metaKey, 'merge_completed_at', now()->toDateTimeString());
         $redis->hset($metaKey, 'invoices_remaining', $remaining);
 
-        event(new ImportProgressEvent($this->batchId, $rowsProcessed, "Merge: procesadas={$processedInvoices} restantes={$remaining}", $processedInvoices, 'merging', 'MERGE'));
+        event(new ImportProgressEvent(
+            $this->batchId,
+            $invoicesProcessed,
+            "MERGING",
+            ErrorCollector::countErrors($this->batchId),
+            'active',
+            "Merge: procesadas={$invoicesProcessed} restantes={$remaining}"
+        ));
 
-        Log::info("MergeGroupsJob: final run batch={$this->batchId} processed={$processedInvoices} remaining={$remaining}");
+        Log::info("MergeGroupsJob: final run batch={$this->batchId} processed={$invoicesProcessed} remaining={$remaining}");
 
         if ($remaining > 0) {
             self::dispatch($this->batchId, $this->disk, $this->batchSize);
             Log::info("MergeGroupsJob: Re-encolando job para procesar facturas restantes");
         } else {
-            event(new ImportProgressEvent($this->batchId, $rowsProcessed, "Merge completo. facturas procesadas total={$processedInvoices}", $processedInvoices, 'completed', 'MERGE'));
+            event(new ImportProgressEvent(
+                $this->batchId,
+                $totalInvoices,
+                "MERGE_COMPLETED",
+                ErrorCollector::countErrors($this->batchId),
+                'completed',
+                "Merge completo: {$invoicesProcessed} facturas procesadas"
+            ));
             Log::info("MergeGroupsJob: merge completado para batch={$this->batchId}");
 
             $countErrors = ErrorCollector::countErrors($this->batchId);

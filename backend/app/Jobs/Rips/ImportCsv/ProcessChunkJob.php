@@ -56,7 +56,6 @@ class ProcessChunkJob implements ShouldQueue
 
     public function handle()
     {
-
         $redis = Redis::connection('redis_6380');
         $metaKey = "import:batch:{$this->batchId}:meta";
         $chunkKey = "import:batch:{$this->batchId}:chunk:{$this->chunkId}";
@@ -165,15 +164,17 @@ class ProcessChunkJob implements ShouldQueue
         // Verificar si todos los chunks están completos para encolar MergeGroupsJob
         $this->checkAndDispatchMergeJob($redis, $metaKey);
 
-        // Emitir evento de progreso
-        $rowsProcessed = (int) $redis->hget($metaKey, 'rows_processed');
+        // Emitir evento de progreso - CORREGIDO
+        $chunksCompleted = (int) $redis->hget($metaKey, 'chunks_completed');
+        $totalChunks = (int) $redis->hget($metaKey, 'total_chunks');
+
         event(new ImportProgressEvent(
             $this->batchId,
-            $rowsProcessed,
-            "Chunk procesado {$this->chunkId} partials={$partialsWritten}",
-            $rowsProcessed,
-            'processing',
-            'CSV'
+            $chunksCompleted,  // ← Progreso basado en CHUNKS completados
+            'PROCESSING_CHUNKS',
+            ErrorCollector::countErrors($this->batchId),
+            'active',
+            "Chunk {$this->chunkId} procesado: {$chunksCompleted}/{$totalChunks} chunks, {$partialsWritten} partials",
         ));
 
         Log::info("ProcessChunkJob: chunk {$this->chunkId} processed for batch {$this->batchId} partials={$partialsWritten} rows={$rowsInChunk}");
@@ -636,20 +637,32 @@ class ProcessChunkJob implements ShouldQueue
                 $redis->expire($mergeFlagKey, 60 * 60 * 24);
 
                 try {
+                    // PRIMERO: INFORMAR QUE EL MERGE VA A COMENZAR
+                    $totalInvoices = $redis->scard($invoicesSet);
+                    event(new ImportProgressEvent(
+                        $this->batchId,
+                        0,  // ← Progreso en 0 para nueva fase
+                        'MERGE_STARTING',
+                        ErrorCollector::countErrors($this->batchId),
+                        'active',
+                        "Preparando merge de {$totalInvoices} facturas...",
+                    ));
+
+                    sleep(5);
+
+                    // SEGUNDO: REINICIAR CONTADORES PARA MERGE
+                    $redis->hset($metaKey, 'merge_invoices_processed', 0);
+                    $redis->hset($metaKey, 'merge_total_invoices', $totalInvoices);
+
+                    // TERCERO: ACTUALIZAR TOTAL_ROWS EN METADATA PRINCIPAL PARA EL MERGE
+                    $metadata = $redis->hgetall("batch:{$this->batchId}:metadata");
+                    $metadata['total_rows'] = $totalInvoices;  // ← ¡CORRECCIÓN IMPORTANTE!
+                    $redis->hmset("batch:{$this->batchId}:metadata", $metadata);
+
+                    // CUARTO: DESPACHAR EL JOB
                     \App\Jobs\Rips\ImportCsv\MergeGroupsJob::dispatch($this->batchId, $this->disk, 500);
                     Log::info("ProcessChunkJob: dispatched MergeGroupsJob for batch {$this->batchId}");
                     $redis->hset($metaKey, 'merge_enqueued_at', now()->toDateTimeString());
-
-                    // Emitir evento de progreso
-                    $rowsProcessed = (int) $redis->hget($metaKey, 'rows_processed');
-                    event(new ImportProgressEvent(
-                        $this->batchId,
-                        $rowsProcessed,
-                        "Chunk processing completado, iniciando merge",
-                        $totalErrors,
-                        'processing',
-                        'MERGE'
-                    ));
                 } catch (\Throwable $e) {
                     Log::error("ProcessChunkJob: fallo al encolar MergeGroupsJob: {$e->getMessage()}");
                     $redis->del($mergeFlagKey);
