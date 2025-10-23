@@ -175,3 +175,15 @@ export const minDateValidator = (date: string, dateComparation: string) => {
 
   return endDate >= minDate || `La fecha no puede ser anterior a ${formatToDMYHI(dateComparation)}`;
 };
+
+export const uniqueValue = (value: unknown, arrayData: Array<string>, customErrorMessage?: string): string | boolean => {
+  const stringValue = String(value); // Convertir el valor a cadena de texto
+   
+  const occurrences = arrayData.filter(item => item === stringValue).length;
+  
+  if (occurrences > 1) {
+    return customErrorMessage || "El valor ya está en uso.";
+  }
+  
+  return true;
+};

@@ -3,6 +3,7 @@ import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
 import ModalUploadZip from '@/pages/Rips/Components/ModalUploadZip.vue';
 import ModalUploadCsv from '@/pages/Rips/Components/ModalUploadCsv.vue';
 import ModalUploadExcel from '@/pages/Rips/Components/ModalUploadExcel.vue';
+import ModalSelectServiceVendor from '@/pages/Rips/Components/ModalSelectServiceVendor.vue';
 import { router } from "@/plugins/1.router";
 import { useGlobalLoading } from '@/composables/useGlobalLoading';
 
@@ -62,8 +63,12 @@ const openModalUploadZip = () => {
   refModalUploadZip.value.openModal()
 }
 
-const goView = (item: any) => {
+const goViewRipZip = (item: any) => {
   router.push({ name: "Rips-ListInvoices", params: { id: item.id } })
+}
+
+const goViewRipManual = (item: any) => {
+  router.push({ name: "Rips-Manual-ListInvoices", params: { id: item.id } })
 }
 
 //descarga de archivos
@@ -135,11 +140,18 @@ const validateWithMinistry = async (rip: any) => {
   }
 };
 
+<<<<<<< HEAD
 
 //ModalUploadCsv
 const refModalUploadCsv = ref()
 const openModalUploadCsv = () => {
   refModalUploadCsv.value.openModal()
+=======
+//ModalSelectServiceVendor
+const refModalSelectServiceVendor = ref()
+const openModalSelectServiceVendor = () => {
+  refModalSelectServiceVendor.value.openModal()
+>>>>>>> origin/feature/import-manual-charge-rips
 }
 </script>
 
@@ -159,6 +171,11 @@ const openModalUploadCsv = () => {
               </VBtn>
             </template>
 
+            <VList>
+              <VListItem @click="openModalSelectServiceVendor()">
+                Manual
+              </VListItem> 
+            </VList>
             <VList>
               <VListItem @click="openModalUploadZip()">
                 Añadir ZIP
@@ -215,7 +232,10 @@ const openModalUploadCsv = () => {
                     <VListItem  @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
                     <VListItem  @click="validateWithMinistry(item)">Validar con el ministerio</VListItem>
-                    <VListItem @click="goView(item)">
+                    <VListItem v-if="item.type == 'RIP_TYPE_001'" @click="goViewRipZip(item)">
+                      Ingresar
+                    </VListItem>
+                    <VListItem v-else-if="item.type == 'RIP_TYPE_002'" @click="goViewRipManual(item)">
                       Ingresar
                     </VListItem>
                   </VList>
@@ -233,6 +253,7 @@ const openModalUploadCsv = () => {
 
     <ModalUploadExcel ref="refModalUploadExcel" :maxFileSizeMB="200" />
 
+    <ModalSelectServiceVendor ref="refModalSelectServiceVendor" @success="refreshTable" />
 
   </div>
 </template>
