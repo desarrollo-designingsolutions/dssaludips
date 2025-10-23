@@ -451,8 +451,6 @@ class RipController extends Controller
 
             Bus::dispatch((new ValidateStructureJob($batchId))->onQueue($selectedQueue));
 
-
-
             return [
                 'code' => 200,
                 'message' => 'Archivo subido y encolado para validación de estructura.',

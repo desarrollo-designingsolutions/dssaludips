@@ -3,6 +3,7 @@
 namespace App\Jobs\Rips\ImportCsv;
 
 use App\Events\ImportProgressEvent;
+use App\Helpers\Common\ErrorCollector;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -161,6 +162,10 @@ class MergeGroupsJob implements ShouldQueue
         } else {
             event(new ImportProgressEvent($this->batchId, $rowsProcessed, "Merge completo. facturas procesadas total={$processedInvoices}", $processedInvoices, 'completed', 'MERGE'));
             Log::info("MergeGroupsJob: merge completado para batch={$this->batchId}");
+
+            $countErrors = ErrorCollector::countErrors($this->batchId);
+            $status = $countErrors > 0 ? 'failed' : "completed";
+            ErrorCollector::saveErrorsToDatabase($this->batchId, $status);
         }
     }
 

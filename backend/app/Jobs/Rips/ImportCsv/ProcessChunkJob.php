@@ -42,7 +42,8 @@ class ProcessChunkJob implements ShouldQueue
         'numNota',
         'TipoNota',
         'numFactura',
-        'numDocumentoIdObligado'
+        'numDocumentoIdObligado',
+        'usuarios',
     ];
 
     public function __construct(string $batchId, string $chunkId, string $chunkPath, string $disk = 'public')
@@ -55,6 +56,7 @@ class ProcessChunkJob implements ShouldQueue
 
     public function handle()
     {
+
         $redis = Redis::connection('redis_6380');
         $metaKey = "import:batch:{$this->batchId}:meta";
         $chunkKey = "import:batch:{$this->batchId}:chunk:{$this->chunkId}";
@@ -177,6 +179,250 @@ class ProcessChunkJob implements ShouldQueue
         Log::info("ProcessChunkJob: chunk {$this->chunkId} processed for batch {$this->batchId} partials={$partialsWritten} rows={$rowsInChunk}");
     }
 
+    // Agrega esta propiedad a la clase
+    private array $allowedServiceTypes = [
+        'consultas',
+        'procedimientos',
+        'urgencias',
+        'hospitalizacion',
+        'recienNacidos',
+        'medicamentos',
+        'otrosServicios'
+    ];
+
+    /**
+     * Valida si un campo pertenece a la sección correcta
+     */
+    protected function validateFieldSection(string $campo, string $section, array $data, int $rowNumber): bool
+    {
+        $valid = true;
+        $errorMessage = null;
+        $errorType = null;
+
+        switch ($section) {
+            case 'factura':
+                if (!in_array($campo, $this->exactInvoiceFields, true)) {
+                    $errorMessage = "Campo '{$campo}' no permitido a nivel de factura";
+                    $errorType = 'FIELD_NOT_ALLOWED_IN_SECTION';
+                    $valid = false;
+                }
+                break;
+
+            case 'usuario':
+                if (!in_array($campo, $this->exactUserFields, true)) {
+                    $errorMessage = "Campo '{$campo}' no permitido a nivel de usuario";
+                    $errorType = 'FIELD_NOT_ALLOWED_IN_SECTION';
+                    $valid = false;
+                }
+                break;
+
+            case 'servicio':
+                // La validación de campos de servicio se hace en processServiceLevelField
+                break;
+        }
+
+        if (!$valid) {
+            ErrorCollector::addError(
+                $this->batchId,
+                $rowNumber,
+                $campo,
+                $errorMessage,
+                $errorType,
+                $data['valor'] ?? null,
+                json_encode($data)
+            );
+        }
+
+        return $valid;
+    }
+
+    /**
+     * Valida si un tipo de servicio es permitido
+     */
+    protected function validateServiceType(string $servicio, array $data, int $rowNumber): bool
+    {
+        if (!in_array($servicio, $this->allowedServiceTypes, true)) {
+            ErrorCollector::addError(
+                $this->batchId,
+                $rowNumber,
+                'servicio',
+                "Tipo de servicio '{$servicio}' no permitido. Servicios válidos: " . implode(', ', $this->allowedServiceTypes),
+                'SERVICE_TYPE_NOT_ALLOWED',
+                $servicio,
+                json_encode($data)
+            );
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Valida si un campo es permitido para un tipo de servicio específico
+     */
+    protected function validateServiceField(string $campo, string $servicio, array $data, int $rowNumber): bool
+    {
+        $allowedFields = $this->getAllowedServiceFields($servicio);
+
+        if (!in_array($campo, $allowedFields, true)) {
+            ErrorCollector::addError(
+                $this->batchId,
+                $rowNumber,
+                $campo,
+                "Campo '{$campo}' no permitido para el servicio '{$servicio}'. Campos válidos: " . implode(', ', $allowedFields),
+                'FIELD_NOT_ALLOWED_FOR_SERVICE',
+                $data['valor'] ?? null,
+                json_encode($data)
+            );
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Retorna los campos permitidos para cada tipo de servicio
+     */
+    protected function getAllowedServiceFields(string $serviceType): array
+    {
+        $fields = [
+            'procedimientos' => [
+                'idMIPRES',
+                'vrServicio',
+                'codServicio',
+                'consecutivo',
+                'codPrestador',
+                'grupoServicios',
+                'codComplicacion',
+                'conceptoRecaudo',
+                'numAutorizacion',
+                'codProcedimiento',
+                'valorPagoModerador',
+                'fechaInicioAtencion',
+                'numFEVPagoModerador',
+                'codDiagnosticoPrincipal',
+                'viaIngresoServicioSalud',
+                'finalidadTecnologiaSalud',
+                'codDiagnosticoRelacionado',
+                'numDocumentoIdentificacion',
+                'tipoDocumentoIdentificacion',
+                'modalidadGrupoServicioTecSal'
+            ],
+            'consultas' => [
+                'codPrestador',
+                'fechaInicioAtencion',
+                'numAutorizacion',
+                'codConsulta',
+                'modalidadGrupoServicioTecSal',
+                'grupoServicios',
+                'codServicio',
+                'finalidadTecnologiaSalud',
+                'causaMotivoAtencion',
+                'codDiagnosticoPrincipal',
+                'codDiagnosticoRelacionado1',
+                'codDiagnosticoRelacionado2',
+                'codDiagnosticoRelacionado3',
+                'tipoDiagnosticoPrincipal',
+                'tipoDocumentoIdentificacion',
+                'numDocumentoIdentificacion',
+                'vrServicio',
+                'conceptoRecaudo',
+                'valorPagoModerador',
+                'numFEVPagoModerador',
+                'consecutivo'
+            ],
+            'urgencias' => [
+                'codPrestador',
+                'fechaInicioAtencion',
+                'causaMotivoAtencion',
+                'codDiagnosticoPrincipal',
+                'codDiagnosticoPrincipalE',
+                'codDiagnosticoRelacionadoE1',
+                'codDiagnosticoRelacionadoE2',
+                'codDiagnosticoRelacionadoE3',
+                'condicionDestinoUsuarioEgreso',
+                'codDiagnosticoCausaMuerte',
+                'fechaEgreso',
+                'consecutivo'
+            ],
+            'hospitalizacion' => [
+                'codPrestador',
+                'viaIngresoServicioSalud',
+                'fechaInicioAtencion',
+                'numAutorizacion',
+                'causaMotivoAtencion',
+                'codDiagnosticoPrincipal',
+                'codDiagnosticoPrincipalE',
+                'codDiagnosticoRelacionadoE1',
+                'codDiagnosticoRelacionadoE2',
+                'codDiagnosticoRelacionadoE3',
+                'codComplicacion',
+                'condicionDestinoUsuarioEgreso',
+                'codDiagnosticoCausaMuerte',
+                'fechaEgreso',
+                'consecutivo'
+            ],
+            'medicamentos' => [
+                'codPrestador',
+                'numAutorizacion',
+                'idMIPRES',
+                'fechaDispensAdmon',
+                'codDiagnosticoPrincipal',
+                'codDiagnosticoRelacionado',
+                'tipoMedicamento',
+                'codTecnologiaSalud',
+                'nomTecnologiaSalud',
+                'concentracionMedicamento',
+                'unidadMedida',
+                'formaFarmaceutica',
+                'unidadMinDispensa',
+                'cantidadMedicamento',
+                'diasTratamiento',
+                'tipoDocumentoIdentificacion',
+                'numDocumentoIdentificacion',
+                'vrUnitMedicamento',
+                'vrServicio',
+                'conceptoRecaudo',
+                'valorPagoModerador',
+                'numFEVPagoModerador',
+                'consecutivo'
+            ],
+            'recienNacidos' => [
+                'codPrestador',
+                'tipoDocumentoIdentificacion',
+                'numDocumentoIdentificacion',
+                'fechaNacimiento',
+                'edadGestacional',
+                'numConsultasCPrenatal',
+                'codSexoBiologico',
+                'peso',
+                'codDiagnosticoPrincipal',
+                'condicionDestinoUsuarioEgreso',
+                'codDiagnosticoCausaMuerte',
+                'fechaEgreso',
+                'consecutivo'
+            ],
+            'otrosServicios' => [
+                'codPrestador',
+                'numAutorizacion',
+                'idMIPRES',
+                'fechaSuministroTecnologia',
+                'tipoOS',
+                'codTecnologiaSalud',
+                'nomTecnologiaSalud',
+                'cantidadOS',
+                'tipoDocumentoIdentificacion',
+                'numDocumentoIdentificacion',
+                'vrUnitOS',
+                'vrServicio',
+                'conceptoRecaudo',
+                'valorPagoModerador',
+                'numFEVPagoModerador',
+                'consecutivo'
+            ]
+        ];
+
+        return $fields[$serviceType] ?? [];
+    }
+
     /**
      * Procesa una fila del CSV y la agrega al grupo correspondiente
      */
@@ -215,23 +461,22 @@ class ProcessChunkJob implements ShouldQueue
         $campo = $data['campo'] ?? null;
         $valor = $this->castValue($data['valor'] ?? null);
 
-        // DEBUG: Log para ver qué está llegando
-        Log::info("DEBUG - Procesando fila: num_factura={$numFactura}, id_usuario={$idUsuario}, num_identificacion={$numIdentificacion}, campo={$campo}, valor={$valor}");
-
         // Determinar el nivel del campo
         if (!empty($idUsuario) && !empty($numIdentificacion)) {
             // Campo a nivel de usuario o servicio
-            $this->processUserLevelField($groups[$numFactura], $idUsuario, $numIdentificacion, $idServicio, $servicio, $campo, $valor, $rowNumber);
+            $this->processUserLevelField($groups[$numFactura], $idUsuario, $numIdentificacion, $idServicio, $servicio, $campo, $valor, $rowNumber, $data);
         } else {
-            // Campo a nivel de factura (solo num_factura, campo y valor tienen datos)
-            $this->processInvoiceLevelField($groups[$numFactura], $campo, $valor);
+            // Campo a nivel de factura
+            if (!empty($campo) && $this->validateFieldSection($campo, 'factura', $data, $rowNumber)) {
+                $this->processInvoiceLevelField($groups[$numFactura], $campo, $valor);
+            }
         }
     }
 
     /**
      * Procesa campos a nivel de usuario o servicio
      */
-    protected function processUserLevelField(array &$invoiceGroup, $idUsuario, $numIdentificacion, $idServicio, $servicio, $campo, $valor, int $rowNumber): void
+    protected function processUserLevelField(array &$invoiceGroup, $idUsuario, $numIdentificacion, $idServicio, $servicio, $campo, $valor, int $rowNumber, array $data): void
     {
         // Calcular posición del usuario (id_usuario - 1)
         $userPosition = max(0, ((int)$idUsuario) - 1);
@@ -249,7 +494,7 @@ class ProcessChunkJob implements ShouldQueue
                 'fechaNacimiento' => null,
                 'codPaisResidencia' => null,
                 'codMunicipioResidencia' => null,
-                'numDocumentoIdentificacion' => $numIdentificacion, // Tomar directamente de num_identificacion
+                'numDocumentoIdentificacion' => $numIdentificacion,
                 'tipoDocumentoIdentificacion' => null,
                 'codZonaTerritorialResidencia' => null,
                 'servicios' => [],
@@ -260,40 +505,33 @@ class ProcessChunkJob implements ShouldQueue
                     'position' => $userPosition
                 ]
             ];
-
-            Log::info("DEBUG - Usuario creado: key={$userKey}, numDocumentoIdentificacion={$numIdentificacion}");
         }
 
         $user = &$invoiceGroup['usuarios'][$userKey];
 
         if (!empty($idServicio) && !empty($servicio)) {
             // Campo a nivel de servicio
-            $this->processServiceLevelField($user, $idServicio, $servicio, $campo, $valor);
+            $this->processServiceLevelField($user, $idServicio, $servicio, $campo, $valor, $rowNumber, $data);
         } else if (!empty($campo)) {
-            // Campo a nivel de usuario (solo si hay campo definido)
-            $this->processUserField($user, $campo, $valor);
+            // Campo a nivel de usuario
+            if ($this->validateFieldSection($campo, 'usuario', $data, $rowNumber)) {
+                $this->processUserField($user, $campo, $valor);
+            }
         }
     }
 
     /**
      * Procesa campos a nivel de servicio
      */
-    protected function processServiceLevelField(array &$user, $idServicio, $servicio, $campo, $valor): void
+    protected function processServiceLevelField(array &$user, $idServicio, $servicio, $campo, $valor, int $rowNumber, array $data): void
     {
-        // Tipos de servicios permitidos
-        $allowedServiceTypes = [
-            'consultas',
-            'procedimientos',
-            'urgencias',
-            'hospitalizacion',
-            'recienNacidos',
-            'medicamentos',
-            'otrosServicios'
-        ];
-
         // Validar tipo de servicio
-        if (!in_array($servicio, $allowedServiceTypes)) {
-            Log::warning("ProcessChunkJob: Tipo de servicio no permitido: {$servicio}");
+        if (!$this->validateServiceType($servicio, $data, $rowNumber)) {
+            return;
+        }
+
+        // Validar campo del servicio
+        if (!empty($campo) && !$this->validateServiceField($campo, $servicio, $data, $rowNumber)) {
             return;
         }
 
@@ -304,14 +542,13 @@ class ProcessChunkJob implements ShouldQueue
                 'id_servicio' => $idServicio,
                 'servicio' => $servicio,
                 'detalles' => [],
-                'consecutivo' => $idServicio // Usar id_servicio como consecutivo por defecto
+                'consecutivo' => $idServicio
             ];
         }
 
         // Agregar campo al servicio
         if (!empty($campo)) {
             $user['servicios'][$serviceKey]['detalles'][$campo] = $valor;
-            Log::info("DEBUG - Campo de servicio agregado: servicio={$servicio}, id_servicio={$idServicio}, campo={$campo}, valor={$valor}");
         }
     }
 
@@ -386,8 +623,10 @@ class ProcessChunkJob implements ShouldQueue
         $totalChunks = (int) $redis->hget($metaKey, 'total_chunks');
         $invoicesSet = "import:batch:{$this->batchId}:invoices_set";
 
+        $totalErrors = ErrorCollector::countErrors($this->batchId);
+
         // LOG DE DIAGNÓSTICO - Verificación de merge
-        Log::info("ProcessChunkJob: Verificando merge - chunksCompleted={$chunksCompleted}, totalChunks={$totalChunks}, facturasEnSet=" . $redis->scard($invoicesSet));
+        Log::info("ProcessChunkJob: Verificando merge - chunksCompleted={$chunksCompleted}, totalChunks={$totalChunks}, facturasEnSet=" . $redis->scard($invoicesSet) . ", errores={$totalErrors}");
 
         $mergeFlagKey = "import:batch:{$this->batchId}:merge_enqueued";
 
@@ -400,6 +639,17 @@ class ProcessChunkJob implements ShouldQueue
                     \App\Jobs\Rips\ImportCsv\MergeGroupsJob::dispatch($this->batchId, $this->disk, 500);
                     Log::info("ProcessChunkJob: dispatched MergeGroupsJob for batch {$this->batchId}");
                     $redis->hset($metaKey, 'merge_enqueued_at', now()->toDateTimeString());
+
+                    // Emitir evento de progreso
+                    $rowsProcessed = (int) $redis->hget($metaKey, 'rows_processed');
+                    event(new ImportProgressEvent(
+                        $this->batchId,
+                        $rowsProcessed,
+                        "Chunk processing completado, iniciando merge",
+                        $totalErrors,
+                        'processing',
+                        'MERGE'
+                    ));
                 } catch (\Throwable $e) {
                     Log::error("ProcessChunkJob: fallo al encolar MergeGroupsJob: {$e->getMessage()}");
                     $redis->del($mergeFlagKey);

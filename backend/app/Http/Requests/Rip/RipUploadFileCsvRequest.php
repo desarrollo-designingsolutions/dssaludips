@@ -17,7 +17,7 @@ class RipUploadFileCsvRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'file' => 'required|file|extensions:csv|max:51200', // Valida MIME (application/csv), extensión .csv, y tamaño máx 50MB
+            'file' => 'required|file|extensions:csv', // Valida MIME (application/csv), extensión .csv, y tamaño máx 50MB
             'user_id' => 'required',
             'company_id' => 'required',
         ];

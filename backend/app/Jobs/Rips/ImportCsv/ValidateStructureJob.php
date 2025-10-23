@@ -45,9 +45,6 @@ class ValidateStructureJob implements ShouldQueue
 
     public function handle()
     {
-
-            Log::info("bbbbb");
-
         event(new ImportProgressEvent($this->batchId, 0, 'Iniciando validación CSV', 0, 'active', 'CSV'));
 
 
@@ -182,7 +179,7 @@ class ValidateStructureJob implements ShouldQueue
                 if ($errorsCount > 0) {
                     $batch->update([
                         'error_count' => DB::raw("error_count + {$errorsCount}"),
-                        'status' => 'failed_structure', // o 'failed' según tu flujo
+                        'status' => 'failed', // o 'failed' según tu flujo
                     ]);
 
                     event(new ImportProgressEvent($this->batchId, 0, 'Validación CSV fallida', ErrorCollector::countErrors($this->batchId), 'failed', 'CSV'));
@@ -225,21 +222,10 @@ class ValidateStructureJob implements ShouldQueue
                 return;
             }
 
-            event(new ImportProgressEvent($this->batchId, 0, 'Validación CSV OK', ErrorCollector::countErrors($this->batchId), 'completed', 'CSV'));
 
 
 
-            Log::info("cccccccccc");
-
-
-
-            $cantChunks = 5;
-            Bus::dispatch(new CreateChunksJob($this->batchId, $filePath, $diskName, $cantChunks));
-
-
-
-
-
+            event(new ImportProgressEvent($this->batchId, 0, 'Validación CSV OK', ErrorCollector::countErrors($this->batchId), 'active', 'CSV'));
 
 
 
@@ -264,10 +250,20 @@ class ValidateStructureJob implements ShouldQueue
             }
         } finally {
             try {
+
+
                 // Consolidar y persistir errores en BD (si tu ErrorCollector implementa esto)
                 $countErrors = ErrorCollector::countErrors($this->batchId);
-                $status = $countErrors > 0 ? 'failed' : 'completed';
-                ErrorCollector::saveErrorsToDatabase($this->batchId, $status);
+                if ($countErrors > 0) {
+                    $status = 'failed';
+                    ErrorCollector::saveErrorsToDatabase($this->batchId, $status);
+                }else{
+
+                    $cantChunks = 1000;
+                    Bus::dispatch(new CreateChunksJob($this->batchId, $filePath, $diskName, $cantChunks));
+                }
+
+
             } catch (\Throwable $e) {
                 Log::debug("ValidateStructureJob: error guardando errores a BD: {$e->getMessage()}");
             }

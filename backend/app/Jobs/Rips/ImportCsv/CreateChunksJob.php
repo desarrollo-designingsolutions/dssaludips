@@ -3,6 +3,7 @@
 namespace App\Jobs\Rips\ImportCsv;
 
 use App\Events\ImportProgressEvent;
+use App\Helpers\Common\ErrorCollector;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -39,6 +40,9 @@ class CreateChunksJob implements ShouldQueue
 
     public function handle()
     {
+        event(new ImportProgressEvent($this->batchId, 0, 'Procesamiento de la data del CSV', ErrorCollector::countErrors($this->batchId), 'active', "CreateChunksJob: iniciando chunking batch={$this->batchId} file={$this->filePath} disk={$this->disk} chunkSize={$this->chunkSize}"));
+
+
         $redis = Redis::connection('redis_6380');
         $metaKey = "import:batch:{$this->batchId}:meta";
         $chunksPrefix = "import:batch:{$this->batchId}:chunk:"; // we'll HSET per chunk
@@ -93,11 +97,6 @@ class CreateChunksJob implements ShouldQueue
 
             // Put stream to storage (overwrites if exists)
             try {
-                // Ensure parent directory exists in storage: putStream will create path
-                // $disk->putStream($chunkPath, $currentTemp);
-
-
-
                 // --- Bloque robusto para escribir chunk al storage (reemplaza el anterior) ---
 
                 try {
@@ -243,6 +242,10 @@ class CreateChunksJob implements ShouldQueue
 
         // Emitir evento final de chunking
         event(new ImportProgressEvent($this->batchId, $rowsProcessedTotal, "Chunking completo: {$totalChunks} chunks", $rowsProcessedTotal, 'chunks_created', 'CSV'));
+
+
+
+
 
         Log::info("CreateChunksJob: terminado batch={$this->batchId} totalChunks={$totalChunks} totalRows={$rowsProcessedTotal}");
     }

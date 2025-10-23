@@ -229,7 +229,7 @@ const openModalUploadCsv = () => {
 
     <ModalUploadZip ref="refModalUploadZip" :maxFileSizeMB="200" />
 
-    <ModalUploadCsv ref="refModalUploadCsv" :maxFileSizeMB="200" />
+    <ModalUploadCsv ref="refModalUploadCsv" :maxFileSizeMB="900" />
 
     <ModalUploadExcel ref="refModalUploadExcel" :maxFileSizeMB="200" />
 
