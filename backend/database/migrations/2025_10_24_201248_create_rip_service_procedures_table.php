@@ -11,26 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rip_service_queries', function (Blueprint $table) {
+        Schema::create('rip_service_procedures', function (Blueprint $table) {
             $table->uuid('id')->primary();
 
             $table->foreignUuid('rip_invoice_user_id')->constrained();
             $table->string('codPrestador')->nullable();
             $table->string('fechaInicioAtencion')->nullable();
+            $table->string('idMIPRES')->nullable();
             $table->string('numAutorizacion')->nullable();
-            $table->string('codConsulta')->nullable();
+            $table->string('codProcedimiento')->nullable();
+            $table->string('viaIngresoServicioSalud')->nullable();
             $table->string('modalidadGrupoServicioTecSal')->nullable();
             $table->string('grupoServicios')->nullable();
             $table->string('codServicio')->nullable();
             $table->string('finalidadTecnologiaSalud')->nullable();
-            $table->string('causaMotivoAtencion')->nullable();
-            $table->string('codDiagnosticoPrincipal')->nullable();
-            $table->string('codDiagnosticoRelacionado1')->nullable();
-            $table->string('codDiagnosticoRelacionado2')->nullable();
-            $table->string('codDiagnosticoRelacionado3')->nullable();
-            $table->string('tipoDiagnosticoPrincipal')->nullable();
             $table->string('tipoDocumentoIdentificacion')->nullable();
             $table->string('numDocumentoIdentificacion')->nullable();
+            $table->string('codDiagnosticoPrincipal')->nullable();
+            $table->string('codDiagnosticoRelacionado')->nullable();
+            $table->string('codComplicacion')->nullable();
             $table->float('vrServicio')->nullable();
             $table->string('conceptoRecaudo')->nullable();
             $table->float('valorPagoModerador')->nullable();
@@ -47,6 +46,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rip_service_queries');
+        Schema::dropIfExists('rip_service_procedures');
     }
 };

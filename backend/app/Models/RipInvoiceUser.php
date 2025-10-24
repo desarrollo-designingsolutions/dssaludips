@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\YesNoEnum;
 use App\Traits\Cacheable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -13,5 +12,15 @@ class RipInvoiceUser extends Model
     use Cacheable, HasUuids, SoftDeletes;
 
     protected $guarded = [];
+
+    public function queries()
+    {
+        return $this->hasMany(RipServiceQuery::class);
+    }
+
+    public function procedures()
+    {
+        return $this->hasMany(RipServiceProcedure::class);
+    }
 
 }

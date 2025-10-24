@@ -13,7 +13,13 @@ export const useRipStore = defineStore('useRipStore', {
       recienNacidos: 0,
       medicamentos: 0,
       otrosServicios: 0,
-    }
+    },
+    dataServicesRipUser: {
+      arrayData: [] as Array<object>
+    } as object,
+    dataUser: {
+      arrayData: [] as Array<object>
+    } as object,
   }),
   persist: true,
   getters: {

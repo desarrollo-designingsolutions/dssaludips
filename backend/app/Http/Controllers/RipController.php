@@ -18,9 +18,18 @@ use App\Http\Requests\Rip\Manual\RipsManualStoreUsersRequest;
 use App\Http\Requests\Rip\RipUploadFileZipRequest;
 use App\Http\Resources\Rip\RipPaginateResource;
 use App\Http\Requests\Rip\RipCreateManualRequest;
+use App\Http\Resources\Cie10\Cie10SelectInfiniteResource;
+use App\Http\Resources\ConceptoRecaudo\ConceptoRecaudoSelectResource;
+use App\Http\Resources\CupsRips\CupsRipsSelectInfiniteResource;
+use App\Http\Resources\GrupoServicio\GrupoServicioSelectInfiniteResource;
+use App\Http\Resources\ModalidadAtencion\ModalidadAtencionSelectInfiniteResource;
 use App\Http\Resources\Municipio\MunicipioSelectResource;
 use App\Http\Resources\Pais\PaisSelectResource;
+use App\Http\Resources\RipsCausaExternaVersion2\RipsCausaExternaVersion2SelectInfiniteResource;
+use App\Http\Resources\RipsFinalidadConsultaVersion2\RipsFinalidadConsultaVersion2SelectInfiniteResource;
+use App\Http\Resources\RipsTipoDiagnosticoPrincipalVersion2\RipsTipoDiagnosticoPrincipalVersion2SelectInfiniteResource;
 use App\Http\Resources\RipsTipoUsuarioVersion2\RipsTipoUsuarioVersion2SelectResource;
+use App\Http\Resources\Servicio\ServicioSelectInfiniteResource;
 use App\Http\Resources\Sexo\SexoSelectResource;
 use App\Http\Resources\TipoIdPisis\TipoIdPisisSelectResource;
 use App\Http\Resources\TipoNota\TipoNotaSelectResource;
@@ -34,11 +43,20 @@ use App\Jobs\Rips\SaveErrorsJob;
 use App\Jobs\Rips\ValidateExcelJob;
 use App\Jobs\Rips\ValidateRipInvoiceJob;
 use App\Jobs\Rips\ValidateZipJob;
+use App\Models\Cie10;
+use App\Models\ConceptoRecaudo;
+use App\Models\CupsRips;
+use App\Models\GrupoServicio;
+use App\Models\ModalidadAtencion;
 use App\Models\Municipio;
 use App\Models\Pais;
 use App\Models\ProcessBatch;
 use App\Models\RipInvoice;
+use App\Models\RipsCausaExternaVersion2;
+use App\Models\RipsFinalidadConsultaVersion2;
+use App\Models\RipsTipoDiagnosticoPrincipalVersion2;
 use App\Models\RipsTipoUsuarioVersion2;
+use App\Models\Servicio;
 use App\Models\Sexo;
 use App\Models\TipoIdPisis;
 use App\Models\TipoNota;
@@ -462,8 +480,8 @@ class RipController extends Controller
 
                     $tipoNota = null;
 
-                    if ($value['note_type']) {
-                        $tipoNota = TipoNota::where('codigo', $value['note_type'])->first();
+                    if ($value['tipoNota']) {
+                        $tipoNota = TipoNota::where('codigo', $value['tipoNota'])->first();
                     }
 
                     $arrayData[] = [
@@ -471,8 +489,8 @@ class RipController extends Controller
                         'numDocumentoIdObligado' => $rip->nit,
                         'numFactura' => $value['invoice_number'],
                         'cantUsers' => $value['count_users'],
-                        'TipoNota' => $value['note_type'] ? new TipoNotaSelectResource($tipoNota) : null,
-                        'numNota' => $value['note_number'],
+                        'TipoNota' => $value['tipoNota'] ? new TipoNotaSelectResource($tipoNota) : null,
+                        'numNota' => $value['numNota'],
                         'sumVr' => $value['sumVr'],
                         'status_name' => $value['status']->description(),
                         'status_background' => $value['status']->backgroundColor(),
@@ -592,8 +610,8 @@ class RipController extends Controller
                             'status_xml' => RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002,
                             'count_users' => $cantUsers,
                             'sumVr' => $sumVr,
-                            'note_type' => $tipoNota,
-                            'note_number' => $numNota,
+                            'tipoNota' => $tipoNota,
+                            'numNota' => $numNota,
                         ]);
 
                         // actualizar colecciones locales
@@ -634,8 +652,8 @@ class RipController extends Controller
                             'status_xml' => RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002,
                             'count_users' => $cantUsers,
                             'sumVr' => $sumVr,
-                            'note_type' => $tipoNota,
-                            'note_number' => $numNota,
+                            'tipoNota' => $tipoNota,
+                            'numNota' => $numNota,
                         ]);
 
                         $existingById->put($invoice->id, $invoice);
@@ -661,8 +679,8 @@ class RipController extends Controller
                         'status_xml' => RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002,
                         'count_users' => $cantUsers,
                         'sumVr' => $sumVr,
-                        'note_type' => $tipoNota,
-                        'note_number' => $numNota,
+                        'tipoNota' => $tipoNota,
+                        'numNota' => $numNota,
                     ]);
 
                     $existingById->put($invoice->id, $invoice);
@@ -707,10 +725,10 @@ class RipController extends Controller
             if (isset($ripInvoice->ripUsers) && count($ripInvoice->ripUsers) > 0) {
 
                 $orderedRipUsers = collect($ripInvoice->ripUsers)
-                ->sortBy(function ($v) {
-                    return (int) ($v['consecutivo'] ?? 0);
-                })
-                ->values();
+                    ->sortBy(function ($v) {
+                        return (int) ($v['consecutivo'] ?? 0);
+                    })
+                    ->values();
 
                 foreach ($orderedRipUsers as $key => $value) {
 
@@ -767,8 +785,8 @@ class RipController extends Controller
             }
 
             $tipoNota = null;
-            if ($ripInvoice->note_type) {
-                $tipoNota = TipoNota::where('codigo', $ripInvoice->note_type)->select('codigo', 'nombre')->first();
+            if ($ripInvoice->tipoNota) {
+                $tipoNota = TipoNota::where('codigo', $ripInvoice->tipoNota)->select('codigo', 'nombre')->first();
                 $tipoNota = $tipoNota->codigo . ' - ' . $tipoNota->nombre;
             }
 
@@ -778,7 +796,7 @@ class RipController extends Controller
                 "numFactura" => $ripInvoice->invoice_number,
                 "cantUsers" => $ripInvoice->count_users,
                 "tipoNota" => $tipoNota,
-                "numNota" => $ripInvoice->note_number,
+                "numNota" => $ripInvoice->numNota,
 
                 "users" => $users,
             ];
@@ -841,7 +859,114 @@ class RipController extends Controller
         return $this->execute(function () use ($ripInvoiceUser_id) {
             $ripInvoiceUser = $this->ripInvoiceUserRepository->find($ripInvoiceUser_id);
 
-            $services = [];
+            $servicesCount = [
+                'consultas' => count($ripInvoiceUser->queries),
+                'procedimientos' => count($ripInvoiceUser->procedures),
+            ];
+
+            $queries = [];
+
+            if ($ripInvoiceUser->queries) {
+                $orderedRipUsers = collect($ripInvoiceUser->queries)
+                    ->sortBy(function ($v) {
+                        return (int) ($v['consecutivo'] ?? 0);
+                    })
+                    ->values();
+                foreach ($orderedRipUsers as $key => $value) {
+
+                    $codConsulta = null;
+                    $modalidadGrupoServicioTecSal = null;
+                    $grupoServicios = null;
+                    $codServicio = null;
+                    $finalidadTecnologiaSalud = null;
+                    $causaMotivoAtencion = null;
+                    $codDiagnosticoPrincipal = null;
+                    $codDiagnosticoRelacionado1 = null;
+                    $codDiagnosticoRelacionado2 = null;
+                    $codDiagnosticoRelacionado3 = null;
+                    $tipoDiagnosticoPrincipal = null;
+                    $conceptoRecaudo = null;
+
+
+                    if ($value['codConsulta']) {
+                        $codConsulta = CupsRips::where('codigo', $value['codConsulta'])->first();
+                    }
+
+                    if ($value['modalidadGrupoServicioTecSal']) {
+                        $modalidadGrupoServicioTecSal = ModalidadAtencion::where('codigo', $value['modalidadGrupoServicioTecSal'])->first();
+                    }
+
+                    if ($value['grupoServicios']) {
+                        $grupoServicios = GrupoServicio::where('codigo', $value['grupoServicios'])->first();
+                    }
+
+                    if ($value['codServicio']) {
+                        $codServicio = Servicio::where('codigo', $value['codServicio'])->first();
+                    }
+
+                    if ($value['finalidadTecnologiaSalud']) {
+                        $finalidadTecnologiaSalud = RipsFinalidadConsultaVersion2::where('codigo', $value['finalidadTecnologiaSalud'])->first();
+                    }
+
+                    if ($value['causaMotivoAtencion']) {
+                        $causaMotivoAtencion = RipsCausaExternaVersion2::where('codigo', $value['causaMotivoAtencion'])->first();
+                    }
+
+                    if ($value['codDiagnosticoPrincipal']) {
+                        $codDiagnosticoPrincipal = Cie10::where('codigo', $value['codDiagnosticoPrincipal'])->first();
+                    }
+
+                    if ($value['codDiagnosticoRelacionado1']) {
+                        $codDiagnosticoRelacionado1 = Cie10::where('codigo', $value['codDiagnosticoRelacionado1'])->first();
+                    }
+
+                    if ($value['codDiagnosticoRelacionado2']) {
+                        $codDiagnosticoRelacionado2 = Cie10::where('codigo', $value['codDiagnosticoRelacionado2'])->first();
+                    }
+
+                    if ($value['codDiagnosticoRelacionado3']) {
+                        $codDiagnosticoRelacionado3 = Cie10::where('codigo', $value['codDiagnosticoRelacionado3'])->first();
+                    }
+
+                    if ($value['tipoDiagnosticoPrincipal']) {
+                        $tipoDiagnosticoPrincipal = RipsTipoDiagnosticoPrincipalVersion2::where('codigo', $value['tipoDiagnosticoPrincipal'])->first();
+                    }
+
+                    if ($value['conceptoRecaudo']) {
+                        $conceptoRecaudo = ConceptoRecaudo::where('codigo', $value['conceptoRecaudo'])->first();
+                    }
+
+                    $queries[] = [
+                        'id' => $value['id'],
+                        'codPrestador' => $value['codPrestador'],
+                        'fechaInicioAtencion' => $value['fechaInicioAtencion'],
+                        'numAutorizacion' => $value['numAutorizacion'],
+                        'codConsulta' => $value['codConsulta'] ? new CupsRipsSelectInfiniteResource($codConsulta) : null,
+                        'modalidadGrupoServicioTecSal' => $value['modalidadGrupoServicioTecSal'] ? new ModalidadAtencionSelectInfiniteResource($modalidadGrupoServicioTecSal) : null,
+                        'grupoServicios' => $value['grupoServicios'] ? new GrupoServicioSelectInfiniteResource($grupoServicios) : null,
+                        'codServicio' => $value['codServicio'] ? new ServicioSelectInfiniteResource($codServicio) : null,
+                        'finalidadTecnologiaSalud' => $value['finalidadTecnologiaSalud'] ? new RipsFinalidadConsultaVersion2SelectInfiniteResource($finalidadTecnologiaSalud) : null,
+                        'causaMotivoAtencion' => $value['causaMotivoAtencion'] ? new RipsCausaExternaVersion2SelectInfiniteResource($causaMotivoAtencion) : null,
+                        'codDiagnosticoPrincipal' => $value['codDiagnosticoPrincipal'] ? new Cie10SelectInfiniteResource($codDiagnosticoPrincipal) : null,
+                        'codDiagnosticoRelacionado1' => $value['codDiagnosticoRelacionado1'] ? new Cie10SelectInfiniteResource($codDiagnosticoRelacionado1) : null,
+                        'codDiagnosticoRelacionado2' => $value['codDiagnosticoRelacionado2'] ? new Cie10SelectInfiniteResource($codDiagnosticoRelacionado2) : null,
+                        'codDiagnosticoRelacionado3' => $value['codDiagnosticoRelacionado3'] ? new Cie10SelectInfiniteResource($codDiagnosticoRelacionado3) : null,
+                        'tipoDiagnosticoPrincipal' => $value['tipoDiagnosticoPrincipal'] ? new RipsTipoDiagnosticoPrincipalVersion2SelectInfiniteResource($tipoDiagnosticoPrincipal) : null,
+                        'conceptoRecaudo' => $value['conceptoRecaudo'] ? new ConceptoRecaudoSelectResource($conceptoRecaudo) : null,
+                        'tipoDocumentoIdentificacion' => $value['tipoDocumentoIdentificacion'],
+                        'numDocumentoIdentificacion' => $value['numDocumentoIdentificacion'],
+                        'valorPagoModerador' => $value['valorPagoModerador'],
+                        'numFEVPagoModerador' => $value['numFEVPagoModerador'],
+                        'consecutivo' => $value['consecutivo'],
+                        'vrServicio' => $value['vrServicio'],
+                    ];
+                }
+            }
+
+
+            $servicios = [
+                'consultas' => $queries
+            ];
             // 'consultas' => [],
             // 'procedimientos' => [],
             // 'urgencias' => [],
@@ -868,8 +993,6 @@ class RipController extends Controller
                 $codSexo = $codSexo->codigo . ' - ' . $codSexo->nombre;
             }
 
-            $servicesCount = null;
-
             $ripInvoiceUserInfo = [
                 "id" => $ripInvoiceUser->id,
                 "consecutivo" => $ripInvoiceUser->consecutivo,
@@ -879,26 +1002,13 @@ class RipController extends Controller
                 "fechaNacimiento" => $ripInvoiceUser->fechaNacimiento,
                 "codSexo" => $codSexo,
 
-                "services" => $services,
+                "servicios" => $servicios,
                 "servicesCount" => $servicesCount,
             ];
-
-            // $tipoIdPisis = $this->queryController->selectInfiniteTipoIdPisis(request());
-            // $tipoUsuarios = $this->queryController->selectInfiniteTipoUsuario(request());
-            // $sexos = $this->queryController->selectInfiniteSexo(request());
-            // $paises = $this->queryController->selectInfinitePais(request());
-            // $municipios = $this->queryController->selectInfiniteMunicipio(request());
-            // $zonaVersion2 = $this->queryController->selectInfiniteZonaVersion2(request());
 
             return [
                 'code' => 200,
                 'ripInvoiceUser_info' => $ripInvoiceUserInfo,
-                // ...$tipoIdPisis,
-                // ...$tipoUsuarios,
-                // ...$sexos,
-                // ...$paises,
-                // ...$municipios,
-                // ...$zonaVersion2,
             ];
         });
     }
@@ -908,6 +1018,7 @@ class RipController extends Controller
         return $this->execute(function () use ($request) {
 
             $cupsrip = $this->queryController->selectInfiniteCupsRips(request());
+            $viaIngresoUsuario = $this->queryController->selectInfiniteViaIngresoUsuario(request());
             $modalidadAtencion = $this->queryController->selectInfiniteModalidadAtencion(request());
             $grupoServicio = $this->queryController->selectInfiniteGrupoServicio(request());
             $servicios = $this->queryController->selectInfiniteServicio(request());
@@ -920,6 +1031,7 @@ class RipController extends Controller
             return [
                 'code' => 200,
                 ...$cupsrip,
+                ...$viaIngresoUsuario,
                 ...$modalidadAtencion,
                 ...$grupoServicio,
                 ...$servicios,
@@ -935,32 +1047,27 @@ class RipController extends Controller
     public function storeServices(Request $request)
     {
         return $this->runTransaction(function () use ($request) {
+            $ripInvoice = $this->ripInvoiceRepository->find($request->input('ripInvoice_id'));
+            $typeService = $request->input('typeService');
 
-            // $ripInvoice = $this->ripInvoiceRepository->find($request->input('ripInvoice_id'));
+            $updatedInvoice = RipsManual::saveServicesToInvoiceAndDbMapped(
+                $ripInvoice,
+                $request->input('serviceData'),
+                $request->input('company_id'),
+                $request->input('ripInvoiceUser_id'),
+                $ripInvoice->rip,
+                $typeService,
+                RipTypeEnum::RIP_TYPE_002->value
+            );
 
-            // $type = RipTypeEnum::RIP_TYPE_002->value;
 
-            // RipsManual::saveInvoiceUsersAndJson($ripInvoice, $request['usersData'] ?? [], $request['company_id'], $ripInvoice->rip, $type);
-
-            // $tipoIdPisis = $this->queryController->selectInfiniteTipoIdPisis(request());
-            // $tipoUsuarios = $this->queryController->selectInfiniteTipoUsuario(request());
-            // $sexos = $this->queryController->selectInfiniteSexo(request());
-            // $paises = $this->queryController->selectInfinitePais(request());
-            // $municipios = $this->queryController->selectInfiniteMunicipio(request());
-            // $zonaVersion2 = $this->queryController->selectInfiniteZonaVersion2(request());
-
-            // $response = $this->getManualInfoUsers($ripInvoice->id);
-            // $ripInvoice_info = $response->original["ripInvoice_info"];
+            $response = $this->getManualInfoServices($request->input('ripInvoiceUser_id'));
+            $ripInvoiceUser_info = $response->original["ripInvoiceUser_info"];
 
             return [
                 'code' => 200,
-                // 'ripInvoice_info' => $ripInvoice_info,
-                // ...$tipoIdPisis,
-                // ...$tipoUsuarios,
-                // ...$sexos,
-                // ...$paises,
-                // ...$municipios,
-                // ...$zonaVersion2,
+                'message' => 'Servicios procesados correctamente',
+                'ripInvoiceUser_info' => $ripInvoiceUser_info
             ];
         });
     }

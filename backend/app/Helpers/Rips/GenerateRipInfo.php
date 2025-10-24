@@ -208,8 +208,8 @@ class GenerateRipInfo
                 'invoice_number' => $invoiceNumber,
                 'sumVr' => self::sumVrServicio($invoiceData),
                 'count_users' => $invoiceData['usuarios'] ? count($invoiceData['usuarios']) : 0,
-                'note_type' => $invoiceData['tipoNota'] ?? null,
-                'note_number' => $invoiceData['numNota'] ?? null,
+                'tipoNota' => $invoiceData['tipoNota'] ?? null,
+                'numNota' => $invoiceData['numNota'] ?? null,
                 'status' => RipInvoiceStatusEnum::RIP_INVOICE_STATUS_002,
                 'status_xml' => RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002,
                 'path_json' => $routeJson,
@@ -313,8 +313,8 @@ class GenerateRipInfo
     //     $ripInvoice->invoice_number = $valueJsonInvoice['numFactura'];
     //     $ripInvoice->sumVr = self::sumVrServicio($valueJsonInvoice);
     //     $ripInvoice->count_users = $valueJsonInvoice['usuarios'] ? count($valueJsonInvoice['usuarios']) : 0;
-    //     $ripInvoice->note_type = $valueJsonInvoice['tipoNota'] ?? null;
-    //     $ripInvoice->note_number = $valueJsonInvoice['numNota'] ?? null;
+    //     $ripInvoice->tipoNota = $valueJsonInvoice['tipoNota'] ?? null;
+    //     $ripInvoice->numNota = $valueJsonInvoice['numNota'] ?? null;
     //     $ripInvoice->status_xml = RipInvoiceStatusXmlEnum::RIP_INVOICE_STATUS_XML_002;
 
 

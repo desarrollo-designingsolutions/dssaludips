@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 export const useRipManualStore = defineStore("useRipManualStore", {
   state: () => ({
     cupsRips_arrayInfo: [] as Array<object>,
+    viaIngresoUsuario_arrayInfo: [] as Array<object>,
     modalidadAtencion_arrayInfo: [] as Array<object>,
     grupoServicio_arrayInfo: [] as Array<object>,
     servicio_arrayInfo: [] as Array<object>,
@@ -19,6 +20,7 @@ export const useRipManualStore = defineStore("useRipManualStore", {
 
       if (response.status == 200 && data) {
         this.cupsRips_arrayInfo = data.cupsRips_arrayInfo;
+        this.viaIngresoUsuario_arrayInfo = data.viaIngresoUsuario_arrayInfo;
         this.modalidadAtencion_arrayInfo = data.modalidadAtencion_arrayInfo;
         this.grupoServicio_arrayInfo = data.grupoServicio_arrayInfo;
         this.servicio_arrayInfo = data.servicio_arrayInfo;
