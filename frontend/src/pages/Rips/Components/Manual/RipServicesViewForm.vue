@@ -4,8 +4,8 @@
 // import MedicinesForm from '@/pages/Rips/Manual/Components/MedicinesForm.vue';
 // import NewlyBornForm from '@/pages/Rips/Manual/Components/NewlyBornForm.vue';
 // import OtherServicesForm from '@/pages/Rips/Manual/Components/OtherServicesForm.vue';
-// import ProcedureForm from '@/pages/Rips/Manual/Components/ProcedureForm.vue';
 import MedicalConsultationForm from '@/pages/Rips/Components/Manual/MedicalConsultationForm.vue';
+import ProcedureForm from '@/pages/Rips/Components/Manual/ProcedureForm.vue';
 import { useRipStore } from "@/pages/Rips/Store/useRipStore";
 import { useRipManualStore } from "@/pages/Rips/Store/useRipManualStore";
 
@@ -21,9 +21,8 @@ definePage({
   },
 });
 
-const { dataRip, servicesCount } = storeToRefs(useRipStore())
+const { dataRip, dataUser, dataServicesRipUser, servicesCount } = storeToRefs(useRipStore())
 const route = useRoute()
-const dataUser = ref()
 const keyComponent = ref<number>(1)
 const currentTab = ref(0)
 
@@ -35,27 +34,10 @@ const fetchDataTable = async () => {
 
   if (response.status === 200 && data) {
     dataUser.value = data.ripInvoiceUser_info
+    dataServicesRipUser.value = data.ripInvoiceUser_info.servicios
+    servicesCount.value = data.ripInvoiceUser_info.servicesCount
     keyComponent.value++
   }
-  // const response = await ripManualStore.fetchdataView(route.params.id)
-  // if (response.code == 200) {
-  //   dataRip.value = response.infoRip
-  //   if (dataRip.value) {
-  //     const search = dataRip.value?.arrayData.find(ele => ele.numFactura == route.params.numFactura)
-  //     if (search) {
-  //       dataUser.value = search.usuarios.find(ele => ele.numDocumentoIdentificacion == route.params.numDocumentoIdentificacion)
-  //       keyComponent.value++
-
-  //       servicesCount.value.consultas = dataUser.value.servicios.consultas.length
-  //       servicesCount.value.procedimientos = dataUser.value.servicios.procedimientos.length
-  //       servicesCount.value.urgencias = dataUser.value.servicios.urgencias.length
-  //       servicesCount.value.hospitalizacion = dataUser.value.servicios.hospitalizacion.length
-  //       servicesCount.value.recienNacidos = dataUser.value.servicios.recienNacidos.length
-  //       servicesCount.value.medicamentos = dataUser.value.servicios.medicamentos.length
-  //       servicesCount.value.otrosServicios = dataUser.value.servicios.otrosServicios.length
-  //     }
-  //   }
-  // }
 };
 
 onMounted(async () => {
@@ -154,40 +136,41 @@ const breadcrumbs = [
         <VTabs v-model="currentTab" grow>
           <VTab>
             <span>Consultas</span>
-            <!-- <VBadge :content="servicesCount.consultas" :offset-x="-18" :offset-y="0" /> -->
+            <VBadge :content="servicesCount?.consultas" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Procedimientos</span>
-            <!-- <VBadge :content="servicesCount.procedimientos" :offset-x="-18" :offset-y="0" /> -->
+            <VBadge :content="servicesCount?.procedimientos" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Urgencias</span>
-            <!-- <VBadge :content="servicesCount.urgencias" :offset-x="-18" :offset-y="0" /> -->
+            <!-- <VBadge :content="servicesCount?.urgencias" :offset-x="-18" :offset-y="0" /> -->
           </VTab>
           <VTab>
             <span>Hospitalización</span>
-            <!-- <VBadge :content="servicesCount.hospitalizacion" :offset-x="-18" :offset-y="0" /> -->
+            <!-- <VBadge :content="servicesCount?.hospitalizacion" :offset-x="-18" :offset-y="0" /> -->
           </VTab>
           <VTab>
             <span>Recien nacidos</span>
-            <!-- <VBadge :content="servicesCount.recienNacidos" :offset-x="-18" :offset-y="0" /> -->
+            <!-- <VBadge :content="servicesCount?.recienNacidos" :offset-x="-18" :offset-y="0" /> -->
           </VTab>
           <VTab>
             <span>Medicamentos</span>
-            <!-- <VBadge :content="servicesCount.medicamentos" :offset-x="-18" :offset-y="0" /> -->
+            <!-- <VBadge :content="servicesCount?.medicamentos" :offset-x="-18" :offset-y="0" /> -->
           </VTab>
           <VTab>
             <span>Otros servicios</span>
-            <!-- <VBadge :content="servicesCount.otrosServicios" :offset-x="-18" :offset-y="0" /> -->
+            <!-- <VBadge :content="servicesCount?.otrosServicios" :offset-x="-18" :offset-y="0" /> -->
           </VTab>
         </VTabs>
 
         <VWindow v-model="currentTab" class="my-5">
           <VWindowItem>
-            <MedicalConsultationForm :key="keyComponent" :data-list="dataUser?.servicios?.consultas"></MedicalConsultationForm>
+            <MedicalConsultationForm :key="keyComponent" :data-list="dataUser?.servicios?.consultas">
+            </MedicalConsultationForm>
           </VWindowItem>
           <VWindowItem>
-            <!-- <ProcedureForm :key="keyComponent" :data-list="dataUser?.servicios?.procedimientos"></ProcedureForm> -->
+            <ProcedureForm :key="keyComponent" :data-list="dataUser?.servicios?.procedimientos"></ProcedureForm>
           </VWindowItem>
           <VWindowItem>
             <!-- <EmergenciesForm :key="keyComponent" :data-list="dataUser?.servicios?.urgencias"></EmergenciesForm> -->

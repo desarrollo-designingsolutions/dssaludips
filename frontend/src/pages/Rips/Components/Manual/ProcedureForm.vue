@@ -11,6 +11,7 @@ const router = useRouter()
 const { dataRip, dataUser, dataServicesRipUser, servicesCount } = storeToRefs(useRipStore())
 const {
   cupsRips_arrayInfo,
+  viaIngresoUsuario_arrayInfo,
   modalidadAtencion_arrayInfo,
   grupoServicio_arrayInfo,
   servicio_arrayInfo,
@@ -33,20 +34,19 @@ const inputsTableFilter = ref([
     fixed: true,
   },
   { key: "fechaInicioAtencion", title: 'Fecha Inicio Atención', sortable: false, minWidth: "200px" },
+  { key: "idMIPRES", title: 'id Mipres', sortable: false, minWidth: "200px" },
   { key: "numAutorizacion", title: 'No Autorización', sortable: false, minWidth: "200px" },
-  { key: "codConsulta", title: 'Codigo de Consulta', sortable: false, minWidth: "350px" },
+  { key: "codProcedimiento", title: 'Codigo de Procedimiento', sortable: false, minWidth: "350px" },
+  { key: "viaIngresoServicioSalud", title: 'Via Ingreso Servicio Salud', sortable: false, minWidth: "350px" },
   { key: "modalidadGrupoServicioTecSal", title: 'Modalidad Grupo Servicio TecSal', sortable: false, minWidth: "350px" },
-  { key: "grupoServicios", title: 'Grupo Servicios', sortable: false, minWidth: "350px" },
-  { key: "codServicio", title: 'Codigo Servicio', sortable: false, minWidth: "350px" },
+  { key: "grupoServicios", title: 'Grupo Servicio', sortable: false, minWidth: "350px" },
+  { key: "codServicio", title: 'Codigo Servicio', sortable: false, minWidth: "200px" },
   { key: "finalidadTecnologiaSalud", title: 'Finalidad Tecnologia Salud', sortable: false, minWidth: "350px" },
-  { key: "causaMotivoAtencion", title: 'Causa Motivo Atención', sortable: false, minWidth: "350px" },
   { key: "codDiagnosticoPrincipal", title: 'Diagnostico Principal', sortable: false, minWidth: "350px" },
-  { key: "codDiagnosticoRelacionado1", title: 'Diagnostico Relacionado 1', sortable: false, minWidth: "200px" },
-  { key: "codDiagnosticoRelacionado2", title: 'Diagnostico Relacionado 2', sortable: false, minWidth: "200px" },
-  { key: "codDiagnosticoRelacionado3", title: 'Diagnostico Relacionado 3', sortable: false, minWidth: "200px" },
-  { key: "tipoDiagnosticoPrincipal", title: 'Tipo Diagnostico Principal', sortable: false, minWidth: "200px" },
-  { key: "vrServicio", title: 'Valor Servicio', sortable: false, minWidth: "200px" },
+  { key: "codDiagnosticoRelacionado", title: 'Diagnostico Relacionado', sortable: false, minWidth: "350px" },
+  { key: "codComplicacion", title: 'Código Complicación', sortable: false, minWidth: "350px" },
   { key: "valorPagoModerador", title: 'Valor Pago Moderador', sortable: false, minWidth: "200px" },
+  { key: "vrServicio", title: 'Valor Servicio', sortable: false, minWidth: "200px" },
   { key: "conceptoRecaudo", title: 'Concepto Recaudo', sortable: false, minWidth: "350px" },
 ])
 
@@ -61,14 +61,14 @@ const loading = reactive({
 })
 
 onMounted(async () => {
-  if (dataServicesRipUser.value.consultas) {
-    dataServices.value = dataServicesRipUser.value.consultas;
+  if (dataServicesRipUser.value.procedimientos) {
+    dataServices.value = dataServicesRipUser.value.procedimientos;
   }
 })
 
 const saveData = async () => {
   if (dataServices.value.length == 0) {
-    toast("Debe agregar almenos un Servicio de consultas", "", "warning");
+    toast("Debe agregar almenos un Servicio de procedimientos", "", "warning");
     return false;
   }
   const validation = await refForm.value?.validate();
@@ -82,13 +82,13 @@ const saveData = async () => {
         ripInvoiceUser_id: route.params?.ripInvoiceUser_id,
         company_id: authenticationStore.company.id,
         serviceData: dataServices.value,
-        typeService: 'Consultas'
+        typeService: 'Procedimientos'
       }
     );
     if (response.status === 200 && data) {
       dataServicesRipUser.value = data.ripInvoiceUser_info.servicios
       servicesCount.value = data.ripInvoiceUser_info.servicesCount
-      dataServices.value = dataServicesRipUser.value.consultas;
+      dataServices.value = dataServicesRipUser.value.procedimientos;
     }
     loading.table = false;
 
@@ -104,22 +104,20 @@ const addData = async () => {
   if (validation?.valid) {
     dataServices.value.push({
       codPrestador: null,
-      fechaInicioAtencion: '',
+      fechaInicioAtencion: null,
+      idMIPRES: null,
       numAutorizacion: null,
-      codConsulta: null,
+      codProcedimiento: null,
+      viaIngresoServicioSalud: null,
       modalidadGrupoServicioTecSal: null,
       grupoServicios: null,
       codServicio: null,
       finalidadTecnologiaSalud: null,
-      causaMotivoAtencion: null,
-      codDiagnosticoPrincipal: null,
-      codDiagnosticoRelacionado1: null,
-      codDiagnosticoRelacionado2: null,
-      codDiagnosticoRelacionado3: null,
-      tipoDiagnosticoPrincipal: null,
-      conceptoRecaudo: null,
       tipoDocumentoIdentificacion: null,
       numDocumentoIdentificacion: null,
+      codDiagnosticoPrincipal: null,
+      codDiagnosticoRelacionado: null,
+      codComplicacion: null,
       valorPagoModerador: null,
       numFEVPagoModerador: null,
       consecutivo: null,
@@ -131,7 +129,7 @@ const addData = async () => {
   }
 }
 
-const queryData = computed(() => {
+const proceduresData = computed(() => {
   return dataServices.value.filter((ele) => ele.delete != 1);
 });
 
@@ -202,7 +200,7 @@ const openModalQuestionDelete = (index: number) => {
           <VCol cols="12" offset-md="8" md="4">
             <div class="d-flex justify-end gap-3 flex-wrap">
               <VBtn color="primary" @click="addData()">
-                <VIcon start icon="tabler-plus" />Agregar Consulta
+                <VIcon start icon="tabler-plus" />Agregar Procedimiento
               </VBtn>
             </div>
           </VCol>
@@ -215,7 +213,7 @@ const openModalQuestionDelete = (index: number) => {
 
       <VCardText>
         <VForm ref="refForm" @submit.prevent="() => { }">
-          <VDataTable :search="search" :headers="inputsTableFilter" :items="queryData"
+          <VDataTable :search="search" :headers="inputsTableFilter" :items="proceduresData"
             :items-per-page="options.itemsPerPage" :page="options.page" :options="options">
 
             <template #item.fechaInicioAtencion="{ item, index }">
@@ -225,16 +223,31 @@ const openModalQuestionDelete = (index: number) => {
               </div>
             </template>
 
+            <template #item.idMIPRES="{ item, index }">
+              <div class="text-center">
+                <AppTextField clearable v-model="item.idMIPRES" />
+              </div>
+            </template>
+
             <template #item.numAutorizacion="{ item, index }">
               <div class="text-center">
                 <AppTextField clearable v-model="item.numAutorizacion" />
               </div>
             </template>
 
-            <template #item.codConsulta="{ item, index }">
+            <template #item.codProcedimiento="{ item, index }">
               <div class="text-center">
-                <AppSelectRemote v-model="item.codConsulta" url="/selectInfiniteCupsRips" arrayInfo="cupsRips" clearable
-                  :params="paramsSelectInfinite" :itemsData="cupsRips_arrayInfo" :firstFetch="false">
+                <AppSelectRemote v-model="item.codProcedimiento" url="/selectInfiniteCupsRips" arrayInfo="cupsRips"
+                  clearable :params="paramsSelectInfinite" :itemsData="cupsRips_arrayInfo" :firstFetch="false">
+                </AppSelectRemote>
+              </div>
+            </template>
+
+            <template #item.viaIngresoServicioSalud="{ item, index }">
+              <div class="text-center">
+                <AppSelectRemote v-model="item.viaIngresoServicioSalud" url="/selectInfiniteViaIngresoUsuario"
+                  arrayInfo="viaIngresoUsuario" clearable :params="paramsSelectInfinite"
+                  :itemsData="viaIngresoUsuario_arrayInfo" :firstFetch="false">
                 </AppSelectRemote>
               </div>
             </template>
@@ -265,21 +278,13 @@ const openModalQuestionDelete = (index: number) => {
               </div>
             </template>
 
+
             <template #item.finalidadTecnologiaSalud="{ item, index }">
               <div class="text-center">
                 <AppSelectRemote v-model="item.finalidadTecnologiaSalud"
                   url="/selectInfiniteRipsFinalidadConsultaVersion2" arrayInfo="ripsFinalidadConsultaVersion2" clearable
                   :params="paramsSelectInfinite" :itemsData="ripsFinalidadConsultaVersion2_arrayInfo"
                   :firstFetch="false">
-                </AppSelectRemote>
-              </div>
-            </template>
-
-            <template #item.causaMotivoAtencion="{ item, index }">
-              <div class="text-center">
-                <AppSelectRemote v-model="item.causaMotivoAtencion" url="/selectInfiniteRipsCausaExternaVersion2"
-                  arrayInfo="ripsCausaExternaVersion2" clearable :params="paramsSelectInfinite"
-                  :itemsData="ripsCausaExternaVersion2_arrayInfo" :firstFetch="false">
                 </AppSelectRemote>
               </div>
             </template>
@@ -292,36 +297,18 @@ const openModalQuestionDelete = (index: number) => {
               </div>
             </template>
 
-            <template #item.codDiagnosticoRelacionado1="{ item, index }">
+            <template #item.codDiagnosticoRelacionado="{ item, index }">
               <div class="text-center">
-                <AppSelectRemote v-model="item.codDiagnosticoRelacionado1" url="/selectInfiniteCie10" arrayInfo="cie10"
+                <AppSelectRemote v-model="item.codDiagnosticoRelacionado" url="/selectInfiniteCie10" arrayInfo="cie10"
                   clearable :params="paramsSelectInfinite" :itemsData="cie10_arrayInfo" :firstFetch="false">
                 </AppSelectRemote>
               </div>
             </template>
 
-            <template #item.codDiagnosticoRelacionado2="{ item, index }">
+            <template #item.codComplicacion="{ item, index }">
               <div class="text-center">
-                <AppSelectRemote v-model="item.codDiagnosticoRelacionado2" url="/selectInfiniteCie10" arrayInfo="cie10"
-                  clearable :params="paramsSelectInfinite" :itemsData="cie10_arrayInfo" :firstFetch="false">
-                </AppSelectRemote>
-              </div>
-            </template>
-
-            <template #item.codDiagnosticoRelacionado3="{ item, index }">
-              <div class="text-center">
-                <AppSelectRemote v-model="item.codDiagnosticoRelacionado3" url="/selectInfiniteCie10" arrayInfo="cie10"
-                  clearable :params="paramsSelectInfinite" :itemsData="cie10_arrayInfo" :firstFetch="false">
-                </AppSelectRemote>
-              </div>
-            </template>
-
-            <template #item.tipoDiagnosticoPrincipal="{ item, index }">
-              <div class="text-center">
-                <AppSelectRemote v-model="item.tipoDiagnosticoPrincipal"
-                  url="/selectInfiniteRipsTipoDiagnosticoPrincipalVersion2"
-                  arrayInfo="ripsTipoDiagnosticoPrincipalVersion2" clearable :params="paramsSelectInfinite"
-                  :itemsData="ripsTipoDiagnosticoPrincipalVersion2_arrayInfo" :firstFetch="false">
+                <AppSelectRemote v-model="item.codComplicacion" url="/selectInfiniteCie10" arrayInfo="cie10" clearable
+                  :params="paramsSelectInfinite" :itemsData="cie10_arrayInfo" :firstFetch="false">
                 </AppSelectRemote>
               </div>
             </template>
@@ -370,7 +357,7 @@ const openModalQuestionDelete = (index: number) => {
           Regresar a usuarios
         </VBtn>
         <VBtn :disabled="loading.table" :loading="loading.table" @click="openModalQuestionSave()" color="primary">
-          Guardar Consultas
+          Guardar Procedimientos
           <VIcon end icon="tabler-device-floppy" />
         </VBtn>
       </VCardText>

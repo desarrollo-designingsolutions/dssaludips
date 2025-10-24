@@ -29,7 +29,7 @@ class ServiceVendor extends Model
 
     public function ips_cod_habilitacion()
     {
-        return $this->belongsTo(IpsCodHabilitacion::class, 'ips_cod_habilitacion_id');
+        return $this->belongsTo(IpsCodHabilitacion::class, 'ipsable_id');
     }
 
     public function users()

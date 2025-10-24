@@ -40,6 +40,6 @@ class RipInvoice extends Model
 
     public function tipoNota()
     {
-        return $this->belongsTo(TipoNota::class, 'note_type');
+        return $this->belongsTo(TipoNota::class, 'tipoNota');
     }
 }

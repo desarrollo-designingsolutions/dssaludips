@@ -168,13 +168,10 @@ const openModalUploadCsv = () => {
                 Agregar rips
               </VBtn>
             </template>
-
             <VList>
               <VListItem @click="openModalSelectServiceVendor()">
                 Manual
               </VListItem> 
-            </VList>
-            <VList>
               <VListItem @click="openModalUploadZip()">
                 Añadir ZIP
               </VListItem> 
