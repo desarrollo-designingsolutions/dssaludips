@@ -46,19 +46,24 @@ const authThemeImg = useGenerateImageVariant(
 const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 
 const login = async () => {
-  const validation = await refForm.value?.validate();
-  if (validation?.valid) {
-    const promise = await authenticationStore.login(form.value);
-
-    if (promise.code == 200) {
-      if (isEmpty(promise.user.company_id)) {
-        router.push({ name: "Company-List" })
-        return
-      }
-      router.push({ name: "Home" })
-    };
-
-    if (promise.code === 422) errorsBack.value = promise.errors ?? {};
+  try {
+    
+    const validation = await refForm.value?.validate();
+    if (validation?.valid) {
+      const promise = await authenticationStore.login(form.value);
+  
+      if (promise.code == 200) {
+        if (isEmpty(promise.user.company_id)) {
+          router.push({ name: "Company-List" })
+          return
+        }
+        router.push({ name: "Home" })
+      };
+  
+      if (promise.code === 422) errorsBack.value = promise.errors ?? {};
+    }
+  } catch (error) {
+    console.log("error",error)
   }
 }
 

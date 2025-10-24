@@ -998,7 +998,7 @@ class RipController extends Controller
                 'user_id' => $user_id,
                 'company_id' => $company_id,
                 'file_path' => $filePath, // guardar path para que jobs lo encuentren
-                'type' => "ripsCsv",
+                'type' => RipTypeEnum::RIP_TYPE_003->value,
             ];
 
             // Conexión a Redis (mantener la tuya)
@@ -1021,7 +1021,7 @@ class RipController extends Controller
             // Despachar job de validación de estructura (asíncrono)
             $selectedQueue = ProcessBatchService::selectAvailableQueueRoundRobin(Constants::AVAILABLE_QUEUES_TO_IMPORTS_RIPS_CSV);
 
-            Bus::dispatch((new ValidateStructureJob($batchId))->onQueue($selectedQueue));
+            Bus::dispatch((new ValidateStructureJob($batchId,$selectedQueue))->onQueue($selectedQueue));
 
             return [
                 'code' => 200,

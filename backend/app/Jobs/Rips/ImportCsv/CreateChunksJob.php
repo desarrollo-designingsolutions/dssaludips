@@ -23,11 +23,13 @@ class CreateChunksJob implements ShouldQueue
     public string $filePath;
     public string $disk;
     public int $chunkSize;
+    public string $selectedQueue;
 
-    public function __construct(string $batchId, string $filePath, ?string $disk = null, ?int $chunkSize = null)
+    public function __construct(string $batchId, string $filePath, ?string $disk = null, ?int $chunkSize = null, string $selectedQueue)
     {
         $this->batchId = $batchId;
         $this->filePath = $filePath;
+        $this->selectedQueue = $selectedQueue;
         $this->disk = $disk ?: config('filesystems.default');
         $this->chunkSize = $chunkSize ?: (int) env('IMPORT_CHUNK_SIZE', 100000);
     }
@@ -50,7 +52,7 @@ class CreateChunksJob implements ShouldQueue
             'processing',
             'Iniciando división del archivo en chunks',
         ));
-        sleep(5);
+        // sleep(5);
 
         // Borrar meta previa si existe
         try {
@@ -333,7 +335,7 @@ class CreateChunksJob implements ShouldQueue
 
         // Guardar cantidad de chunks en metadata
         $metadata = $redis->hgetall("batch:{$this->batchId}:metadata");
-        $metadata['total_chunks'] = $totalChunks;
+        $metadata['total_rows'] = $totalChunks;
         $redis->hmset("batch:{$this->batchId}:metadata", $metadata);
 
         Log::info("CreateChunksJob: Chunking completado - {$totalChunks} chunks creados, {$totalRowsProcessed} filas procesadas");
@@ -352,7 +354,7 @@ class CreateChunksJob implements ShouldQueue
             "Iniciando procesamiento de {$totalChunks} chunks...",
         ));
 
-         sleep(5);
+        //  sleep(5);
         Log::info("CreateChunksJob: Despachando {$totalChunks} jobs ProcessChunkJob");
 
         // Despachar todos los jobs de procesamiento
@@ -363,7 +365,8 @@ class CreateChunksJob implements ShouldQueue
                     $this->batchId,
                     $chunk['id'],
                     $chunk['path'],
-                    $this->disk
+                    $this->disk,
+                    $this->selectedQueue
                 ));
                 $jobsDespachados++;
 

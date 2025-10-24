@@ -30,12 +30,12 @@ const optionsTable = {
   paramsGlobal: {
     company_id: authenticationStore.company.id,
   },
-  headers: [ 
+  headers: [
     { key: 'type', title: 'Tipo' },
     { key: 'numInvoices', title: 'Facturas' },
     { key: 'successfulInvoices', title: 'Validadas' },
-    { key: 'failedInvoices', title: 'No validadas' }, 
-    { key: 'created_at', title: 'Fecha de creación' }, 
+    { key: 'failedInvoices', title: 'No validadas' },
+    { key: 'created_at', title: 'Fecha de creación' },
     { key: 'status', title: 'Estado' },
     { key: 'actions', title: 'Acciones', sortable: false },
   ],
@@ -45,7 +45,7 @@ const optionsTable = {
 const optionsFilter = ref({
   filterLabels: { inputGeneral: 'Buscar en todo', filing_invoice_pre_radicated_count: 'Facturas preradicadas' }
 })
- 
+
 
 const tableLoading = ref(false); // Estado de carga de la tabla
 
@@ -63,12 +63,29 @@ const openModalUploadZip = () => {
   refModalUploadZip.value.openModal()
 }
 
+const goViewInvoice = (item: any) => {
+  if (item.type == "RIP_TYPE_001") {
+    goViewRipZip(item)
+  }
+  if (item.type == "RIP_TYPE_002") {
+    goViewRipManual(item)
+  }
+  if (item.type == "RIP_TYPE_003") {
+    goViewRipCsv(item)
+  }
+
+}
 const goViewRipZip = (item: any) => {
   router.push({ name: "Rips-ListInvoices", params: { id: item.id } })
 }
 
 const goViewRipManual = (item: any) => {
   router.push({ name: "Rips-Manual-ListInvoices", params: { id: item.id } })
+}
+
+const goViewRipCsv = (item: any) => {
+  router.push({ name: "Rips-ListInvoices", params: { id: item.id } })
+
 }
 
 //descarga de archivos
@@ -85,7 +102,7 @@ const downloadFileData = async (obj: any, type: string) => {
   let ext = ""
   let nameFile = ""
 
-  if(type === "excel"){
+  if (type === "excel") {
     api = `/rip/downloadExcel/${obj.id}`
     ext = "xlsx"
     nameFile = `Invoice_${obj.id}_${formattedDate}`
@@ -94,13 +111,13 @@ const downloadFileData = async (obj: any, type: string) => {
     ext = "json"
     nameFile = `Invoice_${obj.id}_${formattedDate}`
   }
-  
+
   await downloadBlob(api, nameFile, ext)
 
   loading.downloadFile = false;
 };
- 
- //ModalUploadExcel
+
+//ModalUploadExcel
 const refModalUploadExcel = ref()
 const openModalUploadExcel = (item: any) => {
   refModalUploadExcel.value.openModal(null, item)
@@ -129,7 +146,7 @@ const validateWithMinistry = async (rip: any) => {
 
     if (response.status === 200 && data) {
       // toast('Validación iniciada correctamente', '', 'success');
-        globalLoading.startLoading(data.batch_id);
+      globalLoading.startLoading(data.batch_id);
     } else {
       toast('Error al validar facturas: ' + (data?.message || 'Error desconocido'), '', 'danger');
     }
@@ -172,15 +189,15 @@ const openModalUploadCsv = () => {
             <VList>
               <VListItem @click="openModalSelectServiceVendor()">
                 Manual
-              </VListItem> 
+              </VListItem>
             </VList>
             <VList>
               <VListItem @click="openModalUploadZip()">
                 Añadir ZIP
-              </VListItem> 
+              </VListItem>
               <VListItem @click="openModalUploadCsv()">
                 Añadir CSV
-              </VListItem> 
+              </VListItem>
             </VList>
           </VMenu>
         </div>
@@ -192,7 +209,8 @@ const openModalUploadCsv = () => {
       </VCardText>
 
       <VCardText>
-        <TableFull ref="refTableFull" :options="optionsTable" @update:loading="tableLoading = $event" @dataFetched="echoChannel">
+        <TableFull ref="refTableFull" :options="optionsTable" @update:loading="tableLoading = $event"
+          @dataFetched="echoChannel">
           <template #item.type="{ item }">
             <div>
               <VChip>{{ item.type_description }}</VChip>
@@ -200,15 +218,15 @@ const openModalUploadCsv = () => {
           </template>
 
           <template #item.successfulInvoices="{ item }">
-              <VChip color="success">
-                <span>{{ item.successfulInvoices }}</span>
-              </VChip>
+            <VChip color="success">
+              <span>{{ item.successfulInvoices }}</span>
+            </VChip>
           </template>
 
           <template #item.failedInvoices="{ item }">
-              <VChip color="error">
-                <span>{{ item.failedInvoices }}</span>
-              </VChip>
+            <VChip color="error">
+              <span>{{ item.failedInvoices }}</span>
+            </VChip>
           </template>
 
           <template #item.status="{ item }">
@@ -224,18 +242,15 @@ const openModalUploadCsv = () => {
                 <VMenu activator="parent">
                   <VList>
                     <VListItem v-if="item.path_json" @click="downloadFileData(item, 'json')">Descargar Json
-                    </VListItem> 
-                    <VListItem v-if="item.path_excel"  @click="downloadFileData(item, 'excel')">Descargar Excel
                     </VListItem>
-                    <VListItem  @click="openModalUploadExcel(item)">Subir
+                    <VListItem v-if="item.path_excel" @click="downloadFileData(item, 'excel')">Descargar Excel
+                    </VListItem>
+                    <VListItem @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
-                    <VListItem  @click="validateWithMinistry(item)">Validar con el ministerio</VListItem>
-                    <VListItem v-if="item.type == 'RIP_TYPE_001'" @click="goViewRipZip(item)">
+                    <VListItem @click="validateWithMinistry(item)">Validar con el ministerio</VListItem>
+                    <VListItem @click="goViewInvoice(item)">
                       Ingresar
-                    </VListItem>
-                    <VListItem v-else-if="item.type == 'RIP_TYPE_002'" @click="goViewRipManual(item)">
-                      Ingresar
-                    </VListItem>
+                    </VListItem> 
                   </VList>
                 </VMenu>
               </VBtn>
@@ -243,7 +258,7 @@ const openModalUploadCsv = () => {
           </template>
         </TableFull>
       </VCardText>
-    </VCard>  
+    </VCard>
 
     <ModalUploadZip ref="refModalUploadZip" :maxFileSizeMB="200" />
 

@@ -86,7 +86,7 @@ class GenerateRipInfo
 
 
     //suma todos los valores VRSERVICE DE TODAS LAS FACTURAS
-    private static function sumVrServicioRips($invoices)
+    public static function sumVrServicioRips($invoices)
     {
         $sumVrRips = 0;
         foreach ($invoices as $invoice) {
@@ -96,7 +96,7 @@ class GenerateRipInfo
     }
 
 
-    private static function sumVrServicio($valueJsonInvoice)
+    public static function sumVrServicio($valueJsonInvoice)
     {
         //suma todos los valores VRSERVICE DE TODAS LAS FACTURAS
         $sumVrInvoice = 0;

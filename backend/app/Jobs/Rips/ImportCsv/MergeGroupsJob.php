@@ -2,8 +2,12 @@
 
 namespace App\Jobs\Rips\ImportCsv;
 
+use App\Enums\Rip\RipStatusEnum;
 use App\Events\ImportProgressEvent;
 use App\Helpers\Common\ErrorCollector;
+use App\Models\Rip;
+use App\Models\RipInvoice;
+use App\Models\RipInvoiceUser;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -12,6 +16,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
 
 class MergeGroupsJob implements ShouldQueue
 {
@@ -179,15 +185,29 @@ class MergeGroupsJob implements ShouldQueue
             self::dispatch($this->batchId, $this->disk, $this->batchSize);
             Log::info("MergeGroupsJob: Re-encolando job para procesar facturas restantes");
         } else {
+
+            Log::info("MergeGroupsJob: merge completado para batch={$this->batchId}");
+
+
             event(new ImportProgressEvent(
                 $this->batchId,
                 $totalInvoices,
                 "MERGE_COMPLETED",
                 ErrorCollector::countErrors($this->batchId),
-                'completed',
-                "Merge completo: {$invoicesProcessed} facturas procesadas"
+                'processing',
+                "Merge completado, iniciando guardado en BD"
             ));
-            Log::info("MergeGroupsJob: merge completado para batch={$this->batchId}");
+
+            // DESPACHAR NUEVO JOB CON LOS PARÁMETROS MEJORADOS
+            \App\Jobs\Rips\ImportCsv\SaveToDatabaseJob::dispatch(
+                $this->batchId,
+                100,           // chunkSize: 100 facturas por chunk
+                $this->disk,
+                1000           // insertChunkSize: 1000 registros por insert masivo
+            );
+            Log::info("MergeGroupsJob: dispatched SaveToDatabaseJob for batch {$this->batchId}");
+
+
 
             $countErrors = ErrorCollector::countErrors($this->batchId);
             $status = $countErrors > 0 ? 'failed' : "completed";

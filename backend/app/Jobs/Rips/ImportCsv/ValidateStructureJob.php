@@ -37,10 +37,12 @@ class ValidateStructureJob implements ShouldQueue
 
     public string $batchId;
     protected int $lockTtl = 30;
+    protected string $selectedQueue;
 
-    public function __construct(string $batchId)
+    public function __construct(string $batchId, string $selectedQueue)
     {
         $this->batchId = $batchId;
+        $this->selectedQueue = $selectedQueue;
     }
 
     public function handle()
@@ -257,13 +259,11 @@ class ValidateStructureJob implements ShouldQueue
                 if ($countErrors > 0) {
                     $status = 'failed';
                     ErrorCollector::saveErrorsToDatabase($this->batchId, $status);
-                }else{
+                } else {
 
                     $cantChunks = 50;
-                    Bus::dispatch(new CreateChunksJob($this->batchId, $filePath, $diskName, $cantChunks));
+                    Bus::dispatch(new CreateChunksJob($this->batchId, $filePath, $diskName, $cantChunks,$this->selectedQueue))->onQueue($this->selectedQueue);
                 }
-
-
             } catch (\Throwable $e) {
                 Log::debug("ValidateStructureJob: error guardando errores a BD: {$e->getMessage()}");
             }

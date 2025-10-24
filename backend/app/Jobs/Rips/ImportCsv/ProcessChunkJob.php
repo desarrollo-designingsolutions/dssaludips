@@ -21,6 +21,7 @@ class ProcessChunkJob implements ShouldQueue
     public string $chunkId;
     public string $chunkPath;
     public string $disk;
+    public string $selectedQueue;
 
     // Campos EXACTOS permitidos a nivel de usuario
     private array $exactUserFields = [
@@ -46,12 +47,13 @@ class ProcessChunkJob implements ShouldQueue
         'usuarios',
     ];
 
-    public function __construct(string $batchId, string $chunkId, string $chunkPath, string $disk = 'public')
+    public function __construct(string $batchId, string $chunkId, string $chunkPath, string $disk = 'public', string $selectedQueue)
     {
         $this->batchId = $batchId;
         $this->chunkId = $chunkId;
         $this->chunkPath = $chunkPath;
         $this->disk = $disk;
+        $this->selectedQueue = $selectedQueue;
     }
 
     public function handle()
@@ -648,7 +650,7 @@ class ProcessChunkJob implements ShouldQueue
                         "Preparando merge de {$totalInvoices} facturas...",
                     ));
 
-                    sleep(5);
+                    // sleep(5);
 
                     // SEGUNDO: REINICIAR CONTADORES PARA MERGE
                     $redis->hset($metaKey, 'merge_invoices_processed', 0);
@@ -660,7 +662,7 @@ class ProcessChunkJob implements ShouldQueue
                     $redis->hmset("batch:{$this->batchId}:metadata", $metadata);
 
                     // CUARTO: DESPACHAR EL JOB
-                    \App\Jobs\Rips\ImportCsv\MergeGroupsJob::dispatch($this->batchId, $this->disk, 500);
+                    \App\Jobs\Rips\ImportCsv\MergeGroupsJob::dispatch($this->batchId, $this->disk, 500)->onQueue($this->selectedQueue);
                     Log::info("ProcessChunkJob: dispatched MergeGroupsJob for batch {$this->batchId}");
                     $redis->hset($metaKey, 'merge_enqueued_at', now()->toDateTimeString());
                 } catch (\Throwable $e) {
