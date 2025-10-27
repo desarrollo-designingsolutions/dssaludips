@@ -16,12 +16,21 @@ const {
   grupoServicio_arrayInfo,
   servicio_arrayInfo,
   ripsFinalidadConsultaVersion2_arrayInfo,
+  ripsCausaExternaVersion2_arrayInfo,
   cie10_arrayInfo,
-  conceptoRecaudo_arrayInfo
+  ripsTipoDiagnosticoPrincipalVersion2_arrayInfo,
+  conceptoRecaudo_arrayInfo,
+  condicionyDestinoUsuarioEgreso_arrayInfo,
+  sexos_arrayInfo,
+  tipoMedicamentoPosVersion2_arrayInfo,
+  dci_arrayInfo,
+  umm_arrayInfo,
+  ffm_arrayInfo,
+  upr_arrayInfo,
 } = storeToRefs(useRipManualStore())
 const refForm = ref<VForm>()
 
-//table
+//table 
 const inputsTableFilter = ref([
   {
     key: "actions",
@@ -31,23 +40,25 @@ const inputsTableFilter = ref([
     minWidth: "100px",
     fixed: true,
   },
-  { key: "fechaInicioAtencion", title: 'Fecha Inicio Atención', sortable: false, minWidth: "200px" },
-  { key: "idMIPRES", title: 'id Mipres', sortable: false, minWidth: "200px" },
   { key: "numAutorizacion", title: 'No Autorización', sortable: false, minWidth: "200px" },
-  { key: "codProcedimiento", title: 'Codigo de Procedimiento', sortable: false, minWidth: "350px" },
-  { key: "viaIngresoServicioSalud", title: 'Via Ingreso Servicio Salud', sortable: false, minWidth: "350px" },
-  { key: "modalidadGrupoServicioTecSal", title: 'Modalidad Grupo Servicio TecSal', sortable: false, minWidth: "350px" },
-  { key: "grupoServicios", title: 'Grupo Servicio', sortable: false, minWidth: "350px" },
-  { key: "codServicio", title: 'Codigo Servicio', sortable: false, minWidth: "200px" },
-  { key: "finalidadTecnologiaSalud", title: 'Finalidad Tecnologia Salud', sortable: false, minWidth: "350px" },
+  { key: "idMIPRES", title: 'id Mipres', sortable: false, minWidth: "200px" },
+  { key: "fechaDispensAdmon", title: 'Fecha Dispens Admon', sortable: false, minWidth: "200px" },
   { key: "codDiagnosticoPrincipal", title: 'Diagnostico Principal', sortable: false, minWidth: "350px" },
   { key: "codDiagnosticoRelacionado", title: 'Diagnostico Relacionado', sortable: false, minWidth: "350px" },
-  { key: "codComplicacion", title: 'Código Complicación', sortable: false, minWidth: "350px" },
+  { key: "tipoMedicamento", title: 'Tipo Medicamento', sortable: false, minWidth: "350px" },
+  { key: "codTecnologiaSalud", title: 'Cod Tecnologia Salud', sortable: false, minWidth: "200px" },
+  { key: "nomTecnologiaSalud", title: 'Nombre Tecnología Salud', sortable: false, minWidth: "200px" },
+  { key: "concentracionMedicamento", title: 'Concentracion Medicamento', sortable: false, minWidth: "200px" },
+  { key: "unidadMedida", title: 'Unidad de Medida', sortable: false, minWidth: "350px" },
+  { key: "formaFarmaceutica", title: 'Forma Farmaceutica', sortable: false, minWidth: "200px" },
+  { key: "unidadMinDispensa", title: 'Unidad Min Dispensa', sortable: false, minWidth: "200px" },
+  { key: "cantidadMedicamento", title: 'Cantidad Medicamento', sortable: false, minWidth: "200px" },
+  { key: "diasTratamiento", title: 'DÍas Tratamiento', sortable: false, minWidth: "200px" },
+  { key: "vrUnitMedicamento", title: 'Valor Unit. Medicamento', sortable: false, minWidth: "200px" },
   { key: "valorPagoModerador", title: 'Valor Pago Moderador', sortable: false, minWidth: "200px" },
   { key: "vrServicio", title: 'Valor Servicio', sortable: false, minWidth: "200px" },
   { key: "conceptoRecaudo", title: 'Concepto Recaudo', sortable: false, minWidth: "350px" },
 ])
-
 
 const options = ref({ page: 1, itemsPerPage: 10, sortBy: [''], sortDesc: [false] })
 const search = ref('')
@@ -59,14 +70,14 @@ const loading = reactive({
 })
 
 onMounted(async () => {
-  if (dataServicesRipUser.value.procedimientos) {
-    dataServices.value = dataServicesRipUser.value.procedimientos;
+  if (dataServicesRipUser.value.medicamentos) {
+    dataServices.value = dataServicesRipUser.value.medicamentos;
   }
 })
 
 const saveData = async () => {
   if (dataServices.value.length == 0) {
-    toast("Debe agregar almenos un Servicio de procedimientos", "", "warning");
+    toast("Debe agregar almenos un Servicio de medicamentos", "", "warning");
     return false;
   }
   const validation = await refForm.value?.validate();
@@ -80,13 +91,13 @@ const saveData = async () => {
         ripInvoiceUser_id: route.params?.ripInvoiceUser_id,
         company_id: authenticationStore.company.id,
         serviceData: dataServices.value,
-        typeService: 'Procedimientos'
+        typeService: 'medicamentos'
       }
     );
     if (response.status === 200 && data) {
       dataServicesRipUser.value = data.ripInvoiceUser_info.servicios
       servicesCount.value = data.ripInvoiceUser_info.servicesCount
-      dataServices.value = dataServicesRipUser.value.procedimientos;
+      dataServices.value = dataServicesRipUser.value.medicamentos;
     }
     loading.table = false;
 
@@ -102,20 +113,23 @@ const addData = async () => {
   if (validation?.valid) {
     dataServices.value.push({
       codPrestador: null,
-      fechaInicioAtencion: null,
-      idMIPRES: null,
       numAutorizacion: null,
-      codProcedimiento: null,
-      viaIngresoServicioSalud: null,
-      modalidadGrupoServicioTecSal: null,
-      grupoServicios: null,
-      codServicio: null,
-      finalidadTecnologiaSalud: null,
-      tipoDocumentoIdentificacion: null,
-      numDocumentoIdentificacion: null,
+      idMIPRES: null,
+      fechaDispensAdmon: null,
       codDiagnosticoPrincipal: null,
       codDiagnosticoRelacionado: null,
-      codComplicacion: null,
+      tipoMedicamento: null,
+      codTecnologiaSalud: null,
+      nomTecnologiaSalud: null,
+      concentracionMedicamento: null,
+      unidadMedida: null,
+      formaFarmaceutica: null,
+      unidadMinDispensa: null,
+      cantidadMedicamento: null,
+      diasTratamiento: null,
+      tipoDocumentoIdentificacion: null,
+      numDocumentoIdentificacion: null,
+      vrUnitMedicamento: null,
       valorPagoModerador: null,
       numFEVPagoModerador: null,
       consecutivo: null,
@@ -127,7 +141,7 @@ const addData = async () => {
   }
 }
 
-const proceduresData = computed(() => {
+const queryData = computed(() => {
   return dataServices.value.filter((ele) => ele.delete != 1);
 });
 
@@ -198,7 +212,7 @@ const openModalQuestionDelete = (index: number) => {
           <VCol cols="12" offset-md="8" md="4">
             <div class="d-flex justify-end gap-3 flex-wrap">
               <VBtn color="primary" @click="addData()">
-                <VIcon start icon="tabler-plus" />Agregar Procedimiento
+                <VIcon start icon="tabler-plus" />Agregar Medicamento
               </VBtn>
             </div>
           </VCol>
@@ -211,13 +225,12 @@ const openModalQuestionDelete = (index: number) => {
 
       <VCardText>
         <VForm ref="refForm" @submit.prevent="() => { }">
-          <VDataTable :search="search" :headers="inputsTableFilter" :items="proceduresData"
+          <VDataTable :search="search" :headers="inputsTableFilter" :items="queryData"
             :items-per-page="options.itemsPerPage" :page="options.page" :options="options">
 
-            <template #item.fechaInicioAtencion="{ item, index }">
+            <template #item.numAutorizacion="{ item, index }">
               <div class="text-center">
-                <AppDateTimePicker v-model="item.fechaInicioAtencion" :rules="[requiredValidator]"
-                  :config="{ enableTime: true, dateFormat: 'Y-m-d H:i' }" />
+                <AppTextField clearable v-model="item.numAutorizacion" />
               </div>
             </template>
 
@@ -227,63 +240,10 @@ const openModalQuestionDelete = (index: number) => {
               </div>
             </template>
 
-            <template #item.numAutorizacion="{ item, index }">
+            <template #item.fechaDispensAdmon="{ item, index }">
               <div class="text-center">
-                <AppTextField clearable v-model="item.numAutorizacion" />
-              </div>
-            </template>
-
-            <template #item.codProcedimiento="{ item, index }">
-              <div class="text-center">
-                <AppSelectRemote v-model="item.codProcedimiento" url="/selectInfiniteCupsRips" arrayInfo="cupsRips"
-                  clearable :params="paramsSelectInfinite" :itemsData="cupsRips_arrayInfo" :firstFetch="false">
-                </AppSelectRemote>
-              </div>
-            </template>
-
-            <template #item.viaIngresoServicioSalud="{ item, index }">
-              <div class="text-center">
-                <AppSelectRemote v-model="item.viaIngresoServicioSalud" url="/selectInfiniteViaIngresoUsuario"
-                  arrayInfo="viaIngresoUsuario" clearable :params="paramsSelectInfinite"
-                  :itemsData="viaIngresoUsuario_arrayInfo" :firstFetch="false">
-                </AppSelectRemote>
-              </div>
-            </template>
-
-            <template #item.modalidadGrupoServicioTecSal="{ item, index }">
-              <div class="text-center">
-                <AppSelectRemote v-model="item.modalidadGrupoServicioTecSal" url="/selectInfiniteModalidadAtencion"
-                  arrayInfo="modalidadAtencion" clearable :params="paramsSelectInfinite"
-                  :itemsData="modalidadAtencion_arrayInfo" :firstFetch="false">
-                </AppSelectRemote>
-              </div>
-            </template>
-
-            <template #item.grupoServicios="{ item, index }">
-              <div class="text-center">
-                <AppSelectRemote v-model="item.grupoServicios" url="/selectInfiniteGrupoServicio"
-                  arrayInfo="grupoServicio" clearable :params="paramsSelectInfinite"
-                  :itemsData="grupoServicio_arrayInfo" :firstFetch="false">
-                </AppSelectRemote>
-              </div>
-            </template>
-
-            <template #item.codServicio="{ item, index }">
-              <div class="text-center">
-                <AppSelectRemote v-model="item.codServicio" url="/selectInfiniteServicio" arrayInfo="servicio" clearable
-                  :params="paramsSelectInfinite" :itemsData="servicio_arrayInfo" :firstFetch="false">
-                </AppSelectRemote>
-              </div>
-            </template>
-
-
-            <template #item.finalidadTecnologiaSalud="{ item, index }">
-              <div class="text-center">
-                <AppSelectRemote v-model="item.finalidadTecnologiaSalud"
-                  url="/selectInfiniteRipsFinalidadConsultaVersion2" arrayInfo="ripsFinalidadConsultaVersion2" clearable
-                  :params="paramsSelectInfinite" :itemsData="ripsFinalidadConsultaVersion2_arrayInfo"
-                  :firstFetch="false">
-                </AppSelectRemote>
+                <AppDateTimePicker v-model="item.fechaDispensAdmon" :rules="[requiredValidator]"
+                  :config="{ enableTime: true, dateFormat: 'Y-m-d H:i' }" />
               </div>
             </template>
 
@@ -303,11 +263,77 @@ const openModalQuestionDelete = (index: number) => {
               </div>
             </template>
 
-            <template #item.codComplicacion="{ item, index }">
+            <template #item.tipoMedicamento="{ item, index }">
               <div class="text-center">
-                <AppSelectRemote v-model="item.codComplicacion" url="/selectInfiniteCie10" arrayInfo="cie10" clearable
-                  :params="paramsSelectInfinite" :itemsData="cie10_arrayInfo" :firstFetch="false">
+                <AppSelectRemote v-model="item.tipoMedicamento" url="/selectInfiniteTipoMedicamentoPosVersion2"
+                  arrayInfo="tipoMedicamentoPosVersion2" clearable :params="paramsSelectInfinite"
+                  :itemsData="tipoMedicamentoPosVersion2_arrayInfo" :firstFetch="false">
                 </AppSelectRemote>
+              </div>
+            </template>
+
+            <template #item.codTecnologiaSalud="{ item, index }">
+              <div class="text-center">
+                <AppSelectRemote v-model="item.codTecnologiaSalud" url="/selectInfiniteTipoMedicamentoPosVersion2"
+                  arrayInfo="tipoMedicamentoPosVersion2" clearable :params="paramsSelectInfinite"
+                  :itemsData="tipoMedicamentoPosVersion2_arrayInfo" :firstFetch="false">
+                </AppSelectRemote>
+              </div>
+            </template>
+
+            <template #item.nomTecnologiaSalud="{ item, index }">
+              <div class="text-center">
+                <AppSelectRemote v-model="item.nomTecnologiaSalud" url="/selectInfiniteDci" arrayInfo="dci" clearable
+                  :params="paramsSelectInfinite" :itemsData="dci_arrayInfo" :firstFetch="false">
+                </AppSelectRemote>
+              </div>
+            </template>
+
+            <template #item.concentracionMedicamento="{ item, index }">
+              <div class="text-center">
+                <AppTextField clearable v-model="item.concentracionMedicamento" />
+              </div>
+            </template>
+
+            <template #item.unidadMedida="{ item, index }">
+              <div class="text-center">
+                <AppSelectRemote v-model="item.unidadMedida" url="/selectInfiniteUmm" arrayInfo="umm" clearable
+                  :params="paramsSelectInfinite" :itemsData="umm_arrayInfo" :firstFetch="false">
+                </AppSelectRemote>
+              </div>
+            </template>
+
+            <template #item.formaFarmaceutica="{ item, index }">
+              <div class="text-center">
+                <AppSelectRemote v-model="item.formaFarmaceutica" url="/selectInfiniteFfm" arrayInfo="ffm" clearable
+                  :params="paramsSelectInfinite" :itemsData="ffm_arrayInfo" :firstFetch="false">
+                </AppSelectRemote>
+              </div>
+            </template>
+
+            <template #item.unidadMinDispensa="{ item, index }">
+              <div class="text-center">
+                <AppSelectRemote v-model="item.unidadMinDispensa" url="/selectInfiniteUpr" arrayInfo="upr" clearable
+                  :params="paramsSelectInfinite" :itemsData="upr_arrayInfo" :firstFetch="false">
+                </AppSelectRemote>
+              </div>
+            </template>
+
+            <template #item.cantidadMedicamento="{ item, index }">
+              <div class="text-center">
+                <AppTextField clearable v-model="item.cantidadMedicamento" />
+              </div>
+            </template>
+
+            <template #item.diasTratamiento="{ item, index }">
+              <div class="text-center">
+                <AppTextField clearable v-model="item.diasTratamiento" />
+              </div>
+            </template>
+
+            <template #item.vrUnitMedicamento="{ item, index }">
+              <div class="text-center">
+                <AppTextField clearable v-model="item.vrUnitMedicamento" />
               </div>
             </template>
 
@@ -355,7 +381,7 @@ const openModalQuestionDelete = (index: number) => {
           Regresar a usuarios
         </VBtn>
         <VBtn :disabled="loading.table" :loading="loading.table" @click="openModalQuestionSave()" color="primary">
-          Guardar Procedimientos
+          Guardar Medicamentos
           <VIcon end icon="tabler-device-floppy" />
         </VBtn>
       </VCardText>

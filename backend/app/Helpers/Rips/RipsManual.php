@@ -164,7 +164,7 @@ class RipsManual
         foreach ($mappedUsers as &$mu) {
             $mu['consecutivo'] = $con;
             // servicios -> asignar consecutivo por tipo si los hubiera
-            foreach (['consultas', 'procedimientos', 'medicamentos', 'urgencias', 'otrosServicios', 'hospitalizacion', 'recienNacidos'] as $serviceKey) {
+            foreach (['consultas', 'procedimientos', 'medicamentos', 'urgencias', 'otrosServicios', 'hospitalizacion', 'reciennacidos'] as $serviceKey) {
                 if (!empty($mu['servicios'][$serviceKey]) && is_array($mu['servicios'][$serviceKey])) {
                     $j = 1;
                     foreach ($mu['servicios'][$serviceKey] as &$srv) {
@@ -253,23 +253,17 @@ class RipsManual
         return $invoiceModel->fresh();
     }
 
-    public static function saveServicesToInvoiceAndDbMapped($invoiceModel, array $incomingServices, string $company_id, ?string $ripInvoiceUserId, $rip, string $type)
-    {
+    public static function saveServicesToInvoiceAndDbMapped(
+        $invoiceModel,
+        array $incomingServices,
+        string $company_id,
+        ?string $ripInvoiceUserId,
+        $rip,
+        ?string $typeService = null, // <- tipo que llega desde el front (ej: 'Procedimientos' o 'procedimientos')
+        string $type = '' // tu RipTypeEnum u otro uso
+    ) {
         $serviceVendor = ServiceVendor::where('nit', $rip->nit)->first();
         $codPrestador = $serviceVendor->ips_cod_habilitacion?->codigo;
-
-        $extractCode = function ($val) {
-            if (is_null($val)) return null;
-            if (is_object($val)) $val = (array)$val;
-            if (is_array($val)) {
-                if (!empty($val['codigo'])) return $val['codigo'];
-                if (!empty($val['value'])) return $val['value'];
-                if (!empty($val['title'])) return $val['title'];
-                foreach ($val as $v) if ($v !== null && $v !== '') return $v;
-                return null;
-            }
-            return $val;
-        };
 
         // leer JSON existente
         $existingJson = [];
@@ -283,9 +277,10 @@ class RipsManual
         }
         if (!isset($existingJson['usuarios']) || !is_array($existingJson['usuarios'])) $existingJson['usuarios'] = [];
 
-        $serviceKeys = ['consultas', 'procedimientos', 'medicamentos', 'urgencias', 'otrosServicios', 'hospitalizacion', 'recienNacidos'];
+        // service keys soportadas (usa claves en minúscula)
+        $serviceKeys = ['consultas', 'procedimientos', 'medicamentos', 'urgencias', 'otrosServicios', 'hospitalizacion', 'reciennacidos'];
 
-        // inicializar índices existentes y estructura
+        // índice por documento en JSON
         $usuariosIndex = [];
         foreach ($existingJson['usuarios'] as $i => $u) {
             $nd = $u['numDocumentoIdentificacion'] ?? null;
@@ -300,7 +295,7 @@ class RipsManual
             }
         }
 
-        // map para relacionar posición JSON <-> id en BD: $map[userIndex][serviceType] = [ dbIdForIndex0, dbIdForIndex1, ... ]
+        // mapa para relacionar posición JSON <-> id en BD
         $serviceDbIdMap = [];
 
         // cargar rip_invoice_user si se pasó id
@@ -309,34 +304,26 @@ class RipsManual
             $ripInvoiceUser = DB::table('rip_invoice_users')->where('id', $ripInvoiceUserId)->first();
         }
 
-        // si ripInvoiceUser no existe y queremos crear uno, la lógica anterior conserva eso (no repito aquí)
+        // Normalizamos typeService (front puede enviar 'Procedimientos' o 'procedimientos')
+        $typeServiceNormalized = $typeService ? mb_strtolower($typeService) : null;
 
-        // ---------- procesar incoming services ----------
+        // procesar cada servicio entrante
         foreach ($incomingServices as $svcRaw) {
             $svc = is_object($svcRaw) ? (array)$svcRaw : $svcRaw;
 
-            // normalizar typo
+            // normalizar numAutoriacion -> numAutorizacion
             if (isset($svc['numAutoriacion']) && !isset($svc['numAutorizacion'])) {
                 $svc['numAutorizacion'] = $svc['numAutoriacion'];
                 unset($svc['numAutoriacion']);
             }
 
-            // determinar userIndex (igual que antes)
+            // --- DETERMINAR userIndex (idéntico a tu lógica previa) ---
             $userIndex = null;
-            // prioridad: ripInvoiceUser param
-            // (repite lógica similar a la tuya para ubicar/crear userIndex)
-            // ... (código reducido por brevedad, asume que ya creas/seleccionas $userIndex exactamente como antes)
-            // Para evitar repetir todo el bloque largo, vamos a usar la misma lógica que tienes:
-            // (copia la sección completa de determinación/creación del userIndex aquí)
-            // ---------------------------------------------------------------------
-            // --- inicio bloque copia/pega de tu lógica para ubicar $userIndex ----------
             if (!empty($ripInvoiceUser) && ($ripInvoiceUserId !== null)) {
-                // si ripInvoiceUser existe buscar su index
                 $nd = $ripInvoiceUser->numDocumentoIdentificacion ?? null;
                 if ($nd !== null && isset($usuariosIndex[$nd])) {
                     $userIndex = $usuariosIndex[$nd];
                 } else {
-                    // crear nuevo user como en tu lógica
                     $newUser = [
                         'tipoDocumentoIdentificacion' => $ripInvoiceUser->tipoDocumentoIdentificacion ?? '',
                         'numDocumentoIdentificacion' => $ripInvoiceUser->numDocumentoIdentificacion ?? null,
@@ -359,7 +346,6 @@ class RipsManual
                     }
                 }
             } else {
-                // si no vino ripInvoiceUser param
                 $numDoc = $svc['numDocumentoIdentificacion'] ?? null;
                 if ($numDoc && isset($usuariosIndex[$numDoc])) {
                     $userIndex = $usuariosIndex[$numDoc];
@@ -397,14 +383,10 @@ class RipsManual
                     }
                 }
             }
-            // --- fin bloque userIndex -----------------------------------------------
-            // -----------------------------------------------------------------------
+            // --- FIN userIndex ---
+            // normalizar llave a minúscula para coincidir con config
+            $serviceType = mb_strtolower($typeService);
 
-            // asegurar keys de servicios
-            $serviceType = $svc['serviceType'] ?? null;
-            if (!$serviceType) {
-                $serviceType = !empty($svc['codConsulta']) ? 'consultas' : (!empty($svc['codProcedimiento']) ? 'procedimientos' : 'otrosServicios');
-            }
             if (!isset($existingJson['usuarios'][$userIndex]['servicios']) || !is_array($existingJson['usuarios'][$userIndex]['servicios'])) {
                 $existingJson['usuarios'][$userIndex]['servicios'] = [];
             }
@@ -414,31 +396,31 @@ class RipsManual
                 }
             }
 
-            // BORRADO si delete=true (mantén tu lógica)
+            // --------- BORRADO si delete=true ----------
             $shouldDelete = false;
             if (isset($svc['delete'])) {
                 $val = filter_var($svc['delete'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
                 $shouldDelete = ($val === true);
             }
             if ($shouldDelete) {
-                // borrar DB (por id o por rip_invoice_user_id + numAutorizacion o por consecutivo)
+                $table = ServiceMapper::tableFor($serviceType) ?? 'rip_service_queries';
                 $incomingId = $svc['id'] ?? null;
                 try {
                     if (!empty($incomingId)) {
-                        DB::table('rip_service_queries')->where('id', $incomingId)->delete();
+                        DB::table($table)->where('id', $incomingId)->delete();
                     } else {
                         $numAut = $svc['numAutorizacion'] ?? null;
                         if (!empty($numAut) && !empty($ripInvoiceUserId)) {
-                            DB::table('rip_service_queries')->where('rip_invoice_user_id', $ripInvoiceUserId)->where('numAutorizacion', $numAut)->delete();
+                            DB::table($table)->where('rip_invoice_user_id', $ripInvoiceUserId)->where('numAutorizacion', $numAut)->delete();
                         } elseif (!empty($svc['consecutivo']) && !empty($ripInvoiceUserId)) {
-                            DB::table('rip_service_queries')->where('rip_invoice_user_id', $ripInvoiceUserId)->where('consecutivo', (int)$svc['consecutivo'])->delete();
+                            DB::table($table)->where('rip_invoice_user_id', $ripInvoiceUserId)->where('consecutivo', (int)$svc['consecutivo'])->delete();
                         }
                     }
                 } catch (\Throwable $e) {
-                    Log::error("Error borrando rip_service_queries por delete flag: " . $e->getMessage());
+                    Log::error("Error borrando en tabla {$table} por delete flag: " . $e->getMessage());
                 }
 
-                // quitar del JSON (por consecutivo o numAutorizacion)
+                // quitar del JSON
                 $removed = false;
                 $con = $svc['consecutivo'] ?? null;
                 $numAut = $svc['numAutorizacion'] ?? null;
@@ -455,90 +437,46 @@ class RipsManual
                     }
                 }
                 $existingJson['usuarios'][$userIndex]['servicios'][$serviceType] = array_values($existingJson['usuarios'][$userIndex]['servicios'][$serviceType]);
-                // también limpiar mapa de db ids si existiera
                 if (isset($serviceDbIdMap[$userIndex][$serviceType]) && $removed) {
-                    // reindex map to keep same relative positions
                     $serviceDbIdMap[$userIndex][$serviceType] = array_values($serviceDbIdMap[$userIndex][$serviceType]);
                 }
-                continue; // siguiente servicio
+                continue;
             }
 
-            // preparar payload DB
-            $dbPayload = [
-                'rip_invoice_user_id' => $ripInvoiceUserId ?? null,
-                'codPrestador' => $codPrestador,
-                'fechaInicioAtencion' => $svc['fechaInicioAtencion'] ?? null,
-                'numAutorizacion' => $svc['numAutorizacion'] ?? null,
-                'codConsulta' => $extractCode($svc['codConsulta'] ?? null),
-                'modalidadGrupoServicioTecSal' => $extractCode($svc['modalidadGrupoServicioTecSal'] ?? null),
-                'grupoServicios' => $extractCode($svc['grupoServicios'] ?? null),
-                'codServicio' => $extractCode($svc['codServicio'] ?? null),
-                'finalidadTecnologiaSalud' => $extractCode($svc['finalidadTecnologiaSalud'] ?? null),
-                'causaMotivoAtencion' => $extractCode($svc['causaMotivoAtencion'] ?? null),
-                'codDiagnosticoPrincipal' => $extractCode($svc['codDiagnosticoPrincipal'] ?? null),
-                'codDiagnosticoRelacionado1' => $extractCode($svc['codDiagnosticoRelacionado1'] ?? null),
-                'codDiagnosticoRelacionado2' => $extractCode($svc['codDiagnosticoRelacionado2'] ?? null),
-                'codDiagnosticoRelacionado3' => $extractCode($svc['codDiagnosticoRelacionado3'] ?? null),
-                'tipoDiagnosticoPrincipal' => $extractCode($svc['tipoDiagnosticoPrincipal'] ?? null),
-                'tipoDocumentoIdentificacion' => $ripInvoiceUser->tipoDocumentoIdentificacion ?? ($svc['tipoDocumentoIdentificacion'] ?? null),
-                'numDocumentoIdentificacion' => $ripInvoiceUser->numDocumentoIdentificacion ?? ($svc['numDocumentoIdentificacion'] ?? null),
-                'vrServicio' => isset($svc['vrServicio']) ? (float) str_replace(',', '.', $svc['vrServicio']) : 0,
-                'conceptoRecaudo' => $extractCode($svc['conceptoRecaudo'] ?? null),
-                'valorPagoModerador' => isset($svc['valorPagoModerador']) ? (float) str_replace(',', '.', $svc['valorPagoModerador']) : 0,
-                'numFEVPagoModerador' => $invoiceModel->invoice_number,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+            // ---------- PREPARAR payload DB mediante ServiceMapper (centralizado por tipo) ----------
+            $dbPayload = ServiceMapper::buildDbPayload($serviceType, $svc, $ripInvoiceUser, $codPrestador, $invoiceModel);
 
-            // insert o update en BD - NOTA: no calculamos consecutivo aún (se hará en la reenumeración final)
+            // elegir tabla según serviceType
+            $table = ServiceMapper::tableFor($serviceType) ?? 'rip_service_queries';
+
+            // insert/update (no asignamos consecutivo aún)
             $incomingId = $svc['id'] ?? null;
             if (!empty($incomingId)) {
-                $exists = DB::table('rip_service_queries')->where('id', $incomingId)->first();
+                $exists = DB::table($table)->where('id', $incomingId)->first();
                 if ($exists) {
-                    // actualizar sin tocar consecutivo (lo recalcularemos al final)
-                    DB::table('rip_service_queries')->where('id', $incomingId)->update($dbPayload);
+                    DB::table($table)->where('id', $incomingId)->update($dbPayload);
                     $dbId = $incomingId;
                 } else {
                     $dbId = (string) Str::uuid();
                     $dbPayload['id'] = $dbId;
-                    // dejar consecutivo nulo/0 por ahora
                     $dbPayload['consecutivo'] = null;
-                    DB::table('rip_service_queries')->insert($dbPayload);
+                    DB::table($table)->insert($dbPayload);
                 }
             } else {
                 $dbId = (string) Str::uuid();
                 $dbPayload['id'] = $dbId;
                 $dbPayload['consecutivo'] = null;
-                DB::table('rip_service_queries')->insert($dbPayload);
+                DB::table($table)->insert($dbPayload);
             }
 
-            // construir objeto JSON y añadir (manteniendo orden) Y guardar dbId en map
-            $jsonSvc = [
-                'codPrestador' => $codPrestador,
-                'fechaInicioAtencion' => $dbPayload['fechaInicioAtencion'],
-                'numAutorizacion' => $dbPayload['numAutorizacion'],
-                'codConsulta' => $dbPayload['codConsulta'],
-                'modalidadGrupoServicioTecSal' => $dbPayload['modalidadGrupoServicioTecSal'],
-                'grupoServicios' => $dbPayload['grupoServicios'],
-                'codServicio' => $dbPayload['codServicio'],
-                'finalidadTecnologiaSalud' => $dbPayload['finalidadTecnologiaSalud'],
-                'causaMotivoAtencion' => $dbPayload['causaMotivoAtencion'],
-                'codDiagnosticoPrincipal' => $dbPayload['codDiagnosticoPrincipal'],
-                'codDiagnosticoRelacionado1' => $dbPayload['codDiagnosticoRelacionado1'],
-                'codDiagnosticoRelacionado2' => $dbPayload['codDiagnosticoRelacionado2'],
-                'codDiagnosticoRelacionado3' => $dbPayload['codDiagnosticoRelacionado3'],
-                'tipoDiagnosticoPrincipal' => $dbPayload['tipoDiagnosticoPrincipal'],
-                'tipoDocumentoIdentificacion' => $dbPayload['tipoDocumentoIdentificacion'],
-                'numDocumentoIdentificacion' => $dbPayload['numDocumentoIdentificacion'],
-                'vrServicio' => $dbPayload['vrServicio'],
-                'conceptoRecaudo' => $dbPayload['conceptoRecaudo'],
-                'valorPagoModerador' => $dbPayload['valorPagoModerador'],
-                'numFEVPagoModerador' => $dbPayload['numFEVPagoModerador'],
-                // 'consecutivo' se asigna luego en la reenumeración final
-                'consecutivo' => null,
-            ];
+            // construir JSON mínimo para lista (sin consecutivo)
+            $jsonSvc = ServiceMapper::formatForJson($dbPayload, $serviceType);
+            // garantizar consecutivo nulo por ahora si no lo tienes
+            if (!array_key_exists('consecutivo', $jsonSvc) || $jsonSvc['consecutivo'] === null) {
+                $jsonSvc['consecutivo'] = $dbPayload['consecutivo'] ?? null;
+            }
 
-            // reemplazar si hay match por consecutivo o numAutorizacion; sino append.
+            // reemplazar por consecutivo o numAutorizacion, si no append
             $replaced = false;
             foreach ($existingJson['usuarios'][$userIndex]['servicios'][$serviceType] as $k => $entry) {
                 if (!empty($entry['consecutivo']) && !empty($svc['consecutivo']) && $entry['consecutivo'] == (int)$svc['consecutivo']) {
@@ -559,7 +497,7 @@ class RipsManual
                 $serviceDbIdMap[$userIndex][$serviceType][] = $dbId;
             }
 
-            // rellenar datos del usuario desde ripInvoiceUser si se pasó (igual que antes)
+            // rellenar datos del usuario si disponemos de ripInvoiceUser
             if ($ripInvoiceUser) {
                 $existingJson['usuarios'][$userIndex]['tipoDocumentoIdentificacion'] = $ripInvoiceUser->tipoDocumentoIdentificacion ?? $existingJson['usuarios'][$userIndex]['tipoDocumentoIdentificacion'] ?? '';
                 $existingJson['usuarios'][$userIndex]['numDocumentoIdentificacion'] = $ripInvoiceUser->numDocumentoIdentificacion ?? $existingJson['usuarios'][$userIndex]['numDocumentoIdentificacion'] ?? null;
@@ -580,39 +518,43 @@ class RipsManual
                 if (!isset($user['servicios'][$sk]) || !is_array($user['servicios'][$sk])) {
                     $user['servicios'][$sk] = [];
                 }
-                $newList = [];
                 $pos = 0;
                 foreach ($user['servicios'][$sk] as $oldIndex => $svcEntry) {
                     $pos++;
                     $user['servicios'][$sk][$oldIndex]['consecutivo'] = $pos;
-                    // intentar actualizar BD con el id si existe en map
+
+                    // actualizar DB usando el id mapeado (si existe)
                     $dbId = $serviceDbIdMap[$uIdx][$sk][$oldIndex] ?? null;
+                    $table = ServiceMapper::tableFor($sk) ?? 'rip_service_queries';
                     if ($dbId) {
                         try {
-                            DB::table('rip_service_queries')->where('id', $dbId)
-                                ->update(['consecutivo' => $pos, 'updated_at' => now()]);
+                            DB::table($table)->where('id', $dbId)->update(['consecutivo' => $pos, 'updated_at' => now()]);
                         } catch (\Throwable $e) {
-                            Log::warning("No se pudo actualizar consecutivo DB para id {$dbId}: " . $e->getMessage());
+                            Log::warning("No se pudo actualizar consecutivo DB para id {$dbId} en tabla {$table}: " . $e->getMessage());
                         }
                     } else {
-                        // fallback: intentar actualizar por rip_invoice_user_id + numAutorizacion si existe
+                        // fallback por numAutorizacion
                         $numAut = $svcEntry['numAutorizacion'] ?? null;
-                        if (!empty($numAut) && !empty($ripInvoiceUserId)) {
+                        $ripUserId = $ripInvoiceUserId ?? null;
+                        if (!empty($numAut) && !empty($ripUserId)) {
                             try {
-                                DB::table('rip_service_queries')
-                                    ->where('rip_invoice_user_id', $ripInvoiceUserId)
+                                DB::table($table)
+                                    ->where('rip_invoice_user_id', $ripUserId)
                                     ->where('numAutorizacion', $numAut)
                                     ->update(['consecutivo' => $pos, 'updated_at' => now()]);
                             } catch (\Throwable $e) {
-                                Log::warning("No se pudo fallback-update consecutivo por numAutorizacion {$numAut}: " . $e->getMessage());
+                                Log::warning("No se pudo fallback-update consecutivo por numAutorizacion {$numAut} en tabla {$table}: " . $e->getMessage());
                             }
                         }
                     }
                 }
-                // opcional: reindex the array to be sequential in JSON (already is because keys preserved)
                 $user['servicios'][$sk] = array_values($user['servicios'][$sk]);
+                if (empty($user['servicios'][$sk])) {
+                    unset($user['servicios'][$sk]);
+                }
             }
-            // asegurar consecutivo global del usuario (1..N por usuario)
+
+            // asegurar consecutivo global del usuario
             if (empty($user['consecutivo'])) {
                 $maxUserCon = 0;
                 foreach ($existingJson['usuarios'] as $uu) {
@@ -622,6 +564,35 @@ class RipsManual
             }
         }
         unset($user);
+
+        // --- REORDENAR servicios por usuario y eliminar keys vacías ---
+        foreach ($existingJson['usuarios'] as $i => $user) {
+            // Si no tiene 'servicios' saltamos
+            if (!isset($existingJson['usuarios'][$i]['servicios']) || !is_array($existingJson['usuarios'][$i]['servicios'])) {
+                continue;
+            }
+
+            // Reordena las keys de servicios según el orden definido en ServiceMapper
+            $existingJson['usuarios'][$i]['servicios'] = ServiceMapper::reorderServices($existingJson['usuarios'][$i]['servicios']);
+
+            // Si tras reordenar quedó vacío, eliminar la key 'servicios'
+            if (empty($existingJson['usuarios'][$i]['servicios'])) {
+                unset($existingJson['usuarios'][$i]['servicios']);
+            }
+        }
+
+        // limpiar usuarios que tengan 'servicios' vacíos o no tengan 'servicios'
+        foreach ($existingJson['usuarios'] as $i => $u) {
+            if (!isset($existingJson['usuarios'][$i]['servicios']) || count($existingJson['usuarios'][$i]['servicios']) == 0) {
+                // si no tiene servicios, remueve la key (ya fue manejado) y si quieres eliminar usuarios sin servicios: descomenta la línea siguiente
+                // unset($existingJson['usuarios'][$i]);
+                // En tu caso original sólo eliminabas la key 'servicios', así que dejamos tal cual.
+                unset($existingJson['usuarios'][$i]['servicios']);
+            }
+        }
+
+        // reindexar usuarios (asegura índices 0..N-1)
+        $existingJson['usuarios'] = array_values($existingJson['usuarios']);
 
         // ---------- Guardar JSON y actualizar invoice ----------
         $infoJson = [
