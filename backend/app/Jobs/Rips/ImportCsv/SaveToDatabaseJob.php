@@ -7,11 +7,17 @@ use App\Enums\Rip\RipInvoiceStatusXmlEnum;
 use App\Enums\Rip\RipStatusEnum;
 use App\Events\ImportProgressEvent;
 use App\Helpers\Common\ErrorCollector;
+use App\Helpers\Rips\BuildAllDataToJson;
 use App\Helpers\Rips\GenerateRipInfo;
 use App\Models\Rip;
 use App\Models\RipInvoice;
 use App\Models\RipInvoiceUser;
+use App\Models\RipServiceHospitalization;
+use App\Models\RipServiceMedicine;
+use App\Models\RipServiceNewlyBorn;
+use App\Models\RipServiceProcedure;
 use App\Models\RipServiceQuery;
+use App\Models\RipServiceUrgency;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -123,7 +129,15 @@ class SaveToDatabaseJob implements ShouldQueue
         foreach (array_chunk($jsonFiles, $this->chunkSize) as $fileChunkIndex => $fileChunk) {
             $invoiceChunk = [];
             $userChunk = [];
-            $serviceChunk = [];
+            $serviceChunks = [
+                'consultas' => [],
+                'procedimientos' => [],
+                'hospitalizacion' => [],
+                'medicamentos' => [],
+                'recienNacidos' => [],
+                'urgencias' => [],
+                'otrosServicios' => [],
+            ];
 
             foreach ($fileChunk as $file) {
                 try {
@@ -139,6 +153,8 @@ class SaveToDatabaseJob implements ShouldQueue
                     $invoiceFileName = $facturaData['numFactura'] . '.json';
                     $invoiceJsonPath = 'companies/company_' . $company_id . '/rips/' . $type . '/rip_' . $ripId . '/invoices/' . $invoiceFileName;
 
+                    BuildAllDataToJson::generateConsecutive(collect($facturaData)->toarray());
+                    Log::info("aaaaaaaaaaaaaa", $facturaData);
                     try {
                         $disk->put($invoiceJsonPath, json_encode($facturaData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
                     } catch (\Throwable $e) {
@@ -212,33 +228,20 @@ class SaveToDatabaseJob implements ShouldQueue
                                     if (is_array($serviciosArray)) {
                                         foreach ($serviciosArray as $servicioData) {
                                             $serviceId = Str::uuid();
-                                            $serviceChunk[] = [
+
+                                            $camposEspecificos = $this->getFieldsByType($tipoServicio, $servicioData);
+
+                                            $serviceData = array_merge([
                                                 'id' => $serviceId,
                                                 'rip_invoice_user_id' => $userId,
-                                                'codPrestador' => $servicioData["codPrestador"] ?? null,
-                                                'fechaInicioAtencion' => $servicioData["fechaInicioAtencion"] ?? null,
-                                                'numAutorizacion' => $servicioData["numAutorizacion"] ?? null,
-                                                'codConsulta' => $servicioData["codConsulta"] ?? null,
-                                                'modalidadGrupoServicioTecSal' => $servicioData["modalidadGrupoServicioTecSal"] ?? null,
-                                                'grupoServicios' => $servicioData["grupoServicios"] ?? null,
-                                                'codServicio' => $servicioData["codServicio"] ?? null,
-                                                'finalidadTecnologiaSalud' => $servicioData["finalidadTecnologiaSalud"] ?? null,
-                                                'causaMotivoAtencion' => $servicioData["causaMotivoAtencion"] ?? null,
-                                                'codDiagnosticoPrincipal' => $servicioData["codDiagnosticoPrincipal"] ?? null,
-                                                'codDiagnosticoRelacionado1' => $servicioData["codDiagnosticoRelacionado1"] ?? null,
-                                                'codDiagnosticoRelacionado2' => $servicioData["codDiagnosticoRelacionado2"] ?? null,
-                                                'codDiagnosticoRelacionado3' => $servicioData["codDiagnosticoRelacionado3"] ?? null,
-                                                'tipoDiagnosticoPrincipal' => $servicioData["tipoDiagnosticoPrincipal"] ?? null,
-                                                'tipoDocumentoIdentificacion' => $servicioData["tipoDocumentoIdentificacion"] ?? null,
-                                                'numDocumentoIdentificacion' => $servicioData["numDocumentoIdentificacion"] ?? null,
-                                                'vrServicio' => $servicioData["vrServicio"] ?? null,
-                                                'conceptoRecaudo' => $servicioData["conceptoRecaudo"] ?? null,
-                                                'valorPagoModerador' => $servicioData["valorPagoModerador"] ?? null,
-                                                'numFEVPagoModerador' => $servicioData["numFEVPagoModerador"] ?? null,
-                                                'consecutivo' => $servicioData["consecutivo"] ?? null,
                                                 'created_at' => now(),
                                                 'updated_at' => now(),
-                                            ];
+                                            ], $camposEspecificos);
+
+                                            // Agrupar por tipo de servicio
+                                            if (isset($serviceChunks[$tipoServicio])) {
+                                                $serviceChunks[$tipoServicio][] = $serviceData;
+                                            }
 
                                             $processedServices++;
                                         }
@@ -250,6 +253,7 @@ class SaveToDatabaseJob implements ShouldQueue
 
                     // PROGRESO CADA 5 FACTURAS
                     if ($processedInvoices % 5 === 0) {
+                        Log::info("Procesadas {$processedInvoices}/{$totalInvoices} facturas - Usuarios: {$processedUsers}, Servicios: {$processedServices}");
                         event(new ImportProgressEvent(
                             $this->batchId,
                             $processedInvoices,
@@ -259,7 +263,6 @@ class SaveToDatabaseJob implements ShouldQueue
                             "Procesadas {$processedInvoices}/{$totalInvoices} facturas - Usuarios: {$processedUsers}, Servicios: {$processedServices}"
                         ));
                     }
-
                 } catch (\Throwable $e) {
                     Log::error("SaveToDatabaseJob: Error procesando archivo {$file}: {$e->getMessage()}");
                     continue;
@@ -288,16 +291,38 @@ class SaveToDatabaseJob implements ShouldQueue
                     }
                 }
 
-                // Chunkear servicios
-                if (!empty($serviceChunk)) {
-                    foreach (array_chunk($serviceChunk, $this->insertChunkSize) as $serviceSubChunk) {
-                        RipServiceQuery::insert($serviceSubChunk);
-                        $totalInserts += count($serviceSubChunk);
-                        Log::info("SaveToDatabaseJob: Insertados " . count($serviceSubChunk) . " servicios");
+                // Chunkear servicios POR TIPO
+                foreach ($serviceChunks as $tipoServicio => $chunk) {
+                    if (!empty($chunk)) {
+                        $model = $this->getServiceModelByType($tipoServicio);
+
+                        foreach (array_chunk($chunk, $this->insertChunkSize) as $serviceSubChunk) {
+                            $model::insert($serviceSubChunk);
+                            $totalInserts += count($serviceSubChunk);
+                            Log::info("SaveToDatabaseJob: Insertados " . count($serviceSubChunk) . " servicios de tipo: {$tipoServicio}");
+                        }
                     }
                 }
 
                 // INFORMAR CHUNK GUARDADO
+                $totalServicesByType = [];
+                foreach ($serviceChunks as $tipoServicio => $chunk) {
+                    if (!empty($chunk)) {
+                        $totalServicesByType[$tipoServicio] = count($chunk);
+                    }
+                }
+
+                $servicesMessage = "";
+                if (!empty($totalServicesByType)) {
+                    $servicesParts = [];
+                    foreach ($totalServicesByType as $tipo => $cantidad) {
+                        $servicesParts[] = "{$cantidad} {$tipo}";
+                    }
+                    $servicesMessage = implode(", ", $servicesParts);
+                } else {
+                    $servicesMessage = "0 servicios";
+                }
+
                 event(new ImportProgressEvent(
                     $this->batchId,
                     $processedInvoices,
@@ -305,17 +330,28 @@ class SaveToDatabaseJob implements ShouldQueue
                     ErrorCollector::countErrors($this->batchId),
                     'processing',
                     "Chunk #" . ($fileChunkIndex + 1) . " guardado: " .
-                    count($invoiceChunk) . " facturas, " .
-                    count($userChunk) . " usuarios, " .
-                    count($serviceChunk) . " servicios"
+                        count($invoiceChunk) . " facturas, " .
+                        count($userChunk) . " usuarios, " .
+                        $servicesMessage
                 ));
+
+                // Y para el log:
+                $servicesLogMessage = "";
+                if (!empty($totalServicesByType)) {
+                    $logParts = [];
+                    foreach ($totalServicesByType as $tipo => $cantidad) {
+                        $logParts[] = "{$cantidad} {$tipo}";
+                    }
+                    $servicesLogMessage = ", Servicios: " . implode(", ", $logParts);
+                } else {
+                    $servicesLogMessage = ", Servicios: 0";
+                }
 
                 Log::info("SaveToDatabaseJob: Chunk #" . ($fileChunkIndex + 1) . " procesado - " .
                     "Facturas: " . count($invoiceChunk) .
                     ", Usuarios: " . count($userChunk) .
-                    ", Servicios: " . count($serviceChunk) .
+                    $servicesLogMessage .
                     ", Total inserts: " . $totalInserts);
-
             } catch (\Throwable $e) {
                 Log::error("SaveToDatabaseJob: Error en insert masivo: {$e->getMessage()}");
 
@@ -350,7 +386,6 @@ class SaveToDatabaseJob implements ShouldQueue
 
             // Calcular sumVr final usando el método para múltiples facturas
             $finalRipSumVr = GenerateRipInfo::sumVrServicioRips($allInvoicesData);
-
         } catch (\Throwable $e) {
             Log::error("SaveToDatabaseJob: Error guardando JSON unificado: {$e->getMessage()}");
             // Si falla, usamos la suma acumulada de las facturas individuales
@@ -410,6 +445,165 @@ class SaveToDatabaseJob implements ShouldQueue
             }
         } catch (\Throwable $e) {
             Log::warning("SaveToDatabaseJob: Error limpiando archivos temporales: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Obtiene el modelo correspondiente según el tipo de servicio
+     */
+    private function getServiceModelByType($tipoServicio)
+    {
+        switch ($tipoServicio) {
+            case 'consultas':
+                return RipServiceQuery::class;
+            case 'procedimientos':
+                return RipServiceProcedure::class;
+            case 'hospitalizacion':
+                return RipServiceHospitalization::class;
+            case 'medicamentos':
+                return RipServiceMedicine::class;
+            case 'recienNacidos':
+                return RipServiceNewlyBorn::class;
+            case 'urgencias':
+                return RipServiceUrgency::class;
+            default:
+                throw new \Exception("Tipo de servicio no válido: {$tipoServicio}");
+        }
+    }
+
+    // Función que retorna campos según el tipo
+    private function getFieldsByType($tipoServicio, $servicioData)
+    {
+        switch ($tipoServicio) {
+            case 'consultas':
+                return [
+                    'codPrestador' => $servicioData["codPrestador"] ?? null,
+                    'fechaInicioAtencion' => $servicioData["fechaInicioAtencion"] ?? null,
+                    'numAutorizacion' => $servicioData["numAutorizacion"] ?? null,
+                    'codConsulta' => $servicioData["codConsulta"] ?? null,
+                    'modalidadGrupoServicioTecSal' => $servicioData["modalidadGrupoServicioTecSal"] ?? null,
+                    'grupoServicios' => $servicioData["grupoServicios"] ?? null,
+                    'codServicio' => $servicioData["codServicio"] ?? null,
+                    'finalidadTecnologiaSalud' => $servicioData["finalidadTecnologiaSalud"] ?? null,
+                    'causaMotivoAtencion' => $servicioData["causaMotivoAtencion"] ?? null,
+                    'codDiagnosticoPrincipal' => $servicioData["codDiagnosticoPrincipal"] ?? null,
+                    'codDiagnosticoRelacionado1' => $servicioData["codDiagnosticoRelacionado1"] ?? null,
+                    'codDiagnosticoRelacionado2' => $servicioData["codDiagnosticoRelacionado2"] ?? null,
+                    'codDiagnosticoRelacionado3' => $servicioData["codDiagnosticoRelacionado3"] ?? null,
+                    'tipoDiagnosticoPrincipal' => $servicioData["tipoDiagnosticoPrincipal"] ?? null,
+                    'tipoDocumentoIdentificacion' => $servicioData["tipoDocumentoIdentificacion"] ?? null,
+                    'numDocumentoIdentificacion' => $servicioData["numDocumentoIdentificacion"] ?? null,
+                    'vrServicio' => $servicioData["vrServicio"] ?? null,
+                    'conceptoRecaudo' => $servicioData["conceptoRecaudo"] ?? null,
+                    'valorPagoModerador' => $servicioData["valorPagoModerador"] ?? null,
+                    'numFEVPagoModerador' => $servicioData["numFEVPagoModerador"] ?? null,
+                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                ];
+
+            case 'procedimientos':
+                return [
+                    'codPrestador' => $servicioData["codProcedimiento"] ?? null,
+                    'fechaInicioAtencion' => $servicioData["fechaInicioAtencion"] ?? null,
+                    'idMIPRES' => $servicioData["idMIPRES"] ?? null,
+                    'numAutorizacion' => $servicioData["numAutorizacion"] ?? null,
+                    'codProcedimiento' => $servicioData["codProcedimiento"] ?? null,
+                    'viaIngresoServicioSalud' => $servicioData["viaIngresoServicioSalud"] ?? null,
+                    'modalidadGrupoServicioTecSal' => $servicioData["modalidadGrupoServicioTecSal"] ?? null,
+                    'grupoServicios' => $servicioData["grupoServicios"] ?? null,
+                    'codServicio' => $servicioData["codServicio"] ?? null,
+                    'finalidadTecnologiaSalud' => $servicioData["finalidadTecnologiaSalud"] ?? null,
+                    'tipoDocumentoIdentificacion' => $servicioData["tipoDocumentoIdentificacion"] ?? null,
+                    'numDocumentoIdentificacion' => $servicioData["numDocumentoIdentificacion"] ?? null,
+                    'codDiagnosticoPrincipal' => $servicioData["codDiagnosticoPrincipal"] ?? null,
+                    'codDiagnosticoRelacionado' => $servicioData["codDiagnosticoRelacionado"] ?? null,
+                    'codComplicacion' => $servicioData["codComplicacion"] ?? null,
+                    'vrServicio' => $servicioData["vrServicio"] ?? null,
+                    'conceptoRecaudo' => $servicioData["conceptoRecaudo"] ?? null,
+                    'valorPagoModerador' => $servicioData["valorPagoModerador"] ?? null,
+                    'numFEVPagoModerador' => $servicioData["numFEVPagoModerador"] ?? null,
+                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                ];
+
+            case 'hospitalizacion':
+                return [
+                    'codPrestador' => $servicioData["codPrestador"] ?? null,
+                    'viaIngresoServicioSalud' => $servicioData["viaIngresoServicioSalud"] ?? null,
+                    'fechaInicioAtencion' => $servicioData["fechaInicioAtencion"] ?? null,
+                    'numAutorizacion' => $servicioData["numAutorizacion"] ?? null,
+                    'causaMotivoAtencion' => $servicioData["causaMotivoAtencion"] ?? null,
+                    'codDiagnosticoPrincipal' => $servicioData["codDiagnosticoPrincipal"] ?? null,
+                    'codDiagnosticoPrincipalE' => $servicioData["codDiagnosticoPrincipalE"] ?? null,
+                    'codDiagnosticoRelacionadoE1' => $servicioData["codDiagnosticoRelacionadoE1"] ?? null,
+                    'codDiagnosticoRelacionadoE2' => $servicioData["codDiagnosticoRelacionadoE2"] ?? null,
+                    'codDiagnosticoRelacionadoE3' => $servicioData["codDiagnosticoRelacionadoE3"] ?? null,
+                    'codComplicacion' => $servicioData["codComplicacion"] ?? null,
+                    'condicionDestinoUsuarioEgreso' => $servicioData["condicionDestinoUsuarioEgreso"] ?? null,
+                    'codDiagnosticoCausaMuerte' => $servicioData["codDiagnosticoCausaMuerte"] ?? null,
+                    'fechaEgreso' => $servicioData["fechaEgreso"] ?? null,
+                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                ];
+            case 'medicamentos':
+                return [
+                    'codPrestador' => $servicioData["codPrestador"] ?? null,
+                    'numAutorizacion' => $servicioData["numAutorizacion"] ?? null,
+                    'idMIPRES' => $servicioData["idMIPRES"] ?? null,
+                    'fechaDispensAdmon' => $servicioData["fechaDispensAdmon"] ?? null,
+                    'codDiagnosticoPrincipal' => $servicioData["codDiagnosticoPrincipal"] ?? null,
+                    'codDiagnosticoRelacionado' => $servicioData["codDiagnosticoRelacionado"] ?? null,
+                    'tipoMedicamento' => $servicioData["tipoMedicamento"] ?? null,
+                    'codTecnologiaSalud' => $servicioData["codTecnologiaSalud"] ?? null,
+                    'nomTecnologiaSalud' => $servicioData["nomTecnologiaSalud"] ?? null,
+                    'concentracionMedicamento' => $servicioData["concentracionMedicamento"] ?? null,
+                    'unidadMedida' => $servicioData["unidadMedida"] ?? null,
+                    'formaFarmaceutica' => $servicioData["formaFarmaceutica"] ?? null,
+                    'unidadMinDispensa' => $servicioData["unidadMinDispensa"] ?? null,
+                    'cantidadMedicamento' => $servicioData["cantidadMedicamento"] ?? null,
+                    'diasTratamiento' => $servicioData["diasTratamiento"] ?? null,
+                    'tipoDocumentoIdentificacion' => $servicioData["tipoDocumentoIdentificacion"] ?? null,
+                    'numDocumentoIdentificacion' => $servicioData["numDocumentoIdentificacion"] ?? null,
+                    'vrUnitMedicamento' => $servicioData["vrUnitMedicamento"] ?? null,
+                    'vrServicio' => $servicioData["vrServicio"] ?? null,
+                    'conceptoRecaudo' => $servicioData["conceptoRecaudo"] ?? null,
+                    'valorPagoModerador' => $servicioData["valorPagoModerador"] ?? null,
+                    'numFEVPagoModerador' => $servicioData["numFEVPagoModerador"] ?? null,
+                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                ];
+            case 'recienNacidos':
+                return [
+                    'codPrestador' => $servicioData["codPrestador"] ?? null,
+                    'tipoDocumentoIdentificacion' => $servicioData["tipoDocumentoIdentificacion"] ?? null,
+                    'numDocumentoIdentificacion' => $servicioData["numDocumentoIdentificacion"] ?? null,
+                    'fechaNacimiento' => $servicioData["fechaNacimiento"] ?? null,
+                    'edadGestacional' => $servicioData["edadGestacional"] ?? null,
+                    'numConsultasCPrenatal' => $servicioData["numConsultasCPrenatal"] ?? null,
+                    'codSexoBiologico' => $servicioData["codSexoBiologico"] ?? null,
+                    'peso' => $servicioData["peso"] ?? null,
+                    'codDiagnosticoPrincipal' => $servicioData["codDiagnosticoPrincipal"] ?? null,
+                    'condicionDestinoUsuarioEgreso' => $servicioData["condicionDestinoUsuarioEgreso"] ?? null,
+                    'codDiagnosticoCausaMuerte' => $servicioData["codDiagnosticoCausaMuerte"] ?? null,
+                    'fechaEgreso' => $servicioData["fechaEgreso"] ?? null,
+                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                ];
+            case 'urgencias':
+                return [
+                    'codPrestador' => $servicioData["codPrestador"] ?? null,
+                    'fechaInicioAtencion' => $servicioData["fechaInicioAtencion"] ?? null,
+                    'causaMotivoAtencion' => $servicioData["causaMotivoAtencion"] ?? null,
+                    'codDiagnosticoPrincipal' => $servicioData["codDiagnosticoPrincipal"] ?? null,
+                    'codDiagnosticoPrincipalE' => $servicioData["codDiagnosticoPrincipalE"] ?? null,
+                    'codDiagnosticoRelacionadoE1' => $servicioData["codDiagnosticoRelacionadoE1"] ?? null,
+                    'codDiagnosticoRelacionadoE2' => $servicioData["codDiagnosticoRelacionadoE2"] ?? null,
+                    'codDiagnosticoRelacionadoE3' => $servicioData["codDiagnosticoRelacionadoE3"] ?? null,
+                    'condicionDestinoUsuarioEgreso' => $servicioData["condicionDestinoUsuarioEgreso"] ?? null,
+                    'codDiagnosticoCausaMuerte' => $servicioData["codDiagnosticoCausaMuerte"] ?? null,
+                    'fechaEgreso' => $servicioData["fechaEgreso"] ?? null,
+                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                ];
+            case 'otrosServicios':
+                return [];
+
+            default:
+                return []; // Campos por defecto o vacío
         }
     }
 }
