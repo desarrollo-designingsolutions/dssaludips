@@ -1,11 +1,11 @@
 <script setup lang="ts">
-// import OtherServicesForm from '@/pages/Rips/Manual/Components/OtherServicesForm.vue';
 import MedicalConsultationForm from '@/pages/Rips/Components/Manual/MedicalConsultationForm.vue';
 import ProcedureForm from '@/pages/Rips/Components/Manual/ProcedureForm.vue';
 import UrgencyForm from '@/pages/Rips/Components/Manual/UrgencyForm.vue';
 import HospitalizationForm from '@/pages/Rips/Components/Manual/HospitalizationForm.vue';
 import NewlyBornForm from '@/pages/Rips/Components/Manual/NewlyBornForm.vue';
 import MedicinesForm from '@/pages/Rips/Components/Manual/MedicinesForm.vue';
+import OtherServicesForm from '@/pages/Rips/Components/Manual/OtherServicesForm.vue';
 import { useRipStore } from "@/pages/Rips/Store/useRipStore";
 import { useRipManualStore } from "@/pages/Rips/Store/useRipManualStore";
 
@@ -159,7 +159,7 @@ const breadcrumbs = [
           </VTab>
           <VTab>
             <span>Otros servicios</span>
-            <!-- <VBadge :content="servicesCount?.otrosServicios" :offset-x="-18" :offset-y="0" /> -->
+            <VBadge :content="servicesCount?.otrosServicios" :offset-x="-18" :offset-y="0" />
           </VTab>
         </VTabs>
 
@@ -184,7 +184,7 @@ const breadcrumbs = [
             <MedicinesForm :key="keyComponent" :data-list="dataUser?.servicios?.medicamentos"></MedicinesForm>
           </VWindowItem>
           <VWindowItem>
-            <!-- <OtherServicesForm :key="keyComponent" :data-list="dataUser?.servicios?.otrosServicios"></OtherServicesForm> -->
+            <OtherServicesForm :key="keyComponent" :data-list="dataUser?.servicios?.otrosServicios"></OtherServicesForm>
           </VWindowItem>
         </VWindow>
       </VCardText>
