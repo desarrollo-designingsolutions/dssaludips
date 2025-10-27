@@ -70,7 +70,7 @@ const saveData = async () => {
         ripInvoiceUser_id: route.params?.ripInvoiceUser_id,
         company_id: authenticationStore.company.id,
         serviceData: dataServices.value,
-        typeService: 'Urgencias'
+        typeService: 'urgencias'
       }
     );
     if (response.status === 200 && data) {
@@ -159,7 +159,7 @@ const openModalQuestionSave = () => {
   refModalQuestion.value.componentData.principalIcon = 'tabler-help'
   refModalQuestion.value.componentData.btnSuccessText = 'Sí'
   refModalQuestion.value.componentData.btnCancelText = 'No'
-  refModalQuestion.value.componentData.title = `¿Está seguro que desea guardar el registro?`
+  refModalQuestion.value.componentData.title = `¿Está seguro que desea guardar ${dataServices.value.length > 1 ? 'los registros' : 'el registro' }?`
 }
 
 //ModalQuestionDelete

@@ -5,6 +5,7 @@ namespace App\Helpers\Rips;
 use App\Models\IpsCodHabilitacion;
 use App\Models\Municipio;
 use App\Models\Pais;
+use App\Models\RipInvoiceUser;
 use App\Models\RipServiceQuery;
 use App\Models\RipsTipoUsuarioVersion2;
 use App\Models\ServiceVendor;
@@ -60,21 +61,43 @@ class RipsManual
             if ($shouldDelete) {
                 try {
                     if (!empty($incomingId)) {
-                        // Si el frontend nos dio el id (uuid de rip_invoice_users), borramos por id y rip_invoice_id
-                        DB::table('rip_invoice_users')
-                            ->where('id', $incomingId)
-                            ->where('rip_invoice_id', $invoiceModel->id)
-                            ->delete();
-                        Log::info("rip_invoice_users borrado por id {$incomingId} (rip_invoice_id={$invoiceModel->id})");
+                        $user = RipInvoiceUser::with([
+                            'queries',
+                            'procedures',
+                            'urgencies',
+                            'hospitalizations',
+                            'newlyBorns',
+                            'medicines',
+                            'otherServices'
+                        ])->where('id', $incomingId)->where('rip_invoice_id', $invoiceModel->id)->first();
                     } elseif (!empty($numDoc)) {
-                        // Si no hay id, borramos por rip_invoice_id + numDocumentoIdentificacion
-                        DB::table('rip_invoice_users')
-                            ->where('rip_invoice_id', $invoiceModel->id)
-                            ->where('numDocumentoIdentificacion', $numDoc)
-                            ->delete();
-                        Log::info("rip_invoice_users borrado por numDocumentoIdentificacion {$numDoc} (rip_invoice_id={$invoiceModel->id})");
+                        $user = RipInvoiceUser::with([
+                            'queries',
+                            'procedures',
+                            'urgencies',
+                            'hospitalizations',
+                            'newlyBorns',
+                            'medicines',
+                            'otherServices'
+                        ])->where('rip_invoice_id', $invoiceModel->id)->where('numDocumentoIdentificacion', $numDoc)->first();
+                    }
+
+                    if (!empty($user)) {
+                        // si tus relaciones están definidas como hasMany, ->delete() borrará las filas relacionadas
+                        $user->queries()->delete();
+                        $user->procedures()->delete();
+                        $user->urgencies()->delete();
+                        $user->hospitalizations()->delete();
+                        $user->newlyBorns()->delete();
+                        $user->medicines()->delete();
+                        $user->otherServices()->delete();
+
+                        // y por último el usuario
+                        $user->delete();
+
+                        Log::info("RipInvoiceUser {$user->id} y relaciones borradas (Eloquent).");
                     } else {
-                        Log::warning("Se solicitó delete pero no se proporcionó id ni numDocumentoIdentificacion en el payload: " . json_encode($u));
+                        Log::warning("No se encontró RipInvoiceUser para borrar: id={$incomingId} numDoc={$numDoc}");
                     }
 
                     // además quitar del índice de usuarios existentes para que no se reutilicen sus 'servicios'
@@ -164,7 +187,7 @@ class RipsManual
         foreach ($mappedUsers as &$mu) {
             $mu['consecutivo'] = $con;
             // servicios -> asignar consecutivo por tipo si los hubiera
-            foreach (['consultas', 'procedimientos', 'medicamentos', 'urgencias', 'otrosServicios', 'hospitalizacion', 'reciennacidos'] as $serviceKey) {
+            foreach (['consultas', 'procedimientos', 'medicamentos', 'urgencias', 'otrosservicios', 'hospitalizacion', 'reciennacidos'] as $serviceKey) {
                 if (!empty($mu['servicios'][$serviceKey]) && is_array($mu['servicios'][$serviceKey])) {
                     $j = 1;
                     foreach ($mu['servicios'][$serviceKey] as &$srv) {
@@ -278,7 +301,7 @@ class RipsManual
         if (!isset($existingJson['usuarios']) || !is_array($existingJson['usuarios'])) $existingJson['usuarios'] = [];
 
         // service keys soportadas (usa claves en minúscula)
-        $serviceKeys = ['consultas', 'procedimientos', 'medicamentos', 'urgencias', 'otrosServicios', 'hospitalizacion', 'reciennacidos'];
+        $serviceKeys = ['consultas', 'procedimientos', 'medicamentos', 'urgencias', 'otrosservicios', 'hospitalizacion', 'reciennacidos'];
 
         // índice por documento en JSON
         $usuariosIndex = [];
@@ -305,7 +328,7 @@ class RipsManual
         }
 
         // Normalizamos typeService (front puede enviar 'Procedimientos' o 'procedimientos')
-        $typeServiceNormalized = $typeService ? mb_strtolower($typeService) : null;
+        $typeServiceNormalized = $typeService;
 
         // procesar cada servicio entrante
         foreach ($incomingServices as $svcRaw) {
@@ -403,7 +426,7 @@ class RipsManual
                 $shouldDelete = ($val === true);
             }
             if ($shouldDelete) {
-                $table = ServiceMapper::tableFor($serviceType) ?? 'rip_service_queries';
+                $table = ServiceMapper::tableFor($serviceType);
                 $incomingId = $svc['id'] ?? null;
                 try {
                     if (!empty($incomingId)) {
@@ -447,7 +470,7 @@ class RipsManual
             $dbPayload = ServiceMapper::buildDbPayload($serviceType, $svc, $ripInvoiceUser, $codPrestador, $invoiceModel);
 
             // elegir tabla según serviceType
-            $table = ServiceMapper::tableFor($serviceType) ?? 'rip_service_queries';
+            $table = ServiceMapper::tableFor($serviceType);
 
             // insert/update (no asignamos consecutivo aún)
             $incomingId = $svc['id'] ?? null;
@@ -525,7 +548,7 @@ class RipsManual
 
                     // actualizar DB usando el id mapeado (si existe)
                     $dbId = $serviceDbIdMap[$uIdx][$sk][$oldIndex] ?? null;
-                    $table = ServiceMapper::tableFor($sk) ?? 'rip_service_queries';
+                    $table = ServiceMapper::tableFor($sk);
                     if ($dbId) {
                         try {
                             DB::table($table)->where('id', $dbId)->update(['consecutivo' => $pos, 'updated_at' => now()]);
@@ -594,6 +617,13 @@ class RipsManual
         // reindexar usuarios (asegura índices 0..N-1)
         $existingJson['usuarios'] = array_values($existingJson['usuarios']);
 
+        // transformar keys de 'servicios' por usuario para el JSON final
+        foreach ($existingJson['usuarios'] as $i => $user) {
+            if (isset($existingJson['usuarios'][$i]['servicios']) && is_array($existingJson['usuarios'][$i]['servicios'])) {
+                $existingJson['usuarios'][$i]['servicios'] = self::mapServiceKeysForJson($existingJson['usuarios'][$i]['servicios']);
+            }
+        }
+
         // ---------- Guardar JSON y actualizar invoice ----------
         $infoJson = [
             'numDocumentoIdObligado' => $existingJson['numDocumentoIdObligado'] ?? $rip->nit ?? null,
@@ -625,5 +655,24 @@ class RipsManual
         GenerateRipInfo::generateDataJsonAndExcel($invoiceModel->rip_id, $type);
 
         return $invoiceModel->fresh();
+    }
+
+    private static function mapServiceKeysForJson(array $servicios): array
+    {
+        $map = [
+            'reciennacidos' => 'recienNacidos',
+            'otrosservicios' => 'otrosServicios',
+        ];
+
+        $out = [];
+        foreach ($servicios as $k => $v) {
+            if (isset($map[$k])) {
+                $out[$map[$k]] = $v;
+            } else {
+                $out[$k] = $v;
+            }
+        }
+
+        return $out;
     }
 }

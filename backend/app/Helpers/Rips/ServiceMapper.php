@@ -32,6 +32,7 @@ use App\Http\Resources\RipsTipoDiagnosticoPrincipalVersion2\RipsTipoDiagnosticoP
 use App\Http\Resources\Servicio\ServicioSelectInfiniteResource;
 use App\Http\Resources\Sexo\SexoSelectResource;
 use App\Http\Resources\TipoMedicamentoPosVersion2\TipoMedicamentoPosVersion2SelectInfiniteResource;
+use App\Http\Resources\TipoOtrosServicios\TipoOtrosServiciosSelectResource;
 use App\Http\Resources\Umm\UmmSelectInfiniteResource;
 use App\Http\Resources\Upr\UprSelectResource;
 use App\Http\Resources\ViaIngresoUsuario\ViaIngresoUsuarioSelectInfiniteResource;
@@ -42,6 +43,7 @@ use App\Models\Ffm;
 use App\Models\Ium;
 use App\Models\Sexo;
 use App\Models\TipoMedicamentoPosVersion2;
+use App\Models\TipoOtrosServicios;
 use App\Models\Umm;
 use App\Models\Upr;
 use App\Models\ViaIngresoUsuario;
@@ -57,7 +59,7 @@ class ServiceMapper
         'procedimientos' => 'rip_service_procedures',
         'medicamentos' => 'rip_service_medicines',
         'urgencias' => 'rip_service_urgencies',
-        // 'otrosservicios' => 'rip_service_otros',
+        'otrosservicios' => 'rip_service_other_services',
         'hospitalizacion' => 'rip_service_hospitalizations',
         'reciennacidos' => 'rip_service_newly_borns',
     ];
@@ -196,7 +198,7 @@ class ServiceMapper
         }
 
         // RECIEN NACIDOS
-        if ($k === 'reciennacidos' || $k === 'reciennacido') {
+        if ($k === 'reciennacidos') {
             return array_merge($base, [
                 'tipoDocumentoIdentificacion' => $ripInvoiceUser->tipoDocumentoIdentificacion ?? ($svc['tipoDocumentoIdentificacion'] ?? null),
                 'numDocumentoIdentificacion' => $ripInvoiceUser->numDocumentoIdentificacion ?? ($svc['numDocumentoIdentificacion'] ?? null),
@@ -214,7 +216,6 @@ class ServiceMapper
 
         // MEDICAMENTOS
         if ($k === 'medicamentos') {
-            logMessage($svc);
             return array_merge($base, [
                 'numAutorizacion' => $svc['numAutorizacion'] ?? null,
                 'idMIPRES' => $svc['idMIPRES'] ?? null,
@@ -235,6 +236,26 @@ class ServiceMapper
                 'tipoDocumentoIdentificacion' => $ripInvoiceUser->tipoDocumentoIdentificacion ?? ($svc['tipoDocumentoIdentificacion'] ?? null),
                 'numDocumentoIdentificacion' => $ripInvoiceUser->numDocumentoIdentificacion ?? ($svc['numDocumentoIdentificacion'] ?? null),
                 'vrUnitMedicamento' => isset($svc['vrUnitMedicamento']) ? (float) str_replace(',', '.', $svc['vrUnitMedicamento']) : null,
+                'vrServicio' => isset($svc['vrServicio']) ? (float) str_replace(',', '.', $svc['vrServicio']) : null,
+                'conceptoRecaudo' => self::extractCode($svc['conceptoRecaudo'] ?? null),
+                'valorPagoModerador' => isset($svc['valorPagoModerador']) ? (float) str_replace(',', '.', $svc['valorPagoModerador']) : null,
+                'numFEVPagoModerador' => $invoiceModel->invoice_number ?? ($svc['numFEVPagoModerador'] ?? null),
+            ]);
+        }
+
+        // OTROS SERVICIOS
+        if ($k === 'otrosservicios') {
+            return array_merge($base, [
+                'numAutorizacion' => $svc['numAutorizacion'] ?? null,
+                'idMIPRES' => $svc['idMIPRES'] ?? null,
+                'fechaSuministroTecnologia' => $svc['fechaSuministroTecnologia'] ?? null,
+                'tipoOS' => self::extractCode($svc['tipoOS'] ?? null),
+                'codTecnologiaSalud' => self::extractCode($svc['codTecnologiaSalud'] ?? null),
+                'nomTecnologiaSalud' => $svc['nomTecnologiaSalud'] ?? null,
+                'cantidadOS' => $svc['cantidadOS'] ?? null,
+                'tipoDocumentoIdentificacion' => $ripInvoiceUser->tipoDocumentoIdentificacion ?? ($svc['tipoDocumentoIdentificacion'] ?? null),
+                'numDocumentoIdentificacion' => $ripInvoiceUser->numDocumentoIdentificacion ?? ($svc['numDocumentoIdentificacion'] ?? null),
+                'vrUnitOS' => isset($svc['vrUnitOS']) ? (float) str_replace(',', '.', $svc['vrUnitOS']) : null,
                 'vrServicio' => isset($svc['vrServicio']) ? (float) str_replace(',', '.', $svc['vrServicio']) : null,
                 'conceptoRecaudo' => self::extractCode($svc['conceptoRecaudo'] ?? null),
                 'valorPagoModerador' => isset($svc['valorPagoModerador']) ? (float) str_replace(',', '.', $svc['valorPagoModerador']) : null,
@@ -322,7 +343,6 @@ class ServiceMapper
         $k = mb_strtolower($serviceTypeKey);
         $k = str_replace([' ', '_', '-'], '', $k);
 
-        logMessage($rec);
         // CONSULTAS -> recurso con lookups
         if ($k === 'consultas') {
             $codConsulta = null;
@@ -665,11 +685,11 @@ class ServiceMapper
             }
             $codTecnologia = null;
             if (!empty($rec['codTecnologiaSaludable_type']) && !empty($rec['codTecnologiaSaludable_id'])) {
-                if($rec['codTecnologiaSaludable_type'] === 'CatalogoCum'){
+                if ($rec['codTecnologiaSaludable_type'] === 'CatalogoCum') {
                     $codTecnologia = CatalogoCum::where('id', $rec['codTecnologiaSaludable_id'])->first();
                     $codTecnologia = new CatalogoCumSelectResource($codTecnologia);
                 }
-                if($rec['codTecnologiaSaludable_type'] === 'Ium'){
+                if ($rec['codTecnologiaSaludable_type'] === 'Ium') {
                     $codTecnologia = Ium::where('id', $rec['codTecnologiaSaludable_id'])->first();
                     $codTecnologia = new IumSelectResource($codTecnologia);
                 }
@@ -699,6 +719,45 @@ class ServiceMapper
                 'tipoDocumentoIdentificacion' => $rec['tipoDocumentoIdentificacion'] ?? null,
                 'numDocumentoIdentificacion' => $rec['numDocumentoIdentificacion'] ?? null,
                 'vrUnitMedicamento' => $rec['vrUnitMedicamento'] ?? null,
+                'vrServicio' => $rec['vrServicio'] ?? null,
+                'conceptoRecaudo' => !empty($rec['conceptoRecaudo']) ? new ConceptoRecaudoSelectResource($concepto) : null,
+                'valorPagoModerador' => $rec['valorPagoModerador'] ?? null,
+                'numFEVPagoModerador' => $rec['numFEVPagoModerador'] ?? null,
+                'consecutivo' => $rec['consecutivo'] ?? null,
+            ];
+        }
+
+        // OTROS SERVICIOS -> recursos / lookups
+        if ($k === 'otrosservicios') {
+            // intento buscar cups/codes para codTecnologiaSalud (CupsRips)
+            $tipoOs = null;
+            if (!empty($rec['tipoOS'])) {
+                $tipoOs = TipoOtrosServicios::where('codigo', $rec['tipoOS'])->first();
+            }
+
+            $codTecnologiaSalud = null;
+            if (!empty($rec['codTecnologiaSalud'])) {
+                $codTecnologiaSalud = CupsRips::where('codigo', $rec['codTecnologiaSalud'])->first();
+            }
+
+            $concepto = null;
+            if (!empty($rec['conceptoRecaudo'])) {
+                $concepto = ConceptoRecaudo::where('codigo', $rec['conceptoRecaudo'])->first();
+            }
+
+            return [
+                'id' => $rec['id'] ?? null,
+                'codPrestador' => $rec['codPrestador'] ?? null,
+                'numAutorizacion' => $rec['numAutorizacion'] ?? null,
+                'idMIPRES' => $rec['idMIPRES'] ?? null,
+                'fechaSuministroTecnologia' => $rec['fechaSuministroTecnologia'] ?? null,
+                'tipoOS' => !empty($rec['tipoOS']) ? new TipoOtrosServiciosSelectResource($tipoOs) : null,
+                'codTecnologiaSalud' => !empty($rec['codTecnologiaSalud']) ? new CupsRipsSelectInfiniteResource($codTecnologiaSalud) : null,
+                'nomTecnologiaSalud' => $rec['nomTecnologiaSalud'] ?? null,
+                'cantidadOS' => $rec['cantidadOS'] ?? null,
+                'tipoDocumentoIdentificacion' => $rec['tipoDocumentoIdentificacion'] ?? null,
+                'numDocumentoIdentificacion' => $rec['numDocumentoIdentificacion'] ?? null,
+                'vrUnitOS' => $rec['vrUnitOS'] ?? null,
                 'vrServicio' => $rec['vrServicio'] ?? null,
                 'conceptoRecaudo' => !empty($rec['conceptoRecaudo']) ? new ConceptoRecaudoSelectResource($concepto) : null,
                 'valorPagoModerador' => $rec['valorPagoModerador'] ?? null,
@@ -753,7 +812,7 @@ class ServiceMapper
         };
 
         // CONSULTAS (orden EXACTO requerido)
-        if ($k === 'consultas' || $k === 'consulta') {
+        if ($k === 'consultas') {
             $out = [
                 'codPrestador' => $g('codPrestador'),
                 'fechaInicioAtencion' => $g('fechaInicioAtencion'),
@@ -782,7 +841,7 @@ class ServiceMapper
         }
 
         // PROCEDIMIENTOS (orden EXACTO requerido)
-        if ($k === 'procedimientos' || $k === 'procedimiento') {
+        if ($k === 'procedimientos') {
             $out = [
                 'codPrestador' => $g('codPrestador'),
                 'fechaInicioAtencion' => $g('fechaInicioAtencion'),
@@ -810,7 +869,7 @@ class ServiceMapper
         }
 
         // URGENCIAS (orden EXACTO requerido)
-        if ($k === 'urgencias' || $k === 'urgencia') {
+        if ($k === 'urgencias') {
             $out = [
                 'codPrestador' => $g('codPrestador'),
                 'fechaInicioAtencion' => $g('fechaInicioAtencion'),
@@ -830,7 +889,7 @@ class ServiceMapper
         }
 
         // HOSPITALIZACION (orden EXACTO requerido según formatValueAH)
-        if ($k === 'hospitalizacion' || $k === 'hospitalizaciOn') {
+        if ($k === 'hospitalizacion') {
             $out = [
                 'codPrestador' => $g('codPrestador'),
                 'viaIngresoServicioSalud' => $g('viaIngresoServicioSalud'),
@@ -853,7 +912,7 @@ class ServiceMapper
         }
 
         // RECIEN NACIDOS (orden según tu formatValue)
-        if ($k === 'reciennacidos' || $k === 'reciennacido') {
+        if ($k === 'reciennacidos') {
             $out = [
                 'codPrestador' => $g('codPrestador'),
                 'tipoDocumentoIdentificacion' => $g('tipoDocumentoIdentificacion'),
@@ -874,7 +933,7 @@ class ServiceMapper
         }
 
         // MEDICAMENTOS (orden EXACTO requerido)
-        if ($k === 'medicamentos' || $k === 'medicamento') {
+        if ($k === 'medicamentos') {
             $out = [
                 'codPrestador' => $g('codPrestador'),
                 'numAutorizacion' => $g('numAutorizacion'),
@@ -903,6 +962,31 @@ class ServiceMapper
 
             return $out;
         }
+
+        // OTROS SERVICIOS (orden EXACTO requerido)
+        if ($k === 'otrosservicios') {
+            $out = [
+                'codPrestador' => $g('codPrestador'),
+                'numAutorizacion' => $g('numAutorizacion'),
+                'idMIPRES' => $g('idMIPRES'),
+                'fechaSuministroTecnologia' => $g('fechaSuministroTecnologia'),
+                'tipoOS' => $g('tipoOS'),
+                'codTecnologiaSalud' => $g('codTecnologiaSalud'),
+                'nomTecnologiaSalud' => $g('nomTecnologiaSalud'),
+                'cantidadOS' => $g('cantidadOS'),
+                'tipoDocumentoIdentificacion' => $g('tipoDocumentoIdentificacion'),
+                'numDocumentoIdentificacion' => $g('numDocumentoIdentificacion'),
+                'vrUnitOS' => $g('vrUnitOS'),
+                'vrServicio' => $g('vrServicio'),
+                'conceptoRecaudo' => $g('conceptoRecaudo'),
+                'valorPagoModerador' => $g('valorPagoModerador'),
+                'numFEVPagoModerador' => $g('numFEVPagoModerador'),
+                'consecutivo' => array_key_exists('consecutivo', $dbPayload) ? (int)$dbPayload['consecutivo'] : null,
+            ];
+
+            return $out;
+        }
+
 
 
         // FALLBACK ordenado por campos comunes cuando no esté definido explícitamente
@@ -943,9 +1027,9 @@ class ServiceMapper
             'procedimientos',
             'urgencias',
             'hospitalizacion',
-            'recienNacidos',
+            'reciennacidos',
             'medicamentos',
-            'otrosServicios'
+            'otrosservicios'
         ];
         $order = $order ?? $defaultOrder;
 
