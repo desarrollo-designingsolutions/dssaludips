@@ -721,7 +721,7 @@ class RipController extends Controller
 
             return [
                 'code' => 200,
-                'message' => 'Registro Creado correctamente',
+                'message' => 'Facturas creadas exitosamente',
                 'rip_info' => $rip_info,
                 ...$tipoNotas,
             ];
@@ -857,6 +857,7 @@ class RipController extends Controller
 
             return [
                 'code' => 200,
+                'message' => 'Usuarios creados exitosamente',
                 'ripInvoice_info' => $ripInvoice_info,
                 ...$tipoIdPisis,
                 ...$tipoUsuarios,
@@ -1016,7 +1017,7 @@ class RipController extends Controller
 
             return [
                 'code' => 200,
-                'message' => 'Servicios procesados correctamente',
+                'message' => 'Servicios creados exitosamente',
                 'ripInvoiceUser_info' => $ripInvoiceUser_info
             ];
         });
