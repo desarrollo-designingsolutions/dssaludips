@@ -12,6 +12,13 @@ export const useRipManualStore = defineStore("useRipManualStore", {
     cie10_arrayInfo: [] as Array<object>,
     ripsTipoDiagnosticoPrincipalVersion2_arrayInfo: [] as Array<object>,
     conceptoRecaudo_arrayInfo: [] as Array<object>,
+    condicionyDestinoUsuarioEgreso_arrayInfo: [] as Array<object>,
+    sexos_arrayInfo: [] as Array<object>,
+    tipoMedicamentoPosVersion2_arrayInfo: [] as Array<object>,
+    dci_arrayInfo: [] as Array<object>,
+    umm_arrayInfo: [] as Array<object>,
+    ffm_arrayInfo: [] as Array<object>,
+    upr_arrayInfo: [] as Array<object>,
   }),
   persist: true,
   actions: {
@@ -29,6 +36,13 @@ export const useRipManualStore = defineStore("useRipManualStore", {
         this.cie10_arrayInfo = data.cie10_arrayInfo;
         this.ripsTipoDiagnosticoPrincipalVersion2_arrayInfo = data.ripsTipoDiagnosticoPrincipalVersion2_arrayInfo;
         this.conceptoRecaudo_arrayInfo = data.conceptoRecaudo_arrayInfo;
+        this.condicionyDestinoUsuarioEgreso_arrayInfo = data.condicionyDestinoUsuarioEgreso_arrayInfo;
+        this.sexos_arrayInfo = data.sexos_arrayInfo;
+        this.tipoMedicamentoPosVersion2_arrayInfo = data.tipoMedicamentoPosVersion2_arrayInfo;
+        this.dci_arrayInfo = data.dci_arrayInfo;
+        this.umm_arrayInfo = data.umm_arrayInfo;
+        this.ffm_arrayInfo = data.ffm_arrayInfo;
+        this.upr_arrayInfo = data.upr_arrayInfo;
       }
 
       return data;

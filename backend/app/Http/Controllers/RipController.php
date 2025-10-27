@@ -13,6 +13,7 @@ use App\Helpers\Constants;
 use App\Helpers\Rips\GenerateRipInfo;
 use App\Http\Requests\Rip\RipUploadFileCsvRequest;
 use App\Helpers\Rips\RipsManual;
+use App\Helpers\Rips\ServiceMapper;
 use App\Http\Requests\Rip\Manual\RipsManualStoreInvoiceRequest;
 use App\Http\Requests\Rip\Manual\RipsManualStoreUsersRequest;
 use App\Http\Requests\Rip\RipUploadFileZipRequest;
@@ -854,143 +855,35 @@ class RipController extends Controller
         });
     }
 
-    public function getManualInfoServices($ripInvoiceUser_id)
+    public function getManualInfoServices($ripInvoiceUser_id, ?string $typeService = null)
     {
-        return $this->execute(function () use ($ripInvoiceUser_id) {
+        return $this->execute(function () use ($ripInvoiceUser_id, $typeService) {
             $ripInvoiceUser = $this->ripInvoiceUserRepository->find($ripInvoiceUser_id);
 
-            $servicesCount = [
-                'consultas' => count($ripInvoiceUser->queries),
-                'procedimientos' => count($ripInvoiceUser->procedures),
-            ];
+            // pedir servicios mapeados (por default trae todos los tipos definidos en ServiceMapper::$config)
+            $services = ServiceMapper::getServicesForUser($ripInvoiceUser, $typeService);
 
-            $queries = [];
-
-            if ($ripInvoiceUser->queries) {
-                $orderedRipUsers = collect($ripInvoiceUser->queries)
-                    ->sortBy(function ($v) {
-                        return (int) ($v['consecutivo'] ?? 0);
-                    })
-                    ->values();
-                foreach ($orderedRipUsers as $key => $value) {
-
-                    $codConsulta = null;
-                    $modalidadGrupoServicioTecSal = null;
-                    $grupoServicios = null;
-                    $codServicio = null;
-                    $finalidadTecnologiaSalud = null;
-                    $causaMotivoAtencion = null;
-                    $codDiagnosticoPrincipal = null;
-                    $codDiagnosticoRelacionado1 = null;
-                    $codDiagnosticoRelacionado2 = null;
-                    $codDiagnosticoRelacionado3 = null;
-                    $tipoDiagnosticoPrincipal = null;
-                    $conceptoRecaudo = null;
-
-
-                    if ($value['codConsulta']) {
-                        $codConsulta = CupsRips::where('codigo', $value['codConsulta'])->first();
-                    }
-
-                    if ($value['modalidadGrupoServicioTecSal']) {
-                        $modalidadGrupoServicioTecSal = ModalidadAtencion::where('codigo', $value['modalidadGrupoServicioTecSal'])->first();
-                    }
-
-                    if ($value['grupoServicios']) {
-                        $grupoServicios = GrupoServicio::where('codigo', $value['grupoServicios'])->first();
-                    }
-
-                    if ($value['codServicio']) {
-                        $codServicio = Servicio::where('codigo', $value['codServicio'])->first();
-                    }
-
-                    if ($value['finalidadTecnologiaSalud']) {
-                        $finalidadTecnologiaSalud = RipsFinalidadConsultaVersion2::where('codigo', $value['finalidadTecnologiaSalud'])->first();
-                    }
-
-                    if ($value['causaMotivoAtencion']) {
-                        $causaMotivoAtencion = RipsCausaExternaVersion2::where('codigo', $value['causaMotivoAtencion'])->first();
-                    }
-
-                    if ($value['codDiagnosticoPrincipal']) {
-                        $codDiagnosticoPrincipal = Cie10::where('codigo', $value['codDiagnosticoPrincipal'])->first();
-                    }
-
-                    if ($value['codDiagnosticoRelacionado1']) {
-                        $codDiagnosticoRelacionado1 = Cie10::where('codigo', $value['codDiagnosticoRelacionado1'])->first();
-                    }
-
-                    if ($value['codDiagnosticoRelacionado2']) {
-                        $codDiagnosticoRelacionado2 = Cie10::where('codigo', $value['codDiagnosticoRelacionado2'])->first();
-                    }
-
-                    if ($value['codDiagnosticoRelacionado3']) {
-                        $codDiagnosticoRelacionado3 = Cie10::where('codigo', $value['codDiagnosticoRelacionado3'])->first();
-                    }
-
-                    if ($value['tipoDiagnosticoPrincipal']) {
-                        $tipoDiagnosticoPrincipal = RipsTipoDiagnosticoPrincipalVersion2::where('codigo', $value['tipoDiagnosticoPrincipal'])->first();
-                    }
-
-                    if ($value['conceptoRecaudo']) {
-                        $conceptoRecaudo = ConceptoRecaudo::where('codigo', $value['conceptoRecaudo'])->first();
-                    }
-
-                    $queries[] = [
-                        'id' => $value['id'],
-                        'codPrestador' => $value['codPrestador'],
-                        'fechaInicioAtencion' => $value['fechaInicioAtencion'],
-                        'numAutorizacion' => $value['numAutorizacion'],
-                        'codConsulta' => $value['codConsulta'] ? new CupsRipsSelectInfiniteResource($codConsulta) : null,
-                        'modalidadGrupoServicioTecSal' => $value['modalidadGrupoServicioTecSal'] ? new ModalidadAtencionSelectInfiniteResource($modalidadGrupoServicioTecSal) : null,
-                        'grupoServicios' => $value['grupoServicios'] ? new GrupoServicioSelectInfiniteResource($grupoServicios) : null,
-                        'codServicio' => $value['codServicio'] ? new ServicioSelectInfiniteResource($codServicio) : null,
-                        'finalidadTecnologiaSalud' => $value['finalidadTecnologiaSalud'] ? new RipsFinalidadConsultaVersion2SelectInfiniteResource($finalidadTecnologiaSalud) : null,
-                        'causaMotivoAtencion' => $value['causaMotivoAtencion'] ? new RipsCausaExternaVersion2SelectInfiniteResource($causaMotivoAtencion) : null,
-                        'codDiagnosticoPrincipal' => $value['codDiagnosticoPrincipal'] ? new Cie10SelectInfiniteResource($codDiagnosticoPrincipal) : null,
-                        'codDiagnosticoRelacionado1' => $value['codDiagnosticoRelacionado1'] ? new Cie10SelectInfiniteResource($codDiagnosticoRelacionado1) : null,
-                        'codDiagnosticoRelacionado2' => $value['codDiagnosticoRelacionado2'] ? new Cie10SelectInfiniteResource($codDiagnosticoRelacionado2) : null,
-                        'codDiagnosticoRelacionado3' => $value['codDiagnosticoRelacionado3'] ? new Cie10SelectInfiniteResource($codDiagnosticoRelacionado3) : null,
-                        'tipoDiagnosticoPrincipal' => $value['tipoDiagnosticoPrincipal'] ? new RipsTipoDiagnosticoPrincipalVersion2SelectInfiniteResource($tipoDiagnosticoPrincipal) : null,
-                        'conceptoRecaudo' => $value['conceptoRecaudo'] ? new ConceptoRecaudoSelectResource($conceptoRecaudo) : null,
-                        'tipoDocumentoIdentificacion' => $value['tipoDocumentoIdentificacion'],
-                        'numDocumentoIdentificacion' => $value['numDocumentoIdentificacion'],
-                        'valorPagoModerador' => $value['valorPagoModerador'],
-                        'numFEVPagoModerador' => $value['numFEVPagoModerador'],
-                        'consecutivo' => $value['consecutivo'],
-                        'vrServicio' => $value['vrServicio'],
-                    ];
-                }
+            // servicesCount: por ejemplo conteo por tipo
+            $servicesCount = [];
+            foreach ($services as $k => $arr) {
+                $servicesCount[$k] = count($arr);
             }
 
-
-            $servicios = [
-                'consultas' => $queries
-            ];
-            // 'consultas' => [],
-            // 'procedimientos' => [],
-            // 'urgencias' => [],
-            // 'hospitalizacion' => [],
-            // 'recienNacidos' => [],
-            // 'medicamentos' => [],
-            // 'otrosServicios' => [],
-
+            // preparar tipoDocumento/tipoUsuario/codSexo como en tu versión original
             $tipoDocumentoIdentificacion = null;
-            $tipoUsuario = null;
-            $codSexo = null;
             if ($ripInvoiceUser->tipoDocumentoIdentificacion) {
-                $tipoDocumentoIdentificacion = TipoIdPisis::where('codigo', $ripInvoiceUser->tipoDocumentoIdentificacion)->select('codigo', 'nombre')->first();
-                $tipoDocumentoIdentificacion = $tipoDocumentoIdentificacion->codigo . ' - ' . $tipoDocumentoIdentificacion->nombre;
+                $td = TipoIdPisis::where('codigo', $ripInvoiceUser->tipoDocumentoIdentificacion)->select('codigo', 'nombre')->first();
+                $tipoDocumentoIdentificacion = $td?->codigo . ' - ' . $td?->nombre;
             }
-
+            $tipoUsuario = null;
             if ($ripInvoiceUser->tipoUsuario) {
-                $tipoUsuario = RipsTipoUsuarioVersion2::where('codigo', $ripInvoiceUser->tipoUsuario)->select('codigo', 'nombre')->first();
-                $tipoUsuario = $tipoUsuario->codigo . ' - ' . $tipoUsuario->nombre;
+                $tu = RipsTipoUsuarioVersion2::where('codigo', $ripInvoiceUser->tipoUsuario)->select('codigo', 'nombre')->first();
+                $tipoUsuario = $tu?->codigo . ' - ' . $tu?->nombre;
             }
-
+            $codSexo = null;
             if ($ripInvoiceUser->codSexo) {
-                $codSexo = Sexo::where('codigo', $ripInvoiceUser->codSexo)->select('codigo', 'nombre')->first();
-                $codSexo = $codSexo->codigo . ' - ' . $codSexo->nombre;
+                $s = Sexo::where('codigo', $ripInvoiceUser->codSexo)->select('codigo', 'nombre')->first();
+                $codSexo = $s?->codigo . ' - ' . $s?->nombre;
             }
 
             $ripInvoiceUserInfo = [
@@ -1002,7 +895,7 @@ class RipController extends Controller
                 "fechaNacimiento" => $ripInvoiceUser->fechaNacimiento,
                 "codSexo" => $codSexo,
 
-                "servicios" => $servicios,
+                "servicios" => $services,
                 "servicesCount" => $servicesCount,
             ];
 
@@ -1027,6 +920,13 @@ class RipController extends Controller
             $cie10 = $this->queryController->selectInfiniteCie10(request());
             $ripsTipoDiagnosticoPrincipalVersion2 = $this->queryController->selectInfiniteRipsTipoDiagnosticoPrincipalVersion2(request());
             $conceptoRecaudo = $this->queryController->selectInfiniteConceptoRecaudo(request());
+            $destionUsuarioEgreso = $this->queryController->selectInfiniteCondicionyDestinoUsuarioEgreso(request());
+            $sexo = $this->queryController->selectInfiniteSexo(request());
+            $tipoMedicamento = $this->queryController->selectInfiniteTipoMedicamentoPosVersion2(request());
+            $dci = $this->queryController->selectInfiniteDci(request());
+            $umm = $this->queryController->selectInfiniteUmm(request());
+            $ffm = $this->queryController->selectInfiniteFfm(request());
+            $upr = $this->queryController->selectInfiniteUpr(request());
 
             return [
                 'code' => 200,
@@ -1040,6 +940,13 @@ class RipController extends Controller
                 ...$cie10,
                 ...$ripsTipoDiagnosticoPrincipalVersion2,
                 ...$conceptoRecaudo,
+                ...$destionUsuarioEgreso,
+                ...$sexo,
+                ...$tipoMedicamento,
+                ...$dci,
+                ...$umm,
+                ...$ffm,
+                ...$upr,
             ];
         });
     }

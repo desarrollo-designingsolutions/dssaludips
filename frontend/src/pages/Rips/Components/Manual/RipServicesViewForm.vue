@@ -1,11 +1,11 @@
 <script setup lang="ts">
-// import EmergenciesForm from '@/pages/Rips/Manual/Components/EmergenciesForm.vue';
-// import HospitalizationForm from '@/pages/Rips/Manual/Components/HospitalizationForm.vue';
-// import MedicinesForm from '@/pages/Rips/Manual/Components/MedicinesForm.vue';
-// import NewlyBornForm from '@/pages/Rips/Manual/Components/NewlyBornForm.vue';
 // import OtherServicesForm from '@/pages/Rips/Manual/Components/OtherServicesForm.vue';
 import MedicalConsultationForm from '@/pages/Rips/Components/Manual/MedicalConsultationForm.vue';
 import ProcedureForm from '@/pages/Rips/Components/Manual/ProcedureForm.vue';
+import UrgencyForm from '@/pages/Rips/Components/Manual/UrgencyForm.vue';
+import HospitalizationForm from '@/pages/Rips/Components/Manual/HospitalizationForm.vue';
+import NewlyBornForm from '@/pages/Rips/Components/Manual/NewlyBornForm.vue';
+import MedicinesForm from '@/pages/Rips/Components/Manual/MedicinesForm.vue';
 import { useRipStore } from "@/pages/Rips/Store/useRipStore";
 import { useRipManualStore } from "@/pages/Rips/Store/useRipManualStore";
 
@@ -53,7 +53,6 @@ const breadcrumbs = [
   {
     title: "Manual",
     disabled: false,
-    to: "/Rips/Manual/List"
   },
   {
     title: `Factura: ${route.params?.numFactura}`,
@@ -144,19 +143,19 @@ const breadcrumbs = [
           </VTab>
           <VTab>
             <span>Urgencias</span>
-            <!-- <VBadge :content="servicesCount?.urgencias" :offset-x="-18" :offset-y="0" /> -->
+            <VBadge :content="servicesCount?.urgencias" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Hospitalización</span>
-            <!-- <VBadge :content="servicesCount?.hospitalizacion" :offset-x="-18" :offset-y="0" /> -->
+            <VBadge :content="servicesCount?.hospitalizacion" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Recien nacidos</span>
-            <!-- <VBadge :content="servicesCount?.recienNacidos" :offset-x="-18" :offset-y="0" /> -->
+            <VBadge :content="servicesCount?.reciennacidos" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Medicamentos</span>
-            <!-- <VBadge :content="servicesCount?.medicamentos" :offset-x="-18" :offset-y="0" /> -->
+            <VBadge :content="servicesCount?.medicamentos" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Otros servicios</span>
@@ -173,17 +172,16 @@ const breadcrumbs = [
             <ProcedureForm :key="keyComponent" :data-list="dataUser?.servicios?.procedimientos"></ProcedureForm>
           </VWindowItem>
           <VWindowItem>
-            <!-- <EmergenciesForm :key="keyComponent" :data-list="dataUser?.servicios?.urgencias"></EmergenciesForm> -->
+            <UrgencyForm :key="keyComponent" :data-list="dataUser?.servicios?.urgencias"></UrgencyForm>
           </VWindowItem>
           <VWindowItem>
-            <!-- <HospitalizationForm :key="keyComponent" :data-list="dataUser?.servicios?.hospitalizacion"> -->
-            <!-- </HospitalizationForm> -->
+            <HospitalizationForm :key="keyComponent" :data-list="dataUser?.servicios?.hospitalizacion"></HospitalizationForm>
           </VWindowItem>
           <VWindowItem>
-            <!-- <NewlyBornForm :key="keyComponent" :data-list="dataUser?.servicios?.recienNacidos"></NewlyBornForm> -->
+            <NewlyBornForm :key="keyComponent" :data-list="dataUser?.servicios?.reciennacidos"></NewlyBornForm>
           </VWindowItem>
           <VWindowItem>
-            <!-- <MedicinesForm :key="keyComponent" :data-list="dataUser?.servicios?.medicamentos"></MedicinesForm> -->
+            <MedicinesForm :key="keyComponent" :data-list="dataUser?.servicios?.medicamentos"></MedicinesForm>
           </VWindowItem>
           <VWindowItem>
             <!-- <OtherServicesForm :key="keyComponent" :data-list="dataUser?.servicios?.otrosServicios"></OtherServicesForm> -->
