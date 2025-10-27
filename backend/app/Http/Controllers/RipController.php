@@ -719,6 +719,7 @@ class RipController extends Controller
             $req = new Request(['company_id' => $rip->company_id]);
             $tipoNotas = $this->queryController->selectInfinitetipoNota($req);
 
+
             return [
                 'code' => 200,
                 'message' => 'Facturas creadas exitosamente',
