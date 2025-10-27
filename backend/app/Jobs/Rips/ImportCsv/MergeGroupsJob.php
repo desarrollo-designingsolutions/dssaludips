@@ -30,7 +30,7 @@ class MergeGroupsJob implements ShouldQueue
     // Campos EXACTOS permitidos a nivel de factura
     private array $exactInvoiceFields = [
         'numNota',
-        'TipoNota',
+        'tipoNota',
         'numFactura',
         'numDocumentoIdObligado'
     ];
@@ -310,7 +310,7 @@ class MergeGroupsJob implements ShouldQueue
     {
         $out = [
             'numNota' => null,
-            'TipoNota' => null,
+            'tipoNota' => null,
             'usuarios' => [],
             'numFactura' => $merged['numFactura'] ?? null,
             'numDocumentoIdObligado' => null,

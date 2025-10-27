@@ -174,8 +174,8 @@ class SaveToDatabaseJob implements ShouldQueue
                         "path_excel" => null,
                         "sumVr" => $invoiceSumVr,
                         "count_users" => count($facturaData['usuarios'] ?? []),
-                        "note_type" => $facturaData['TipoNota'] ?? null,
-                        "note_number" => $facturaData['numNota'] ?? null,
+                        "tipoNota" => $facturaData['tipoNota'] ?? null,
+                        "numNota" => $facturaData['numNota'] ?? null,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];

@@ -41,7 +41,7 @@ class ProcessChunkJob implements ShouldQueue
     // Campos EXACTOS permitidos a nivel de factura
     private array $exactInvoiceFields = [
         'numNota',
-        'TipoNota',
+        'tipoNota',
         'numFactura',
         'numDocumentoIdObligado',
         'usuarios',
