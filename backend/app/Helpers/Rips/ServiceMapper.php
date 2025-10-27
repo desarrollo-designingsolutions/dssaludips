@@ -2,6 +2,7 @@
 
 namespace App\Helpers\Rips;
 
+use App\Http\Resources\CatalogoCum\CatalogoCumSelectResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
@@ -23,6 +24,7 @@ use App\Http\Resources\CupsRips\CupsRipsSelectInfiniteResource;
 use App\Http\Resources\Dci\DciSelectResource;
 use App\Http\Resources\Ffm\FfmSelectResource;
 use App\Http\Resources\GrupoServicio\GrupoServicioSelectInfiniteResource;
+use App\Http\Resources\Ium\IumSelectResource;
 use App\Http\Resources\ModalidadAtencion\ModalidadAtencionSelectInfiniteResource;
 use App\Http\Resources\RipsCausaExternaVersion2\RipsCausaExternaVersion2SelectInfiniteResource;
 use App\Http\Resources\RipsFinalidadConsultaVersion2\RipsFinalidadConsultaVersion2SelectInfiniteResource;
@@ -33,9 +35,11 @@ use App\Http\Resources\TipoMedicamentoPosVersion2\TipoMedicamentoPosVersion2Sele
 use App\Http\Resources\Umm\UmmSelectInfiniteResource;
 use App\Http\Resources\Upr\UprSelectResource;
 use App\Http\Resources\ViaIngresoUsuario\ViaIngresoUsuarioSelectInfiniteResource;
+use App\Models\CatalogoCum;
 use App\Models\CondicionyDestinoUsuarioEgreso;
 use App\Models\Dci;
 use App\Models\Ffm;
+use App\Models\Ium;
 use App\Models\Sexo;
 use App\Models\TipoMedicamentoPosVersion2;
 use App\Models\Umm;
@@ -210,6 +214,7 @@ class ServiceMapper
 
         // MEDICAMENTOS
         if ($k === 'medicamentos') {
+            logMessage($svc);
             return array_merge($base, [
                 'numAutorizacion' => $svc['numAutorizacion'] ?? null,
                 'idMIPRES' => $svc['idMIPRES'] ?? null,
@@ -217,7 +222,9 @@ class ServiceMapper
                 'codDiagnosticoPrincipal' => self::extractCode($svc['codDiagnosticoPrincipal'] ?? null),
                 'codDiagnosticoRelacionado' => self::extractCode($svc['codDiagnosticoRelacionado'] ?? null),
                 'tipoMedicamento' => self::extractCode($svc['tipoMedicamento'] ?? null),
-                'codTecnologiaSalud' => self::extractCode($svc['codTecnologiaSalud'] ?? null),
+                'codTecnologiaSaludable_type' => $svc['codTecnologiaSaludable_type'] ?? null,
+                'codTecnologiaSaludable_id' => $svc['codTecnologiaSaludable_id']['value'] ?? null,
+                'codTecnologiaSalud' => self::extractCode($svc['codTecnologiaSaludable_id'] ?? null),
                 'nomTecnologiaSalud' => self::extractCode($svc['nomTecnologiaSalud'] ?? null),
                 'concentracionMedicamento' => $svc['concentracionMedicamento'] ?? null,
                 'unidadMedida' => self::extractCode($svc['unidadMedida'] ?? null),
@@ -315,6 +322,7 @@ class ServiceMapper
         $k = mb_strtolower($serviceTypeKey);
         $k = str_replace([' ', '_', '-'], '', $k);
 
+        logMessage($rec);
         // CONSULTAS -> recurso con lookups
         if ($k === 'consultas') {
             $codConsulta = null;
@@ -652,8 +660,19 @@ class ServiceMapper
                 $ffm = Ffm::where('codigo', $rec['formaFarmaceutica'])->first();
             }
             $upr = null;
-            if (!empty($rec['formaFarmaceutica'])) {
-                $upr = Upr::where('codigo', $rec['formaFarmaceutica'])->first();
+            if (!empty($rec['unidadMinDispensa'])) {
+                $upr = Upr::where('codigo', $rec['unidadMinDispensa'])->first();
+            }
+            $codTecnologia = null;
+            if (!empty($rec['codTecnologiaSaludable_type']) && !empty($rec['codTecnologiaSaludable_id'])) {
+                if($rec['codTecnologiaSaludable_type'] === 'CatalogoCum'){
+                    $codTecnologia = CatalogoCum::where('id', $rec['codTecnologiaSaludable_id'])->first();
+                    $codTecnologia = new CatalogoCumSelectResource($codTecnologia);
+                }
+                if($rec['codTecnologiaSaludable_type'] === 'Ium'){
+                    $codTecnologia = Ium::where('id', $rec['codTecnologiaSaludable_id'])->first();
+                    $codTecnologia = new IumSelectResource($codTecnologia);
+                }
             }
 
             return [
@@ -665,7 +684,11 @@ class ServiceMapper
                 'codDiagnosticoPrincipal' => !empty($rec['codDiagnosticoPrincipal']) ? new Cie10SelectInfiniteResource($diagP) : null,
                 'codDiagnosticoRelacionado' => !empty($rec['codDiagnosticoRelacionado']) ? new Cie10SelectInfiniteResource($diagR) : null,
                 'tipoMedicamento' => !empty($rec['tipoMedicamento']) ? new TipoMedicamentoPosVersion2SelectInfiniteResource($tipoMed) : null,
-                // 'codTecnologiaSalud' => $rec['codTecnologiaSalud'] ?? null,
+
+                'codTecnologiaSaludable_type' => $rec['codTecnologiaSaludable_type'] ?? null,
+                'codTecnologiaSaludable_id' => $codTecnologia ?? null,
+                'codTecnologiaSalud' => $rec['codTecnologiaSalud'] ?? null,
+
                 'nomTecnologiaSalud' => !empty($rec['nomTecnologiaSalud']) ? new DciSelectResource($nomTec) : null,
                 'concentracionMedicamento' => $rec['concentracionMedicamento'] ?? null,
                 'unidadMedida' => !empty($rec['unidadMedida']) ? new UmmSelectInfiniteResource($umm) : null,

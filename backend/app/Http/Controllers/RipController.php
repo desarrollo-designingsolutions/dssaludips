@@ -927,9 +927,30 @@ class RipController extends Controller
             $umm = $this->queryController->selectInfiniteUmm(request());
             $ffm = $this->queryController->selectInfiniteFfm(request());
             $upr = $this->queryController->selectInfiniteUpr(request());
+            $ium = $this->queryController->selectInfiniteIum(request());
+            $catalogoCum = $this->queryController->selectInfiniteCatalogoCum(request());
+            $tipoOtrosServicios = $this->queryController->selectInfiniteTipoOtrosServicios(request());
+
+            $codTecnologiaSaludables = [
+                [
+                    'value' => "Ium",
+                    'label' => 'Ium',
+                    'url' => '/selectInfiniteIum',
+                    'arrayInfo' => 'ium',
+                    'itemsData' => $ium['ium_arrayInfo'],
+                ],
+                [
+                    'value' => "CatalogoCum",
+                    'label' => 'CatalogoCum',
+                    'url' => '/selectInfiniteCatalogoCum',
+                    'arrayInfo' => 'catalogoCum',
+                    'itemsData' => $catalogoCum['catalogoCum_arrayInfo'],
+                ],
+            ];
 
             return [
                 'code' => 200,
+                'codTecnologiaSaludables' => $codTecnologiaSaludables,
                 ...$cupsrip,
                 ...$viaIngresoUsuario,
                 ...$modalidadAtencion,
@@ -947,6 +968,7 @@ class RipController extends Controller
                 ...$umm,
                 ...$ffm,
                 ...$upr,
+                ...$tipoOtrosServicios,
             ];
         });
     }

@@ -19,6 +19,8 @@ export const useRipManualStore = defineStore("useRipManualStore", {
     umm_arrayInfo: [] as Array<object>,
     ffm_arrayInfo: [] as Array<object>,
     upr_arrayInfo: [] as Array<object>,
+    codTecnologiaSaludables: [] as Array<object>,
+    tipoOtrosServicios_arrayInfo: [] as Array<object>,
   }),
   persist: true,
   actions: {
@@ -43,6 +45,8 @@ export const useRipManualStore = defineStore("useRipManualStore", {
         this.umm_arrayInfo = data.umm_arrayInfo;
         this.ffm_arrayInfo = data.ffm_arrayInfo;
         this.upr_arrayInfo = data.upr_arrayInfo;
+        this.codTecnologiaSaludables = data.codTecnologiaSaludables;
+        this.tipoOtrosServicios_arrayInfo = data.tipoOtrosServicios_arrayInfo;
       }
 
       return data;

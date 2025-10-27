@@ -10,16 +10,7 @@ const router = useRouter()
 
 const { dataRip, dataUser, dataServicesRipUser, servicesCount } = storeToRefs(useRipStore())
 const {
-  cupsRips_arrayInfo,
-  viaIngresoUsuario_arrayInfo,
-  modalidadAtencion_arrayInfo,
-  grupoServicio_arrayInfo,
-  servicio_arrayInfo,
-  ripsFinalidadConsultaVersion2_arrayInfo,
-  ripsCausaExternaVersion2_arrayInfo,
   cie10_arrayInfo,
-  ripsTipoDiagnosticoPrincipalVersion2_arrayInfo,
-  conceptoRecaudo_arrayInfo,
   condicionyDestinoUsuarioEgreso_arrayInfo,
   sexos_arrayInfo,
 } = storeToRefs(useRipManualStore())
