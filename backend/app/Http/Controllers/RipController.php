@@ -162,7 +162,6 @@ class RipController extends Controller
             try {
                 // Seleccionar una cola disponible
                 $selectedQueue = ProcessBatchService::selectAvailableQueueRoundRobin(Constants::AVAILABLE_QUEUES_TO_IMPORTS_RIPS_ZIP);
-                logMessage("Selected queue for batch {$batchId}: {$selectedQueue}");
 
                 Bus::chain([
                     new ValidateZipJob($fullPath, $batchId, $user_id, $company_id, $selectedQueue),
