@@ -53,7 +53,6 @@ class CreateChunksJob implements ShouldQueue
             'processing',
             'Iniciando división del archivo en chunks',
         ));
-        // sleep(5);
 
         // Borrar meta previa si existe
         try {
@@ -355,7 +354,6 @@ class CreateChunksJob implements ShouldQueue
             "Iniciando procesamiento de {$totalChunks} chunks...",
         ));
 
-        //  sleep(5);
         // Log::info("CreateChunksJob: Despachando {$totalChunks} jobs ProcessChunkJob");
 
         // Despachar todos los jobs de procesamiento

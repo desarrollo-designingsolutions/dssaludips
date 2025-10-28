@@ -651,8 +651,6 @@ class ProcessChunkJob implements ShouldQueue
                         "Preparando merge de {$totalInvoices} facturas...",
                     ));
 
-                    // sleep(5);
-
                     // SEGUNDO: REINICIAR CONTADORES PARA MERGE
                     $redis->hset($metaKey, 'merge_invoices_processed', 0);
                     $redis->hset($metaKey, 'merge_total_invoices', $totalInvoices);

@@ -103,7 +103,6 @@ class ZipSaveToDatabaseJob implements ShouldQueue
             'processing',
             "Iniciando guardado en BD de {$totalInvoices} facturas desde JSON existente"
         ));
-        sleep(5);
 
         // FASE 2: CREAR O REUTILIZAR REGISTRO RIP
         if ($rip_id) {
@@ -147,7 +146,6 @@ class ZipSaveToDatabaseJob implements ShouldQueue
             "RIP " . ($rip_id ? "reutilizado" : "creado") . ", procesando {$totalInvoices} facturas desde JSON"
         ));
 
-        sleep(5);
 
 
         // Variables para acumulación
@@ -292,7 +290,6 @@ class ZipSaveToDatabaseJob implements ShouldQueue
                             'processing',
                             "Procesadas {$processedInvoices}/{$totalInvoices} facturas - Usuarios: {$processedUsers}, Servicios: {$processedServices}"
                         ));
-        sleep(3);
 
                     }
                 } catch (\Throwable $e) {
@@ -363,7 +360,6 @@ class ZipSaveToDatabaseJob implements ShouldQueue
                         count($userBatch) . " usuarios, " .
                         $servicesMessage
                 ));
-        sleep(3);
 
             } catch (\Throwable $e) {
                 Log::error("SaveToDatabaseJob: Error en insert masivo: {$e->getMessage()}");
@@ -419,7 +415,6 @@ class ZipSaveToDatabaseJob implements ShouldQueue
             'completed',
             "Guardado en BD completado: {$processedInvoices} facturas, {$processedUsers} usuarios, {$processedServices} servicios, SumVr: {$totalRipSumVr}"
         ));
-        sleep(5);
 
 
         Log::info("SaveToDatabaseJob: completado batch={$this->batchId} - " .
