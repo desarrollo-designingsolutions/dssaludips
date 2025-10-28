@@ -192,6 +192,8 @@
                         <div class="text-body-1 font-weight-medium">
                           {{ process.metadata.total_records || 0 }} registros procesados
                         </div>
+                        <div class="text-body-1 font-weight-medium">{{ process.current_element }}</div>
+
                       </div>
                     </div>
                     <div v-if="process.completed_at" class="text-right">

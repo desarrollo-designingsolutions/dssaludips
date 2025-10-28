@@ -83,6 +83,5 @@ class ProcessMassUpload implements ShouldQueue
         if (isset($this->data['channel'])) {
             ProgressCircular::dispatch($this->data['channel'], $progress);
         }
-        // sleep(4);
     }
 }

@@ -37,10 +37,13 @@ class ValidateStructureJob implements ShouldQueue
 
     public string $batchId;
     protected int $lockTtl = 30;
+    protected string $selectedQueue;
 
-    public function __construct(string $batchId)
+    public function __construct(string $batchId, string $selectedQueue)
     {
         $this->batchId = $batchId;
+        $this->selectedQueue = $selectedQueue;
+        $this->onQueue($selectedQueue); // ✅ Asignar la cola
     }
 
     public function handle()
@@ -52,7 +55,7 @@ class ValidateStructureJob implements ShouldQueue
         $lock = Cache::lock($lockKey, $this->lockTtl);
 
         if (! $lock->get()) {
-            Log::info("ValidateStructureJob: lock activo, saliendo. batchId={$this->batchId}");
+            // Log::info("ValidateStructureJob: lock activo, saliendo. batchId={$this->batchId}");
             return;
         }
 
@@ -114,7 +117,7 @@ class ValidateStructureJob implements ShouldQueue
 
             // 3) Verificar existencia del archivo en el disco correcto
             $diskName = Constants::DISK_FILES;
-            Log::info("ValidateStructureJob: usando disk '{$diskName}' para batch {$this->batchId}");
+            // Log::info("ValidateStructureJob: usando disk '{$diskName}' para batch {$this->batchId}");
 
             $disk = Storage::disk($diskName);
             if (! $disk->exists($filePath)) {
@@ -188,7 +191,7 @@ class ValidateStructureJob implements ShouldQueue
                     return;
                 } else {
                     // No hubo errores — simplemente continúa el flujo normal
-                    Log::info("ValidateStructureJob: sin errores estructurales. batchId={$this->batchId}");
+                    // Log::info("ValidateStructureJob: sin errores estructurales. batchId={$this->batchId}");
                 }
             }
 
@@ -229,7 +232,7 @@ class ValidateStructureJob implements ShouldQueue
 
 
 
-            Log::info("ValidateStructureJob: estructura validada OK. batchId={$this->batchId}");
+            // Log::info("ValidateStructureJob: estructura validada OK. batchId={$this->batchId}");
         } catch (\Throwable $e) {
             $msg = sprintf("ValidateStructureJob excepción: %s", $e->getMessage());
             Log::error($msg, ['exception' => $e]);
@@ -257,13 +260,11 @@ class ValidateStructureJob implements ShouldQueue
                 if ($countErrors > 0) {
                     $status = 'failed';
                     ErrorCollector::saveErrorsToDatabase($this->batchId, $status);
-                }else{
+                } else {
 
                     $cantChunks = 50;
-                    Bus::dispatch(new CreateChunksJob($this->batchId, $filePath, $diskName, $cantChunks));
+                    CreateChunksJob::dispatch($this->batchId, $filePath, $diskName, $cantChunks, $this->selectedQueue);
                 }
-
-
             } catch (\Throwable $e) {
                 Log::debug("ValidateStructureJob: error guardando errores a BD: {$e->getMessage()}");
             }

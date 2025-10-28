@@ -9,6 +9,7 @@ use App\Helpers\Common\ErrorCollector;
 use App\Helpers\Constants;
 use App\Helpers\Rips\BuildAllDataToJson;
 use App\Helpers\Rips\GenerateRipInfo;
+use App\Jobs\Rips\ImportZip\ZipSaveToDatabaseJob;
 use App\Models\ProcessBatch;
 use App\Models\Rip;
 use App\Models\User;
@@ -56,7 +57,6 @@ class BuildJsonJob implements ShouldQueue
         $pathZip = $metadata['file_path'];
         $process_batch_id = $metadata['process_batch_id'];
 
-
         // Verificar si hay errores
         if ($totalErrors > 0) {
             Log::warning("BuildJsonJob falló: Se encontraron {$totalErrors} errores en el batch {$this->batchId}.");
@@ -64,8 +64,6 @@ class BuildJsonJob implements ShouldQueue
             $this->notifyUser($userId, 'Error en Construcción de JSON', "No se pudo construir el JSON debido a {$totalErrors} errores en la validación.", 'error');
             return;
         }
-
-
 
         try {
             // Construir el JSON
@@ -117,7 +115,7 @@ class BuildJsonJob implements ShouldQueue
             ]);
 
 
-            GenerateRipInfo::saveReloadDataRips($rip->id, $jsonContents, $this->batchId);
+            // GenerateRipInfo::saveReloadDataRips($rip->id, $jsonContents, $this->batchId);
 
             event(new ImportProgressEvent(
                 $this->batchId,
@@ -128,22 +126,49 @@ class BuildJsonJob implements ShouldQueue
                 "Generando JSON y Excel global" // Progreso
             ));
 
-            GenerateRipInfo::generateDataJsonAndExcel($rip->id);
+            // GenerateRipInfo::generateDataJsonAndExcel($rip->id);
 
             // Actualizar el batch con estado completado
-            $this->updateBatchStatus('completed');
+            // $this->updateBatchStatus('completed');
 
             event(new ImportProgressEvent(
                 $this->batchId,
                 "$metadata[total_rows]/$metadata[total_rows]", // Todos los registros procesados
                 'Validación completada',
                 $totalErrors, // Total de errores
-                'completed',
+                'active',
                 "proceso finalizado" // Progreso
             ));
 
             // Notificar al usuario
             $this->notifyUser($userId, 'JSON Construido Exitosamente', "Se generó el archivo JSON para el batch {$this->batchId} con {$numInvoices} facturas.", 'success');
+
+
+            //JSONS
+            // Nombre del archivo en el sistema de archivos
+            $nameFile = 'rips_' . $rip->id . '.json';
+            // Guarda el JSON en el sistema de archivos usando el disco predeterminado (puede configurar otros discos si es necesario)
+            $path_json = 'companies/company_' . $rip->company_id . '/rips/' . $type . '/rip_' . $rip->id . '/' . $nameFile; // Ruta donde se guardará la carpeta
+            $jsonContents = array_values($jsonContents); //reindexo el array
+            $json = json_encode($jsonContents, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            Storage::disk(Constants::DISK_FILES)->put($path_json, $json); //guardo el archivo
+            $rip->path_json = $path_json;
+            $rip->save();
+
+            $metadata = $redis->hgetall("batch:{$this->batchId}:metadata");
+            $metadata['path_json'] = $path_json;
+            $metadata['rip_id'] = $rip->id;
+            $metadata['total_rows'] = $numInvoices;
+            $redis->hmset("batch:{$this->batchId}:metadata", $metadata);
+
+            ZipSaveToDatabaseJob::dispatch(
+                $this->batchId,
+                100,           // chunkSize: 100 facturas por chunk
+                Constants::DISK_FILES,
+                1000,           // insertChunkSize: 1000 registros por insert masivo,
+                $this->selectedQueue
+            );
+
 
             // Log::info("BuildJsonJob completado: JSON guardado en {$path}, registro creado en rips con ID {$rip->id}.");
         } catch (\Exception $e) {

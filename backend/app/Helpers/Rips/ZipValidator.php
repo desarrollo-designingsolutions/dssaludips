@@ -211,7 +211,6 @@ class ZipValidator
             ));
 
             // Simular demora (1 segundo por archivo)
-            // sleep(5);
 
             if (!array_key_exists($prefix, self::$allowedTypes)) {
                 continue;

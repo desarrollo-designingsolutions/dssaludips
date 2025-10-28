@@ -2,8 +2,11 @@
 import { useToast } from '@/composables/useToast';
 import { useGlobalLoading } from '@/composables/useGlobalLoading';
 import { useAuthenticationStore } from "@/stores/useAuthenticationStore";
-import axios from 'axios'; 
+import axios from 'axios';
+import type { VForm } from "vuetify/components/VForm";
+
 const globalLoading = useGlobalLoading();
+const refForm = ref<VForm>();
 
 const { toast } = useToast()
 const authenticationStore = useAuthenticationStore();
@@ -186,80 +189,89 @@ const onFileSelect = (event: Event) => {
 
 // Métodos para subir archivos
 const startUpload = async () => {
-  currentStep.value = 'uploading'
 
-  const filesToUpload = files.value.filter(f => f.status === 'pending')
+  const validation = await refForm.value?.validate();
 
-  const uploadSingleFile = async (file: FileUpload) => {
-    const formData = new FormData();
-    formData.append('file', file.file);
-    formData.append('company_id', String(authenticationStore.company.id));
-    formData.append('user_id', String(authenticationStore.user.id)); 
+  if (validation?.valid) {
 
-    try {
-      file.status = 'uploading';
-      file.progress = 0;
-      file.errorMessage = undefined;
+    currentStep.value = 'uploading'
 
-      const xhr = new XMLHttpRequest();
-      file.xhr = xhr;
+    const filesToUpload = files.value.filter(f => f.status === 'pending')
 
-      await new Promise((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (progressEvent) => {
-          if (progressEvent.lengthComputable) {
-            file.progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          }
+    const uploadSingleFile = async (file: FileUpload) => {
+      const formData = new FormData();
+      formData.append('file', file.file);
+      formData.append('company_id', String(authenticationStore.company.id));
+      formData.append('user_id', String(authenticationStore.user.id));
+      formData.append('service_vendor_id', form.value.service_vendor_id.value);
+
+      try {
+        file.status = 'uploading';
+        file.progress = 0;
+        file.errorMessage = undefined;
+
+        const xhr = new XMLHttpRequest();
+        file.xhr = xhr;
+
+        await new Promise((resolve, reject) => {
+          xhr.upload.addEventListener('progress', (progressEvent) => {
+            if (progressEvent.lengthComputable) {
+              file.progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            }
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(xhr.response);
+            } else {
+              reject(new Error(xhr.statusText));
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            reject(new Error('Error en la conexión'));
+          });
+
+          xhr.addEventListener('abort', () => {
+            reject(new Error('Subida cancelada'));
+          });
+
+          xhr.open('POST', `${api.defaults.baseURL}/rip/uploadFileCsv`);
+          xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+          xhr.setRequestHeader('Accept', 'application/json');
+          xhr.send(formData);
         });
 
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(xhr.response);
-          } else {
-            reject(new Error(xhr.statusText));
-          }
-        });
+        file.status = 'completed';
+        file.progress = 100;
 
-        xhr.addEventListener('error', () => {
-          reject(new Error('Error en la conexión'));
-        });
+        const response = JSON.parse(xhr.response)
+        if (response.status == "success") {
+          globalLoading.startLoading(response.batch_id);
+        }
 
-        xhr.addEventListener('abort', () => {
-          reject(new Error('Subida cancelada'));
-        });
-
-        xhr.open('POST', `${api.defaults.baseURL}/rip/uploadFileCsv`);
-        xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.send(formData);
-      });
-
-      file.status = 'completed';
-      file.progress = 100;
-
-      const response = JSON.parse(xhr.response)
-      if (response.status == "success") {
-        globalLoading.startLoading(response.batch_id);
+      } catch (error: any) {
+        if (error.message !== 'Subida cancelada') {
+          file.status = 'error';
+          file.errorMessage = error.response?.data?.message || 'Error al subir el archivo';
+        }
+      } finally {
+        file.xhr = undefined;
       }
+    };
 
-    } catch (error: any) {
-      if (error.message !== 'Subida cancelada') {
-        file.status = 'error';
-        file.errorMessage = error.response?.data?.message || 'Error al subir el archivo';
-      }
-    } finally {
-      file.xhr = undefined;
+    for (const file of filesToUpload) {
+      await uploadSingleFile(file);
     }
-  };
 
-  for (const file of filesToUpload) {
-    await uploadSingleFile(file);
+    if (allFilesCompleted.value) {
+      setTimeout(() => {
+        successDialog.value = true
+      }, 500)
+    }
+
   }
 
-  if (allFilesCompleted.value) {
-    setTimeout(() => {
-      successDialog.value = true
-    }, 500)
-  }
 }
 
 const hasUploadsInProgress = computed(() => {
@@ -342,16 +354,29 @@ const isDialogVisible = ref<boolean>(false)
 const handleDialogVisible = () => {
   isDialogVisible.value = !isDialogVisible.value;
 };
- 
+
 const openModal = async () => {
   handleDialogVisible();
   resetState()
- 
+
 };
 
 defineExpose({
   openModal,
 });
+
+const paramsSelectInfinite = {
+  company_id: authenticationStore.company.id,
+}
+
+const form = ref({
+  service_vendor_id: null as null | string,
+  company_id: authenticationStore.company.id,
+  user_id: authenticationStore.user.id
+})
+const serviceVendors_arrayInfo = ref([])
+
+
 </script>
 
 <template>
@@ -411,6 +436,22 @@ defineExpose({
               </div>
             </v-card>
           </div>
+
+          <div class="mt-5">
+            <VRow>
+              <VCol>
+
+                <VForm ref="refForm" @submit.prevent="() => { }"> 
+                  <AppSelectRemote :requiredField="true" label="Seleccionar prestador" v-model="form.service_vendor_id"
+                    url="/selectInfiniteServiceVendor" arrayInfo="serviceVendors" clearable :params="paramsSelectInfinite"
+                    :itemsData="serviceVendors_arrayInfo" :rules="[requiredValidator]">
+                  </AppSelectRemote>
+                </VForm>
+              </VCol>
+            </VRow>
+          </div>
+
+
 
           <!-- File Preview -->
           <div v-if="files.length > 0" class="file-list mt-4">
@@ -479,7 +520,7 @@ defineExpose({
               <div v-if="file.status === 'error'" class="status-error">
                 <v-icon color="error" size="24" class="mr-2">tabler-alert-circle</v-icon>
                 <span class="text-error font-weight-medium">{{ file.errorMessage || 'Error al cargar el archivo'
-                  }}</span>
+                }}</span>
               </div>
             </div>
           </div>

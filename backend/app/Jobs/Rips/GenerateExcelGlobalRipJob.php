@@ -141,7 +141,6 @@ class GenerateExcelGlobalRipJob implements ShouldQueue
 
                 event(new ImportProgressEvent($batchId, $attempted, 'Procesando elementos en el excel', count(ErrorCollector::getErrors($batchId)), 'active', "Procesando: {$attempted}/{$total}"));
 
-                // sleep(1);
             }
 
             if (empty($rows)) {
