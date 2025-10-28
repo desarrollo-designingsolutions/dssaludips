@@ -18,6 +18,7 @@ class RipUploadFileCsvRequest extends FormRequest
     {
         $rules = [
             'file' => 'required|file|extensions:csv', // Valida MIME (application/csv), extensión .csv, y tamaño máx 50MB
+            'service_vendor_id' => 'required',
             'user_id' => 'required',
             'company_id' => 'required',
         ];
@@ -28,6 +29,7 @@ class RipUploadFileCsvRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'service_vendor_id.required' => 'El archivo es obligatorio.',
             'file.required' => 'El archivo es obligatorio.',
             'file.file' => 'El archivo proporcionado no es válido.',
             'file.extensions' => 'El archivo debe tener extensión .csv.',

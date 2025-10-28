@@ -15,6 +15,7 @@ use App\Models\RipInvoiceUser;
 use App\Models\RipServiceHospitalization;
 use App\Models\RipServiceMedicine;
 use App\Models\RipServiceNewlyBorn;
+use App\Models\RipServiceOtherService;
 use App\Models\RipServiceProcedure;
 use App\Models\RipServiceQuery;
 use App\Models\RipServiceUrgency;
@@ -37,28 +38,30 @@ class SaveToDatabaseJob implements ShouldQueue
     public string $disk;
     public int $insertChunkSize;
 
-    public function __construct(string $batchId, int $chunkSize = 100, string $disk = 'public', int $insertChunkSize = 1000)
+    public function __construct(string $batchId, int $chunkSize = 100, string $disk = 'public', int $insertChunkSize = 1000, string $selectedQueue)
     {
         $this->batchId = $batchId;
         $this->chunkSize = $chunkSize;
         $this->disk = $disk;
         $this->insertChunkSize = $insertChunkSize;
+        $this->onQueue($selectedQueue); // ✅ Asignar la cola
+
     }
 
     public function handle()
     {
         $redis = Redis::connection('redis_6380');
-        $metaKey = "import:batch:{$this->batchId}:meta";
         $redisKey = "batch:{$this->batchId}:metadata";
         $groupsFolder = "temp/rips/{$this->batchId}/groups";
 
-        Log::info("SaveToDatabaseJob: iniciando guardado en BD batch={$this->batchId}");
+        //  Log::info("SaveToDatabaseJob: iniciando guardado en BD batch={$this->batchId}");
 
         // Obtener metadata
         $metadata = $redis->hgetall($redisKey);
         $type = $metadata['type'] ?? 'ripsCsv';
         $company_id = $metadata['company_id'] ?? null;
         $user_id = $metadata['user_id'] ?? null;
+        $service_vendor_nit = $metadata['service_vendor_nit'] ?? null;
 
         if (!$company_id || !$user_id) {
             Log::error("SaveToDatabaseJob: company_id o user_id no encontrados en metadata");
@@ -98,7 +101,7 @@ class SaveToDatabaseJob implements ShouldQueue
             'user_id' => $user_id,
             'process_batch_id' => $this->batchId,
             'path_zip' => null,
-            'nit' => null,
+            'nit' => $service_vendor_nit,
             'numInvoices' => $totalInvoices,
             'successfulInvoices' => 0,
             'failedInvoices' => $totalInvoices,
@@ -149,12 +152,21 @@ class SaveToDatabaseJob implements ShouldQueue
                         continue;
                     }
 
+                    // 0. recalculo los consecutivos y preparo datos
+                    $facturaData = self::convertArraysToCollections($facturaData);
+                    $facturaArray = [$facturaData];
+                    BuildAllDataToJson::generateConsecutive($facturaArray);
+                    $facturaData = $facturaArray[0];
+                    $facturaData["numDocumentoIdObligado"] = $service_vendor_nit;
+                    unset($facturaData['meta']);
+
+                    $facturaData =  $facturaData->toArray();
+
+
                     // 1. GUARDAR JSON INDIVIDUAL DE FACTURA
                     $invoiceFileName = $facturaData['numFactura'] . '.json';
                     $invoiceJsonPath = 'companies/company_' . $company_id . '/rips/' . $type . '/rip_' . $ripId . '/invoices/' . $invoiceFileName;
 
-                    BuildAllDataToJson::generateConsecutive(collect($facturaData)->toarray());
-                    Log::info("aaaaaaaaaaaaaa", $facturaData);
                     try {
                         $disk->put($invoiceJsonPath, json_encode($facturaData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
                     } catch (\Throwable $e) {
@@ -253,7 +265,7 @@ class SaveToDatabaseJob implements ShouldQueue
 
                     // PROGRESO CADA 5 FACTURAS
                     if ($processedInvoices % 5 === 0) {
-                        Log::info("Procesadas {$processedInvoices}/{$totalInvoices} facturas - Usuarios: {$processedUsers}, Servicios: {$processedServices}");
+                        //  Log::info("Procesadas {$processedInvoices}/{$totalInvoices} facturas - Usuarios: {$processedUsers}, Servicios: {$processedServices}");
                         event(new ImportProgressEvent(
                             $this->batchId,
                             $processedInvoices,
@@ -278,7 +290,7 @@ class SaveToDatabaseJob implements ShouldQueue
                     foreach (array_chunk($invoiceChunk, $this->insertChunkSize) as $invoiceSubChunk) {
                         RipInvoice::insert($invoiceSubChunk);
                         $totalInserts += count($invoiceSubChunk);
-                        Log::info("SaveToDatabaseJob: Insertados " . count($invoiceSubChunk) . " invoices");
+                        //  Log::info("SaveToDatabaseJob: Insertados " . count($invoiceSubChunk) . " invoices");
                     }
                 }
 
@@ -287,7 +299,7 @@ class SaveToDatabaseJob implements ShouldQueue
                     foreach (array_chunk($userChunk, $this->insertChunkSize) as $userSubChunk) {
                         RipInvoiceUser::insert($userSubChunk);
                         $totalInserts += count($userSubChunk);
-                        Log::info("SaveToDatabaseJob: Insertados " . count($userSubChunk) . " usuarios");
+                        //  Log::info("SaveToDatabaseJob: Insertados " . count($userSubChunk) . " usuarios");
                     }
                 }
 
@@ -299,7 +311,7 @@ class SaveToDatabaseJob implements ShouldQueue
                         foreach (array_chunk($chunk, $this->insertChunkSize) as $serviceSubChunk) {
                             $model::insert($serviceSubChunk);
                             $totalInserts += count($serviceSubChunk);
-                            Log::info("SaveToDatabaseJob: Insertados " . count($serviceSubChunk) . " servicios de tipo: {$tipoServicio}");
+                            //  Log::info("SaveToDatabaseJob: Insertados " . count($serviceSubChunk) . " servicios de tipo: {$tipoServicio}");
                         }
                     }
                 }
@@ -347,11 +359,11 @@ class SaveToDatabaseJob implements ShouldQueue
                     $servicesLogMessage = ", Servicios: 0";
                 }
 
-                Log::info("SaveToDatabaseJob: Chunk #" . ($fileChunkIndex + 1) . " procesado - " .
-                    "Facturas: " . count($invoiceChunk) .
-                    ", Usuarios: " . count($userChunk) .
-                    $servicesLogMessage .
-                    ", Total inserts: " . $totalInserts);
+                // Log::info("SaveToDatabaseJob: Chunk #" . ($fileChunkIndex + 1) . " procesado - " .
+                //     "Facturas: " . count($invoiceChunk) .
+                //     ", Usuarios: " . count($userChunk) .
+                //     $servicesLogMessage .
+                //     ", Total inserts: " . $totalInserts);
             } catch (\Throwable $e) {
                 Log::error("SaveToDatabaseJob: Error en insert masivo: {$e->getMessage()}");
 
@@ -382,7 +394,7 @@ class SaveToDatabaseJob implements ShouldQueue
             $unifiedJsonContent = json_encode($allInvoicesData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
             $disk->put($unifiedJsonPath, $unifiedJsonContent);
 
-            Log::info("SaveToDatabaseJob: JSON unificado guardado en: {$unifiedJsonPath}");
+            //  Log::info("SaveToDatabaseJob: JSON unificado guardado en: {$unifiedJsonPath}");
 
             // Calcular sumVr final usando el método para múltiples facturas
             $finalRipSumVr = GenerateRipInfo::sumVrServicioRips($allInvoicesData);
@@ -403,7 +415,7 @@ class SaveToDatabaseJob implements ShouldQueue
 
             $rip->update($updateData);
 
-            Log::info("SaveToDatabaseJob: Actualizado sumVr del RIP: {$finalRipSumVr}");
+            //  Log::info("SaveToDatabaseJob: Actualizado sumVr del RIP: {$finalRipSumVr}");
         } catch (\Throwable $e) {
             Log::error("SaveToDatabaseJob: Error actualizando RIP: {$e->getMessage()}");
         }
@@ -418,7 +430,7 @@ class SaveToDatabaseJob implements ShouldQueue
             "Guardado en BD completado: {$processedInvoices} facturas, {$processedUsers} usuarios, {$processedServices} servicios, SumVr: {$finalRipSumVr}"
         ));
 
-        Log::info("SaveToDatabaseJob: completado batch={$this->batchId} - " .
+         Log::info("SaveToDatabaseJob: completado batch={$this->batchId} - " .
             "Facturas: {$processedInvoices}/{$totalInvoices}, " .
             "Usuarios: {$processedUsers}, " .
             "Servicios: {$processedServices}, " .
@@ -441,7 +453,7 @@ class SaveToDatabaseJob implements ShouldQueue
                 }
                 // También eliminar la carpeta vacía
                 $disk->deleteDirectory($groupsFolder);
-                Log::info("SaveToDatabaseJob: Archivos temporales limpiados: {$groupsFolder}");
+                //  Log::info("SaveToDatabaseJob: Archivos temporales limpiados: {$groupsFolder}");
             }
         } catch (\Throwable $e) {
             Log::warning("SaveToDatabaseJob: Error limpiando archivos temporales: {$e->getMessage()}");
@@ -466,6 +478,8 @@ class SaveToDatabaseJob implements ShouldQueue
                 return RipServiceNewlyBorn::class;
             case 'urgencias':
                 return RipServiceUrgency::class;
+            case 'otrosServicios':
+                return RipServiceOtherService::class;
             default:
                 throw new \Exception("Tipo de servicio no válido: {$tipoServicio}");
         }
@@ -497,7 +511,7 @@ class SaveToDatabaseJob implements ShouldQueue
                     'conceptoRecaudo' => $servicioData["conceptoRecaudo"] ?? null,
                     'valorPagoModerador' => $servicioData["valorPagoModerador"] ?? null,
                     'numFEVPagoModerador' => $servicioData["numFEVPagoModerador"] ?? null,
-                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                    'consecutivo' => $servicioData["consecutivo"] ?? null,
                 ];
 
             case 'procedimientos':
@@ -521,7 +535,7 @@ class SaveToDatabaseJob implements ShouldQueue
                     'conceptoRecaudo' => $servicioData["conceptoRecaudo"] ?? null,
                     'valorPagoModerador' => $servicioData["valorPagoModerador"] ?? null,
                     'numFEVPagoModerador' => $servicioData["numFEVPagoModerador"] ?? null,
-                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                    'consecutivo' => $servicioData["consecutivo"] ?? null,
                 ];
 
             case 'hospitalizacion':
@@ -540,7 +554,7 @@ class SaveToDatabaseJob implements ShouldQueue
                     'condicionDestinoUsuarioEgreso' => $servicioData["condicionDestinoUsuarioEgreso"] ?? null,
                     'codDiagnosticoCausaMuerte' => $servicioData["codDiagnosticoCausaMuerte"] ?? null,
                     'fechaEgreso' => $servicioData["fechaEgreso"] ?? null,
-                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                    'consecutivo' => $servicioData["consecutivo"] ?? null,
                 ];
             case 'medicamentos':
                 return [
@@ -566,7 +580,7 @@ class SaveToDatabaseJob implements ShouldQueue
                     'conceptoRecaudo' => $servicioData["conceptoRecaudo"] ?? null,
                     'valorPagoModerador' => $servicioData["valorPagoModerador"] ?? null,
                     'numFEVPagoModerador' => $servicioData["numFEVPagoModerador"] ?? null,
-                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                    'consecutivo' => $servicioData["consecutivo"] ?? null,
                 ];
             case 'recienNacidos':
                 return [
@@ -582,7 +596,7 @@ class SaveToDatabaseJob implements ShouldQueue
                     'condicionDestinoUsuarioEgreso' => $servicioData["condicionDestinoUsuarioEgreso"] ?? null,
                     'codDiagnosticoCausaMuerte' => $servicioData["codDiagnosticoCausaMuerte"] ?? null,
                     'fechaEgreso' => $servicioData["fechaEgreso"] ?? null,
-                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                    'consecutivo' => $servicioData["consecutivo"] ?? null,
                 ];
             case 'urgencias':
                 return [
@@ -597,13 +611,52 @@ class SaveToDatabaseJob implements ShouldQueue
                     'condicionDestinoUsuarioEgreso' => $servicioData["condicionDestinoUsuarioEgreso"] ?? null,
                     'codDiagnosticoCausaMuerte' => $servicioData["codDiagnosticoCausaMuerte"] ?? null,
                     'fechaEgreso' => $servicioData["fechaEgreso"] ?? null,
-                    // 'consecutivo' => $servicioData["consecutivo"] ?? null,
+                    'consecutivo' => $servicioData["consecutivo"] ?? null,
                 ];
             case 'otrosServicios':
-                return [];
+                return [
+                    'codPrestador' => $servicioData["codPrestador"] ?? null,
+                    'numAutorizacion' => $servicioData["numAutorizacion"] ?? null,
+                    'idMIPRES' => $servicioData["idMIPRES"] ?? null,
+                    'fechaSuministroTecnologia' => $servicioData["fechaSuministroTecnologia"] ?? null,
+                    'tipoOS' => $servicioData["tipoOS"] ?? null,
+                    'codTecnologiaSalud' => $servicioData["codTecnologiaSalud"] ?? null,
+                    'nomTecnologiaSalud' => $servicioData["nomTecnologiaSalud"] ?? null,
+                    'cantidadOS' => $servicioData["cantidadOS"] ?? null,
+                    'tipoDocumentoIdentificacion' => $servicioData["tipoDocumentoIdentificacion"] ?? null,
+                    'numDocumentoIdentificacion' => $servicioData["numDocumentoIdentificacion"] ?? null,
+                    'vrUnitOS' => $servicioData["vrUnitOS"] ?? null,
+                    'vrServicio' => $servicioData["vrServicio"] ?? null,
+                    'conceptoRecaudo' => $servicioData["conceptoRecaudo"] ?? null,
+                    'valorPagoModerador' => $servicioData["valorPagoModerador"] ?? null,
+                    'numFEVPagoModerador' => $servicioData["numFEVPagoModerador"] ?? null,
+                    'consecutivo' => $servicioData["consecutivo"] ?? null,
+
+                ];
 
             default:
                 return []; // Campos por defecto o vacío
         }
+    }
+
+    /**
+     * Convierte arrays anidados a colecciones de Laravel
+     */
+    private static function convertArraysToCollections($data)
+    {
+        if (is_array($data)) {
+            // Convertir array a colección
+            $collection = collect($data);
+
+            // Recursivamente convertir elementos anidados
+            return $collection->map(function ($item) {
+                if (is_array($item)) {
+                    return self::convertArraysToCollections($item);
+                }
+                return $item;
+            });
+        }
+
+        return $data;
     }
 }

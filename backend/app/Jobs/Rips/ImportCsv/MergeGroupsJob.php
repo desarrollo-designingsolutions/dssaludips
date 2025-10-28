@@ -25,6 +25,7 @@ class MergeGroupsJob implements ShouldQueue
 
     public string $batchId;
     public string $disk;
+    public string $selectedQueue;
     public int $batchSize;
 
     // Campos EXACTOS permitidos a nivel de factura
@@ -35,11 +36,14 @@ class MergeGroupsJob implements ShouldQueue
         'numDocumentoIdObligado'
     ];
 
-    public function __construct(string $batchId, ?string $disk = 'public', int $batchSize = 500)
+    public function __construct(string $batchId, string $disk, int $batchSize = 500, string $selectedQueue)
     {
         $this->batchId = $batchId;
-        $this->disk = $disk ?? config('filesystems.default');
+        $this->disk = $disk;
         $this->batchSize = $batchSize;
+        $this->selectedQueue = $selectedQueue;
+        $this->onQueue($selectedQueue); // ✅ Asignar la cola
+
     }
 
     public function handle()
@@ -53,7 +57,7 @@ class MergeGroupsJob implements ShouldQueue
 
         // ========== LOGS DE DIAGNÓSTICO CRÍTICOS ==========
         $totalInvoices = $redis->scard($invoicesSet);
-        Log::info("MergeGroupsJob: DIAGNOSTICO - Total facturas en set: {$totalInvoices}");
+        // Log::info("MergeGroupsJob: DIAGNOSTICO - Total facturas en set: {$totalInvoices}");
 
         if ($totalInvoices === 0) {
             Log::warning("MergeGroupsJob: DIAGNOSTICO - No hay facturas en el set. Verificando partials...");
@@ -61,23 +65,23 @@ class MergeGroupsJob implements ShouldQueue
             // Verificar si hay partials keys
             $partialsPattern = $partialsPrefix . "*";
             $partialsKeys = $redis->keys($partialsPattern);
-            Log::info("MergeGroupsJob: DIAGNOSTICO - Total partials keys encontrados: " . count($partialsKeys));
+            // Log::info("MergeGroupsJob: DIAGNOSTICO - Total partials keys encontrados: " . count($partialsKeys));
 
             foreach ($partialsKeys as $key) {
                 $numFactura = str_replace($partialsPrefix, '', $key);
                 $partialData = $redis->hgetall($key);
-                Log::info("MergeGroupsJob: DIAGNOSTICO - Partial {$numFactura}: " . json_encode($partialData));
+                // Log::info("MergeGroupsJob: DIAGNOSTICO - Partial {$numFactura}: " . json_encode($partialData));
             }
 
             return; // Salir si no hay facturas
         }
 
-        Log::info("MergeGroupsJob: iniciando merge batch={$this->batchId} batchSize={$this->batchSize}");
+        // Log::info("MergeGroupsJob: iniciando merge batch={$this->batchId} batchSize={$this->batchSize}");
 
         // Crear carpeta de grupos si no existe
         if (!$disk->exists($groupsFolder)) {
             $disk->makeDirectory($groupsFolder, 0755, true);
-            Log::info("MergeGroupsJob: Carpeta creada: {$groupsFolder}");
+            // Log::info("MergeGroupsJob: Carpeta creada: {$groupsFolder}");
         }
 
         $totalInvoicesEstimated = (int) $redis->scard($invoicesSet);
@@ -95,19 +99,19 @@ class MergeGroupsJob implements ShouldQueue
             [$cursor, $items] = $reply;
 
             foreach ($items as $numFactura) {
-                Log::info("MergeGroupsJob: Procesando factura {$numFactura} - PASO 1");
+                // Log::info("MergeGroupsJob: Procesando factura {$numFactura} - PASO 1");
 
                 // 1) HGETALL partials for this factura
                 $partialKey = $partialsPrefix . $numFactura;
                 $partials = $redis->hgetall($partialKey);
 
                 if (empty($partials)) {
-                    Log::info("MergeGroupsJob: Factura {$numFactura} - PASO 2 (sin partials)");
+                    // Log::info("MergeGroupsJob: Factura {$numFactura} - PASO 2 (sin partials)");
                     $redis->srem($invoicesSet, $numFactura);
                     continue;
                 }
 
-                Log::info("MergeGroupsJob: Factura {$numFactura} - PASO 3 (con partials)");
+                // Log::info("MergeGroupsJob: Factura {$numFactura} - PASO 3 (con partials)");
 
                 // 2) Decodificar y mergear partials
                 $merged = $this->mergePartials(array_values($partials));
@@ -115,12 +119,12 @@ class MergeGroupsJob implements ShouldQueue
 
                 // 3) Persistir JSON final
                 $groupPath = "{$groupsFolder}/{$this->sanitizeFilename($numFactura)}.json";
-                Log::info("MergeGroupsJob: groupPath = {$groupPath}");
+                // Log::info("MergeGroupsJob: groupPath = {$groupPath}");
                 $encoded = json_encode($mergedNormalized, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
                 try {
                     $disk->put($groupPath, $encoded);
-                    Log::info("MergeGroupsJob: JSON guardado exitosamente para factura {$numFactura} en {$groupPath}");
+                    // Log::info("MergeGroupsJob: JSON guardado exitosamente para factura {$numFactura} en {$groupPath}");
                 } catch (\Throwable $e) {
                     Log::error("MergeGroupsJob: error guardando group {$numFactura}: {$e->getMessage()}");
                     continue;
@@ -130,7 +134,7 @@ class MergeGroupsJob implements ShouldQueue
                 try {
                     $redis->del($partialKey);
                     $redis->srem($invoicesSet, $numFactura);
-                    Log::info("MergeGroupsJob: Partial limpiado para factura {$numFactura}");
+                    // Log::info("MergeGroupsJob: Partial limpiado para factura {$numFactura}");
                 } catch (\Throwable $e) {
                     Log::warning("MergeGroupsJob: no se pudo limpiar partials para {$numFactura}: {$e->getMessage()}");
                 }
@@ -179,14 +183,14 @@ class MergeGroupsJob implements ShouldQueue
             "Merge: procesadas={$invoicesProcessed} restantes={$remaining}"
         ));
 
-        Log::info("MergeGroupsJob: final run batch={$this->batchId} processed={$invoicesProcessed} remaining={$remaining}");
+        // Log::info("MergeGroupsJob: final run batch={$this->batchId} processed={$invoicesProcessed} remaining={$remaining}");
 
         if ($remaining > 0) {
-            self::dispatch($this->batchId, $this->disk, $this->batchSize);
-            Log::info("MergeGroupsJob: Re-encolando job para procesar facturas restantes");
+            self::dispatch($this->batchId, $this->disk, $this->batchSize, $this->selectedQueue);
+            // Log::info("MergeGroupsJob: Re-encolando job para procesar facturas restantes");
         } else {
 
-            Log::info("MergeGroupsJob: merge completado para batch={$this->batchId}");
+            // Log::info("MergeGroupsJob: merge completado para batch={$this->batchId}");
 
 
             event(new ImportProgressEvent(
@@ -199,13 +203,14 @@ class MergeGroupsJob implements ShouldQueue
             ));
 
             // DESPACHAR NUEVO JOB CON LOS PARÁMETROS MEJORADOS
-            \App\Jobs\Rips\ImportCsv\SaveToDatabaseJob::dispatch(
+            SaveToDatabaseJob::dispatch(
                 $this->batchId,
                 100,           // chunkSize: 100 facturas por chunk
                 $this->disk,
-                1000           // insertChunkSize: 1000 registros por insert masivo
+                1000,           // insertChunkSize: 1000 registros por insert masivo,
+                $this->selectedQueue
             );
-            Log::info("MergeGroupsJob: dispatched SaveToDatabaseJob for batch {$this->batchId}");
+            // Log::info("MergeGroupsJob: dispatched SaveToDatabaseJob for batch {$this->batchId}");
 
 
 

@@ -25,13 +25,14 @@ class CreateChunksJob implements ShouldQueue
     public int $chunkSize;
     public string $selectedQueue;
 
-    public function __construct(string $batchId, string $filePath, ?string $disk = null, ?int $chunkSize = null, string $selectedQueue)
+    public function __construct(string $batchId, string $filePath, string $disk, int $chunkSize, string $selectedQueue)
     {
         $this->batchId = $batchId;
         $this->filePath = $filePath;
+        $this->disk = $disk; // Ya no es opcional
+        $this->chunkSize = $chunkSize; // Ya no es opcional
         $this->selectedQueue = $selectedQueue;
-        $this->disk = $disk ?: config('filesystems.default');
-        $this->chunkSize = $chunkSize ?: (int) env('IMPORT_CHUNK_SIZE', 100000);
+        $this->onQueue($selectedQueue);
     }
 
     public function handle()
@@ -41,7 +42,7 @@ class CreateChunksJob implements ShouldQueue
         $chunksPrefix = "import:batch:{$this->batchId}:chunk:";
         $chunksFolder = "temp/rips/{$this->batchId}/chunks";
 
-        Log::info("CreateChunksJob: iniciando chunking batch={$this->batchId} file={$this->filePath} disk={$this->disk} chunkSize={$this->chunkSize}");
+        // Log::info("CreateChunksJob: iniciando chunking batch={$this->batchId} file={$this->filePath} disk={$this->disk} chunkSize={$this->chunkSize}");
 
         // Emitir evento INICIAL
         event(new ImportProgressEvent(
@@ -105,7 +106,7 @@ class CreateChunksJob implements ShouldQueue
         $redis->hset($metaKey, 'chunks_completed', 0);
         $redis->hset($metaKey, 'started_at', now()->toDateTimeString());
 
-        Log::info("CreateChunksJob: Total de filas de datos a procesar: {$totalDataRows}");
+        // Log::info("CreateChunksJob: Total de filas de datos a procesar: {$totalDataRows}");
 
         // Emitir evento con el total correcto
         event(new ImportProgressEvent(
@@ -202,7 +203,7 @@ class CreateChunksJob implements ShouldQueue
                 "Creando chunks: {$totalChunksCreated} creados, {$currentProcessed}/{$totalDataRows} filas procesadas",
             ));
 
-            Log::info("CreateChunksJob: Creando chunk {$chunkId} - {$currentRowCount} filas");
+            // Log::info("CreateChunksJob: Creando chunk {$chunkId} - {$currentRowCount} filas");
 
             // 3️⃣ TERCERO: Guardar el chunk físicamente
             try {
@@ -338,7 +339,7 @@ class CreateChunksJob implements ShouldQueue
         $metadata['total_rows'] = $totalChunks;
         $redis->hmset("batch:{$this->batchId}:metadata", $metadata);
 
-        Log::info("CreateChunksJob: Chunking completado - {$totalChunks} chunks creados, {$totalRowsProcessed} filas procesadas");
+        // Log::info("CreateChunksJob: Chunking completado - {$totalChunks} chunks creados, {$totalRowsProcessed} filas procesadas");
 
         // ========== FASE 3: DESPACHAR JOBS PARA PROCESAR CHUNKS ==========
 
@@ -355,19 +356,20 @@ class CreateChunksJob implements ShouldQueue
         ));
 
         //  sleep(5);
-        Log::info("CreateChunksJob: Despachando {$totalChunks} jobs ProcessChunkJob");
+        // Log::info("CreateChunksJob: Despachando {$totalChunks} jobs ProcessChunkJob");
 
         // Despachar todos los jobs de procesamiento
         $jobsDespachados = 0;
         foreach ($allChunks as $chunk) {
             try {
-                Bus::dispatch(new ProcessChunkJob(
+                ProcessChunkJob::dispatch(
                     $this->batchId,
                     $chunk['id'],
                     $chunk['path'],
                     $this->disk,
                     $this->selectedQueue
-                ));
+                );
+
                 $jobsDespachados++;
 
                 // Actualizar estado del chunk en Redis
@@ -397,6 +399,6 @@ class CreateChunksJob implements ShouldQueue
             "Procesamiento iniciado: {$jobsDespachados}/{$totalChunks} chunks en cola",
         ));
 
-        Log::info("CreateChunksJob: terminado batch={$this->batchId} totalChunks={$totalChunks} jobsDespachados={$jobsDespachados} totalRowsProcessed={$totalRowsProcessed}");
+        // Log::info("CreateChunksJob: terminado batch={$this->batchId} totalChunks={$totalChunks} jobsDespachados={$jobsDespachados} totalRowsProcessed={$totalRowsProcessed}");
     }
 }

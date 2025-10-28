@@ -47,13 +47,14 @@ class ProcessChunkJob implements ShouldQueue
         'usuarios',
     ];
 
-    public function __construct(string $batchId, string $chunkId, string $chunkPath, string $disk = 'public', string $selectedQueue)
+    public function __construct(string $batchId, string $chunkId, string $chunkPath, string $disk, string $selectedQueue)
     {
         $this->batchId = $batchId;
         $this->chunkId = $chunkId;
         $this->chunkPath = $chunkPath;
-        $this->disk = $disk;
+        $this->disk = $disk; // Sin valor por defecto
         $this->selectedQueue = $selectedQueue;
+        $this->onQueue($selectedQueue);
     }
 
     public function handle()
@@ -64,7 +65,7 @@ class ProcessChunkJob implements ShouldQueue
         $partialsPrefix = "import:batch:{$this->batchId}:partials:";
         $invoicesSet = "import:batch:{$this->batchId}:invoices_set";
 
-        Log::info("ProcessChunkJob: starting chunk {$this->chunkId} for batch {$this->batchId} path={$this->chunkPath}");
+        // Log::info("ProcessChunkJob: starting chunk {$this->chunkId} for batch {$this->batchId} path={$this->chunkPath}");
 
         // Marcar como procesando
         $redis->hset($chunkKey, 'status', 'processing');
@@ -151,7 +152,7 @@ class ProcessChunkJob implements ShouldQueue
             $redis->sadd($invoicesSet, $numFactura);
 
             // LOG DE DIAGNÓSTICO - Factura agregada al set
-            Log::info("ProcessChunkJob: Factura {$numFactura} agregada al set. Total en set ahora: " . $redis->scard($invoicesSet));
+            // Log::info("ProcessChunkJob: Factura {$numFactura} agregada al set. Total en set ahora: " . $redis->scard($invoicesSet));
 
             $partialsWritten++;
         }
@@ -179,7 +180,7 @@ class ProcessChunkJob implements ShouldQueue
             "Chunk {$this->chunkId} procesado: {$chunksCompleted}/{$totalChunks} chunks, {$partialsWritten} partials",
         ));
 
-        Log::info("ProcessChunkJob: chunk {$this->chunkId} processed for batch {$this->batchId} partials={$partialsWritten} rows={$rowsInChunk}");
+        // Log::info("ProcessChunkJob: chunk {$this->chunkId} processed for batch {$this->batchId} partials={$partialsWritten} rows={$rowsInChunk}");
     }
 
     // Agrega esta propiedad a la clase
@@ -563,11 +564,11 @@ class ProcessChunkJob implements ShouldQueue
         // Verificar si el campo es EXACTAMENTE uno de los campos permitidos
         if (in_array($campo, $this->exactUserFields, true)) {
             $user[$campo] = $valor;
-            Log::info("DEBUG - Campo de usuario asignado: {$campo} = {$valor}");
+            // Log::info("DEBUG - Campo de usuario asignado: {$campo} = {$valor}");
         } else {
             // Campo no permitido, ir a 'otros'
             $user['otros'][$campo] = $valor;
-            Log::info("DEBUG - Campo de usuario en 'otros': {$campo} = {$valor}");
+            // Log::info("DEBUG - Campo de usuario en 'otros': {$campo} = {$valor}");
         }
     }
 
@@ -580,14 +581,14 @@ class ProcessChunkJob implements ShouldQueue
             // Verificar si el campo es EXACTAMENTE uno de los campos de factura permitidos
             if (in_array($campo, $this->exactInvoiceFields, true)) {
                 $invoiceGroup['invoice_fields'][$campo] = $valor;
-                Log::info("DEBUG - Campo de factura asignado: {$campo} = {$valor}");
+                // Log::info("DEBUG - Campo de factura asignado: {$campo} = {$valor}");
             } else {
                 // Campo no permitido, ir a meta
                 if (!isset($invoiceGroup['meta']['otros_campos'])) {
                     $invoiceGroup['meta']['otros_campos'] = [];
                 }
                 $invoiceGroup['meta']['otros_campos'][$campo] = $valor;
-                Log::info("DEBUG - Campo de factura en 'otros_campos': {$campo} = {$valor}");
+                // Log::info("DEBUG - Campo de factura en 'otros_campos': {$campo} = {$valor}");
             }
         }
     }
@@ -629,7 +630,7 @@ class ProcessChunkJob implements ShouldQueue
         $totalErrors = ErrorCollector::countErrors($this->batchId);
 
         // LOG DE DIAGNÓSTICO - Verificación de merge
-        Log::info("ProcessChunkJob: Verificando merge - chunksCompleted={$chunksCompleted}, totalChunks={$totalChunks}, facturasEnSet=" . $redis->scard($invoicesSet) . ", errores={$totalErrors}");
+        // Log::info("ProcessChunkJob: Verificando merge - chunksCompleted={$chunksCompleted}, totalChunks={$totalChunks}, facturasEnSet=" . $redis->scard($invoicesSet) . ", errores={$totalErrors}");
 
         $mergeFlagKey = "import:batch:{$this->batchId}:merge_enqueued";
 
@@ -662,8 +663,8 @@ class ProcessChunkJob implements ShouldQueue
                     $redis->hmset("batch:{$this->batchId}:metadata", $metadata);
 
                     // CUARTO: DESPACHAR EL JOB
-                    \App\Jobs\Rips\ImportCsv\MergeGroupsJob::dispatch($this->batchId, $this->disk, 500)->onQueue($this->selectedQueue);
-                    Log::info("ProcessChunkJob: dispatched MergeGroupsJob for batch {$this->batchId}");
+                    \App\Jobs\Rips\ImportCsv\MergeGroupsJob::dispatch($this->batchId, $this->disk, 500, $this->selectedQueue);
+                    // Log::info("ProcessChunkJob: dispatched MergeGroupsJob for batch {$this->batchId}");
                     $redis->hset($metaKey, 'merge_enqueued_at', now()->toDateTimeString());
                 } catch (\Throwable $e) {
                     Log::error("ProcessChunkJob: fallo al encolar MergeGroupsJob: {$e->getMessage()}");

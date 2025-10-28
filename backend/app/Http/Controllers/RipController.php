@@ -57,6 +57,7 @@ use App\Models\RipsCausaExternaVersion2;
 use App\Models\RipsFinalidadConsultaVersion2;
 use App\Models\RipsTipoDiagnosticoPrincipalVersion2;
 use App\Models\RipsTipoUsuarioVersion2;
+use App\Models\ServiceVendor;
 use App\Models\Servicio;
 use App\Models\Sexo;
 use App\Models\TipoIdPisis;
@@ -1007,6 +1008,7 @@ class RipController extends Controller
         return $this->runTransaction(function () use ($request) {
             $company_id = $request->input('company_id');
             $user_id = $request->input('user_id');
+            $service_vendor_id = $request->input('service_vendor_id');
             $uploadedFile = $request->file('file');
 
             // Generar batchId único
@@ -1020,9 +1022,7 @@ class RipController extends Controller
             $tempSubfolder = 'temp/rips/' . $batchId;
             $filePath = $uploadedFile->storeAs($tempSubfolder, $uniqueFileName, Constants::DISK_FILES);
 
-            // Ruta completa en servidor (si la necesitas)
-            $fullPath = storage_path('app/' . $filePath); // ojo: usé storage_path('app/...') para respetar disco configurado
-
+            $serviceVendor = $this->serviceVendorRepository->find($service_vendor_id,select:["id","nit"]); // validar que exista el service vendor
             // Metadata que vas a guardar en Redis (igual a lo que tenías)
             $metadata = [
                 'file_name' => $uniqueFileName,
@@ -1033,6 +1033,8 @@ class RipController extends Controller
                 'current_sheet' => 1,
                 'user_id' => $user_id,
                 'company_id' => $company_id,
+                'service_vendor_id' => $service_vendor_id,
+                'service_vendor_nit' => $serviceVendor->nit,
                 'file_path' => $filePath, // guardar path para que jobs lo encuentren
                 'type' => RipTypeEnum::RIP_TYPE_003->value,
             ];
@@ -1057,7 +1059,7 @@ class RipController extends Controller
             // Despachar job de validación de estructura (asíncrono)
             $selectedQueue = ProcessBatchService::selectAvailableQueueRoundRobin(Constants::AVAILABLE_QUEUES_TO_IMPORTS_RIPS_CSV);
 
-            Bus::dispatch((new ValidateStructureJob($batchId,$selectedQueue))->onQueue($selectedQueue));
+            ValidateStructureJob::dispatch($batchId, $selectedQueue);
 
             return [
                 'code' => 200,
