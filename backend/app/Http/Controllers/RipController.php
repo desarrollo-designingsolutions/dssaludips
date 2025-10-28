@@ -875,14 +875,6 @@ class RipController extends Controller
         return $this->execute(function () use ($ripInvoiceUser_id, $typeService) {
             $ripInvoiceUser = $this->ripInvoiceUserRepository->find($ripInvoiceUser_id);
 
-            logMessage($ripInvoiceUser->queries);
-            logMessage($ripInvoiceUser->procedures);
-            logMessage($ripInvoiceUser->urgencies);
-            logMessage($ripInvoiceUser->hospitalizations);
-            logMessage($ripInvoiceUser->newlyBorns);
-            logMessage($ripInvoiceUser->medicines);
-            logMessage($ripInvoiceUser->otherServices);
-
             // pedir servicios mapeados (por default trae todos los tipos definidos en ServiceMapper::$config)
             $services = ServiceMapper::getServicesForUser($ripInvoiceUser, $typeService);
 

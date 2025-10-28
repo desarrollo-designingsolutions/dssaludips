@@ -15,7 +15,6 @@ definePage({
 
 const { dataUser, servicesCount, dataInvoice } = storeToRefs(useRipInvoiceUserStore());
 
-
 const route = useRoute();
 const invoiceId = ref(route.params.invoice_id);
 
@@ -23,69 +22,29 @@ const invoice = ref({
   id: "" as string,
   invoice_number: "" as string,
 });
-const users = ref([]);
 const loading = ref(false);
-const pagination = ref({
-  current_page: 1,
-  last_page: 1,
-  per_page: 10,
-  total: 0,
-  from: 0,
-  to: 0,
-});
-const options = ref({
-  page: 1,
-  itemsPerPage: 10,
-  sortBy: [],
-  sortDesc: [],
-});
-
-const inputsTableFilter = ref([
-  { key: "actions", title: "Acciones", type: "actions", sortable: false, width: "100", fixed: true },
-  { key: "consecutivo", title: "Consecutivo", sortable: true, width: "10" },
-  { key: "tipoDocumentoIdentificacion", title: "Tipo de Documento", sortable: true, width: "350" },
-  { key: "numDocumentoIdentificacion", title: "No Documento", sortable: true, width: "200" },
-  { key: "tipoUsuario", title: "Tipo de Usuario", sortable: true, width: "350" },
-  { key: "fechaNacimiento", title: "Fecha de Nacimiento", sortable: true, width: "200" },
-  { key: "codSexo", title: "Sexo", sortable: true, width: "200" },
-  { key: "codPaisResidencia", title: "Pais Residencia", sortable: true, width: "350" },
-  { key: "codMunicipioResidencia", title: "Municipio Residencia", sortable: true, width: "350" },
-  { key: "codZonaTerritorialResidencia", title: "Zona Territorial Residencia", sortable: true, width: "350" },
-  { key: "incapacidad", title: "Incapacidad", sortable: true, width: "200" },
-  { key: "codPaisOrigen", title: "Pais Origen", sortable: true, width: "350" },
-]);
-
 const fetchUsers = async (opts = {}) => {
   loading.value = true;
-  const { page, itemsPerPage, sortBy, sortDesc } = opts;
 
   try {
-    const { data, response } = await useAxios(`/ripInvoice/${invoiceId.value}/paginatedUsers`).get({
+    const { data, response } = await useAxios(`/ripInvoiceUser/getInfoInvoice/${invoiceId.value}`).get({
       params: {
-        page: page || options.value.page,
-        per_page: itemsPerPage || options.value.itemsPerPage,
-        sortBy: sortBy?.length ? sortBy[0] : '',
-        sortDesc: sortDesc?.length ? sortDesc[0] : false,
+        invoice_id: invoiceId,
       }
     })
 
     if (response.status == 200 && data) {
       invoice.value = data.invoice;
-      dataInvoice.value = cloneObject(data.invoice);
-      users.value = data.dataUsers;
-      pagination.value = data.pagination;
-      options.value.page = pagination.value.current_page;
-      options.value.itemsPerPage = pagination.value.per_page;
     }
   } catch (error) {
-    console.error('Error al obtener usuarios:', error);
+    console.error('Error al obtener informacion:', error);
   } finally {
     loading.value = false;
   }
 };
 
 onMounted(() => {
-  dataUser.value = { arrayData: [] };
+  fetchUsers();
 });
 
 
@@ -93,20 +52,70 @@ const goViewServices = (obj: any) => {
 
   dataUser.value = obj;
 
-  const numDocumentoIdentificacion = obj.numDocumentoIdentificacion;
+  const id = obj.id;
   router.push({
     name: "Invoice-ListUserServicesView",
     params: {
       id: invoice.value.id,
       numFactura: invoice.value.invoice_number,
-      numDocumentoIdentificacion: numDocumentoIdentificacion,
+      ripInvoiceUser_id: id,
     },
   });
 };
 
 const goBack = () => {
-  router.go(-1);
+  router.push({
+    name: "Rips-ListInvoices",
+    params: { id: invoice.value.rip_id },
+  });
 }
+
+//FILTER
+const filterTable = ref()
+const optionsFilter = ref({
+  dialog: {
+    width: 500,
+    cols: '6',
+    inputs: [],
+  },
+  filterLabels: { inputGeneral: 'Buscar en todo' }
+
+})
+
+const refTableFull = ref()
+
+const optionsTable = {
+  showSelect: true,
+  url: "/ripInvoiceUser/paginate",
+  paramsGlobal: {
+    rip_invoice_id: invoiceId,
+  },
+  headers: [
+    { key: "actions", title: "Acciones", type: "actions", sortable: false, minWidth: "100px", fixed: true },
+    { key: "consecutivo", title: "Consecutivo", sortable: true, minWidth: "10px" },
+    { key: "tipoDocumentoIdentificacion", title: "Tipo de Documento", sortable: true, minWidth: "350px" },
+    { key: "numDocumentoIdentificacion", title: "No Documento", sortable: true, minWidth: "200px" },
+    { key: "tipoUsuario", title: "Tipo de Usuario", sortable: true, minWidth: "350px" },
+    { key: "fechaNacimiento", title: "Fecha de Nacimiento", sortable: true, minWidth: "200px" },
+    { key: "codSexo", title: "Sexo", sortable: true, minWidth: "200px" },
+    { key: "codPaisResidencia", title: "Pais Residencia", sortable: true, minWidth: "350px" },
+    { key: "codMunicipioResidencia", title: "Municipio Residencia", sortable: true, minWidth: "350px" },
+    { key: "codZonaTerritorialResidencia", title: "Zona Territorial Residencia", sortable: true, minWidth: "350px" },
+    { key: "incapacidad", title: "Incapacidad", sortable: true, minWidth: "200px" },
+    { key: "codPaisOrigen", title: "Pais Origen", sortable: true, minWidth: "350px" },
+  ],
+  actions: {
+  }
+}
+
+const tableLoading = ref(false); // Estado de carga de la tabla
+
+// Método para refrescar los datos
+const refreshTable = () => {
+  if (refTableFull.value) {
+    refTableFull.value.fetchTableData(null, false, true); // Forzamos la búsqueda
+  }
+};
 
 </script>
 
@@ -133,18 +142,63 @@ const goBack = () => {
             </div>
             <div class="info-row">
               <span class="info-title">Cant. usuarios:</span>
-              <span class="info-value">{{ pagination.total }}</span>
+              <span class="info-value">{{ invoice.count_users }}</span>
             </div>
           </div>
         </div>
 
       </VCardTitle>
 
-      <VCardText class="mt-5">
-        <VDataTable :headers="inputsTableFilter" :items="users" :server-items-length="pagination.total"
-          :items-per-page="pagination.per_page" :page="pagination.current_page" :loading="loading"
-          :options.sync="options" @update:options="fetchUsers">
+      <VCardText>
+        <FilterDialog :options-filter="optionsFilter" @force-search="refreshTable" :table-loading="tableLoading">
+        </FilterDialog>
+      </VCardText>
 
+      <VCardText class=" mt-2">
+        <TableFull v-model:selected="invoicesIds" ref="refTableFull" :options="optionsTable"
+          @update:loading="tableLoading = $event" @dataFetched="echoChannel">
+
+          <template #item.tipoDocumentoIdentificacion="{ item }">
+            <div>
+              {{ item.tipoDocumentoIdentificacion?.title }}
+            </div>
+          </template>
+
+          <template #item.tipoUsuario="{ item }">
+            <div>
+              {{ item.tipoUsuario?.title }}
+            </div>
+          </template>
+
+          <template #item.codSexo="{ item }">
+            <div>
+              {{ item.codSexo?.title }}
+            </div>
+          </template>
+
+          <template #item.codPaisResidencia="{ item }">
+            <div>
+              {{ item.codPaisResidencia?.title }}
+            </div>
+          </template>
+
+          <template #item.codMunicipioResidencia="{ item }">
+            <div>
+              {{ item.codMunicipioResidencia?.title }}
+            </div>
+          </template>
+
+          <template #item.codZonaTerritorialResidencia="{ item }">
+            <div>
+              {{ item.codZonaTerritorialResidencia?.title }}
+            </div>
+          </template>
+
+          <template #item.codPaisOrigen="{ item }">
+            <div>
+              {{ item.codPaisOrigen?.title }}
+            </div>
+          </template>
 
           <template #item.actions="{ item }">
             <div>
@@ -165,9 +219,9 @@ const goBack = () => {
               No hay usuarios disponibles
             </v-alert>
           </template>
-        </VDataTable>
-      </VCardText>
 
+        </TableFull>
+      </VCardText>
     </VCard>
   </div>
 </template>

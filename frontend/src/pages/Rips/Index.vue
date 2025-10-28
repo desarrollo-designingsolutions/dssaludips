@@ -227,11 +227,11 @@ const openModalUploadCsv = () => {
                     <VListItem  @click="openModalUploadExcel(item)">Subir
                       Excel</VListItem>
                     <VListItem  @click="validateWithMinistry(item)">Validar con el ministerio</VListItem>
-                    <VListItem v-if="item.type == 'RIP_TYPE_001'" @click="goViewRipZip(item)">
+                    <VListItem @click="goViewRipZip(item)">
                       Ingresar
                     </VListItem>
-                    <VListItem v-else-if="item.type == 'RIP_TYPE_002'" @click="goViewRipManual(item)">
-                      Ingresar
+                    <VListItem @click="goViewRipManual(item)">
+                      Editar manualmente
                     </VListItem>
                   </VList>
                 </VMenu>

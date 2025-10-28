@@ -10,7 +10,7 @@ import { useRipInvoiceUserStore } from "@/pages/Rips/Components/useRipInvoiceUse
 import { router } from "@/plugins/1.router";
 
 definePage({
-  path: "Invoice-ListUserServicesView/:id/:numFactura/:numDocumentoIdentificacion",
+  path: "Invoice-ListUserServicesView/:id/:numFactura/:ripInvoiceUser_id",
   name: "Invoice-ListUserServicesView",
   meta: {
     redirectIfLoggedIn: true,
@@ -19,36 +19,73 @@ definePage({
   },
 });
 
-const { dataUser, servicesCount, dataInvoice } = storeToRefs(useRipInvoiceUserStore());
-
 const route = useRoute();
-onMounted(async () => {
-  if (dataUser.value) {
-    servicesCount.value.consultas = dataUser.value.servicios.consultas?.length ?? 0
-    servicesCount.value.procedimientos = dataUser.value.servicios.procedimientos?.length ?? 0
-    servicesCount.value.urgencias = dataUser.value.servicios.urgencias?.length ?? 0
-    servicesCount.value.hospitalizacion = dataUser.value.servicios.hospitalizacion?.length ?? 0
-    servicesCount.value.recienNacidos = dataUser.value.servicios.recienNacidos?.length ?? 0
-    servicesCount.value.medicamentos = dataUser.value.servicios.medicamentos?.length ?? 0
-    servicesCount.value.otrosServicios = dataUser.value.servicios.otrosServicios?.length ?? 0
-  }
-});
 
-// Computed para sumar todos los valores de servicesCount
-const totalServices = computed(() => {
-  return Object.values(servicesCount.value).reduce((total, count) => total + count, 0);
-})
+const loading = ref(false);
+const userData = ref([]);
+const servicesCount = ref([]);
+
+const fetchUsers = async (opts = {}) => {
+  loading.value = true;
+
+  try {
+    const { data, response } = await useAxios(`/ripInvoiceService/getInfoUser/${route.params?.ripInvoiceUser_id}`).get()
+
+    if (response.status == 200 && data) {
+      userData.value = data.userData;
+      servicesCount.value = data.servicesCount;
+    }
+  } catch (error) {
+    console.error('Error al obtener informacion:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchUsers();
+});
 
 const currentTab = ref(0);
 
 const goBack = () => {
-  router.go(-1);
+  router.push({
+    name: "Invoice-ListUsers",
+    params: { invoice_id: route.params?.id },
+  });
 }
+
+const optionsFilter = ref({
+  dialog: {
+    width: 500,
+    cols: '6',
+    inputs: [],
+  },
+  filterLabels: { inputGeneral: 'Buscar en todo' }
+
+})
+
+const refListQueries = ref()
+const refListProcedure = ref()
+const refListEmergencies = ref()
+
+// Método para refrescar los datos
+const refreshAllTables = () => {
+  if (refListQueries.value) {
+    refListQueries.value.refreshTable(); // Forzamos la búsqueda
+  }
+  if (refListProcedure.value) {
+    refListProcedure.value.refreshTable(); // Forzamos la búsqueda
+  }
+  if (refListEmergencies.value) {
+    refListEmergencies.value.refreshTable(); // Forzamos la búsqueda
+  }
+};
 </script>
 
 <template>
   <div>
-    <VCard class="mt-5" v-if="dataUser">
+    <VCard class="mt-5" v-if="userData">
       <VCardTitle class="d-flex justify-space-between">
         <span>
           Lista de servicios
@@ -65,11 +102,11 @@ const goBack = () => {
           <div class="info-box">
             <div class="info-row">
               <span class="info-title">Número de factura:</span>
-              <span class="info-value"> {{ dataInvoice.invoice_number }}</span>
+              <span class="info-value"> {{ userData?.numFactura }}</span>
             </div>
             <div class="info-row">
               <span class="info-title">Cant. servicios:</span>
-              <span class="info-value">{{ totalServices }} </span>
+              <span class="info-value">{{ userData?.totalServicesCount }} </span>
             </div>
           </div>
 
@@ -77,60 +114,65 @@ const goBack = () => {
       </VCardTitle>
 
       <VCardText>
+        <FilterDialog :options-filter="optionsFilter" @force-search="refreshAllTables">
+        </FilterDialog>
+      </VCardText>
+
+      <VCardText>
 
         <VTabs v-model="currentTab" grow>
           <VTab>
             <span>Consultas</span>
-            <VBadge :content="servicesCount.consultas" :offset-x="-18" :offset-y="0" />
+            <VBadge :content="servicesCount?.consultas" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Procedimientos</span>
-            <VBadge :content="servicesCount.procedimientos" :offset-x="-18" :offset-y="0" />
+            <VBadge :content="servicesCount?.procedimientos" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Urgencias</span>
-            <VBadge :content="servicesCount.urgencias" :offset-x="-18" :offset-y="0" />
+            <VBadge :content="servicesCount?.urgencias" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Hospitalización</span>
-            <VBadge :content="servicesCount.hospitalizacion" :offset-x="-18" :offset-y="0" />
+            <VBadge :content="servicesCount?.hospitalizacion" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Recien nacidos</span>
-            <VBadge :content="servicesCount.recienNacidos" :offset-x="-18" :offset-y="0" />
+            <VBadge :content="servicesCount?.reciennacidos" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Medicamentos</span>
-            <VBadge :content="servicesCount.medicamentos" :offset-x="-18" :offset-y="0" />
+            <VBadge :content="servicesCount?.medicamentos" :offset-x="-18" :offset-y="0" />
           </VTab>
           <VTab>
             <span>Otros servicios</span>
-            <VBadge :content="servicesCount.otrosServicios" :offset-x="-18" :offset-y="0" />
+            <VBadge :content="servicesCount?.otrosservicios" :offset-x="-18" :offset-y="0" />
           </VTab>
         </VTabs>
 
         <VWindow v-model="currentTab" class="my-5">
           <VDivider />
           <VWindowItem>
-            <Queries :data-list="dataUser.servicios.consultas"></Queries>
+            <Queries ref="refListQueries"></Queries>
           </VWindowItem>
           <VWindowItem>
-            <Procedure :data-list="dataUser.servicios.procedimientos"></Procedure>
+            <Procedure ref="refListProcedure"></Procedure>
           </VWindowItem>
           <VWindowItem>
-            <Emergencies :data-list="dataUser.servicios.urgencias"></Emergencies>
+            <Emergencies ref="refListEmergencies"></Emergencies>
           </VWindowItem>
           <VWindowItem>
-            <Hospitalization :data-list="dataUser.servicios.hospitalizacion"></Hospitalization>
+            <!-- <Hospitalization :data-list="dataUser.servicios.hospitalizacion"></Hospitalization> -->
           </VWindowItem>
           <VWindowItem>
-            <NewlyBorn :data-list="dataUser.servicios.recienNacidos"></NewlyBorn>
+            <!-- <NewlyBorn :data-list="dataUser.servicios.recienNacidos"></NewlyBorn> -->
           </VWindowItem>
           <VWindowItem>
-            <Medicines :data-list="dataUser.servicios.medicamentos"></Medicines>
+            <!-- <Medicines :data-list="dataUser.servicios.medicamentos"></Medicines> -->
           </VWindowItem>
           <VWindowItem>
-            <OtherServices :data-list="dataUser.servicios.otrosServicios"></OtherServices>
+            <!-- <OtherServices :data-list="dataUser.servicios.otrosServicios"></OtherServices> -->
           </VWindowItem>
         </VWindow>
       </VCardText>

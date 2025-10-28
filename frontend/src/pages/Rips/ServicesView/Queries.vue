@@ -1,55 +1,75 @@
 <script setup lang="ts">
-const { dataList } = defineProps({
-  dataList: {
-    type: Array<object>,
-    default: [],
+const route = useRoute();
+const refTableFull = ref()
+
+const optionsTable = {
+  showSelect: true,
+  url: "/ripInvoiceService/paginateQueries",
+  paramsGlobal: {
+    rip_invoice_user_id: route.params?.ripInvoiceUser_id,
+  },
+  headers: [
+    { key: "actions", title: "Acciones", type: "actions", sortable: false, minWidth: "100px", fixed: true },
+    { key: "consecutivo", title: 'Consecutivo', sortable: true },
+    { key: "fechaInicioAtencion", title: 'Fecha Inicio Atención', sortable: false, minWidth: "200px" },
+    { key: "numAutorizacion", title: 'No Autorización', sortable: false, minWidth: "200px" },
+    { key: "codConsulta", title: 'Codigo de Consulta', sortable: false, minWidth: "350px" },
+    { key: "modalidadGrupoServicioTecSal", title: 'Modalidad Grupo Servicio TecSal', sortable: false, minWidth: "350px" },
+    { key: "grupoServicios", title: 'Grupo Servicios', sortable: false, minWidth: "350px" },
+    { key: "codServicio", title: 'Codigo Servicio', sortable: false, minWidth: "350px" },
+    { key: "finalidadTecnologiaSalud", title: 'Finalidad Tecnologia Salud', sortable: false, minWidth: "350px" },
+    { key: "causaMotivoAtencion", title: 'Causa Motivo Atención', sortable: false, minWidth: "350px" },
+    { key: "codDiagnosticoPrincipal", title: 'Diagnostico Principal', sortable: false, minWidth: "350px" },
+    { key: "codDiagnosticoRelacionado1", title: 'Diagnostico Relacionado 1', sortable: false, minWidth: "200px" },
+    { key: "codDiagnosticoRelacionado2", title: 'Diagnostico Relacionado 2', sortable: false, minWidth: "200px" },
+    { key: "codDiagnosticoRelacionado3", title: 'Diagnostico Relacionado 3', sortable: false, minWidth: "200px" },
+    { key: "tipoDiagnosticoPrincipal", title: 'Tipo Diagnostico Principal', sortable: false, minWidth: "200px" },
+    { key: "valorPagoModerador", title: 'Valor Pago Moderador', sortable: false, minWidth: "200px" },
+    { key: "vrServicio", title: 'Valor Servicio', sortable: false, minWidth: "200px" },
+    { key: "conceptoRecaudo", title: 'Concepto Recaudo', sortable: false, minWidth: "350px" },
+  ],
+  actions: {
   }
-})
-//table 
-const inputsTableFilter = ref([
-  { key: "consecutivo", title: 'Consecutivo', sortable: true },
-  { key: "fechaInicioAtencion", title: 'Fecha Inicio Atención', sortable: false, width: "200" },
-  { key: "numAutoriacion", title: 'No Autorización', sortable: false, width: "200" },
-  { key: "codConsulta", title: 'Codigo de Consulta', sortable: false, width: "350" },
-  { key: "modalidadGrupoServicioTecSal", title: 'Modalidad Grupo Servicio TecSal', sortable: false, width: "350" },
-  { key: "grupoServicios", title: 'Grupo Servicios', sortable: false, width: "350" },
-  { key: "codServicio", title: 'Codigo Servicio', sortable: false, width: "350" },
-  { key: "finalidadTecnologiaSalud", title: 'Finalidad Tecnologia Salud', sortable: false, width: "350" },
-  { key: "causaMotivoAtencion", title: 'Causa Motivo Atención', sortable: false, width: "350" },
-  { key: "codDiagnosticoPrincipal", title: 'Diagnostico Principal', sortable: false, width: "350" },
-  { key: "codDiagnosticoRelacionado1", title: 'Diagnostico Relacionado 1', sortable: false, width: "200" },
-  { key: "codDiagnosticoRelacionado2", title: 'Diagnostico Relacionado 2', sortable: false, width: "200" },
-  { key: "codDiagnosticoRelacionado3", title: 'Diagnostico Relacionado 3', sortable: false, width: "200" },
-  { key: "tipoDiagnosticoPrincipal", title: 'Tipo Diagnostico Principal', sortable: false, width: "200" },
-  { key: "valorPagoModerador", title: 'Valor Pago Moderador', sortable: false, width: "200" },
-  { key: "vrServicio", title: 'Valor Servicio', sortable: false, width: "200" },
-  { key: "conceptoRecaudo", title: 'Concepto Recaudo', sortable: false, width: "350" },
-])
+}
 
+const tableLoading = ref(false); // Estado de carga de la tabla
 
-
-const options = ref({ page: 1, itemsPerPage: 10, sortBy: [''], sortDesc: [false] })
-const search = ref('')
+// Método para refrescar los datos
+const refreshTable = () => {
+  if (refTableFull.value) {
+    refTableFull.value.fetchTableData(null, false, true); // Forzamos la búsqueda
+  }
+};
 
 </script>
 <template>
   <div>
-    <VCard>
-      <VCardText>
-        <VRow>
-          <VCol cols="12" offset-md="8" md="4">
-            <AppTextField v-model="search" density="compact" placeholder="Search ..." append-inner-icon="tabler-search"
-              single-line hide-details dense outlined clearable />
-          </VCol>
-        </VRow>
-      </VCardText>
+    <VCard class="mt-5">
+      <VCardText class=" mt-2">
+        <TableFull v-model:selected="invoicesIds" ref="refTableFull" :options="optionsTable"
+          @update:loading="tableLoading = $event" @dataFetched="echoChannel">
 
-      <VCardText>
-        <VDataTable :search="search" :headers="inputsTableFilter" :items="dataList"
-          :items-per-page="options.itemsPerPage" :page="options.page" :options="options">
+          <template #item.actions="{ item }">
+            <div>
+              <VBtn icon color="primary">
+                <VIcon icon="tabler-square-rounded-chevron-down"></VIcon>
+                <VMenu activator="parent">
+                  <VList>
 
-        </VDataTable>
+                    <VListItem @click="goViewServices(item)">Ver Servicios</VListItem>
 
+                  </VList>
+                </VMenu>
+              </VBtn>
+            </div>
+          </template>
+          <template #no-data>
+            <v-alert :value="true" color="warning" icon="mdi-alert">
+              No hay consultas disponibles
+            </v-alert>
+          </template>
+
+        </TableFull>
       </VCardText>
     </VCard>
   </div>

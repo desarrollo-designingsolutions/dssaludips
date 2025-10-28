@@ -33,5 +33,7 @@ class RoutesApi
         'routes/processBatch.php',
         'routes/rip.php',
         'routes/ripInvoice.php',
+        'routes/ripInvoiceUser.php',
+        'routes/ripInvoiceService.php',
     ];
 }
