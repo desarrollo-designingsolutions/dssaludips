@@ -563,6 +563,18 @@ class RipController extends Controller
                             $invoiceDir = dirname($invoiceToDelete->path_json);
                             Storage::disk('public')->deleteDirectory($invoiceDir);
                         }
+
+                        foreach ($invoiceToDelete->ripUsers as $key => $user) {
+                            $user->queries()->delete();
+                            $user->procedures()->delete();
+                            $user->urgencies()->delete();
+                            $user->hospitalizations()->delete();
+                            $user->newlyBorns()->delete();
+                            $user->medicines()->delete();
+                            $user->otherServices()->delete();
+                        }
+
+                        $invoiceToDelete->ripUsers()->delete();
                         $invoiceToDelete->delete();
                         // también quitarlo de las colecciones locales para que futuras iteraciones no lo usen
                         $existingById->forget($invoice_id);
@@ -698,6 +710,7 @@ class RipController extends Controller
             // Actualizar número de facturas
             $rip = $this->ripRepository->find($rip_id);
             $rip->numInvoices = count($rip->ripInvoices);
+            $rip->failedInvoices = count($rip->ripInvoices);
             $rip->save();
 
             // Obtener la info final a devolver (ahora basada en la relación DB)
@@ -707,9 +720,10 @@ class RipController extends Controller
             $req = new Request(['company_id' => $rip->company_id]);
             $tipoNotas = $this->queryController->selectInfinitetipoNota($req);
 
+
             return [
                 'code' => 200,
-                'message' => 'Registro Creado correctamente',
+                'message' => 'Facturas creadas exitosamente',
                 'rip_info' => $rip_info,
                 ...$tipoNotas,
             ];
@@ -845,6 +859,7 @@ class RipController extends Controller
 
             return [
                 'code' => 200,
+                'message' => 'Usuarios creados exitosamente',
                 'ripInvoice_info' => $ripInvoice_info,
                 ...$tipoIdPisis,
                 ...$tipoUsuarios,
@@ -860,6 +875,14 @@ class RipController extends Controller
     {
         return $this->execute(function () use ($ripInvoiceUser_id, $typeService) {
             $ripInvoiceUser = $this->ripInvoiceUserRepository->find($ripInvoiceUser_id);
+
+            logMessage($ripInvoiceUser->queries);
+            logMessage($ripInvoiceUser->procedures);
+            logMessage($ripInvoiceUser->urgencies);
+            logMessage($ripInvoiceUser->hospitalizations);
+            logMessage($ripInvoiceUser->newlyBorns);
+            logMessage($ripInvoiceUser->medicines);
+            logMessage($ripInvoiceUser->otherServices);
 
             // pedir servicios mapeados (por default trae todos los tipos definidos en ServiceMapper::$config)
             $services = ServiceMapper::getServicesForUser($ripInvoiceUser, $typeService);
@@ -996,7 +1019,7 @@ class RipController extends Controller
 
             return [
                 'code' => 200,
-                'message' => 'Servicios procesados correctamente',
+                'message' => 'Servicios creados exitosamente',
                 'ripInvoiceUser_info' => $ripInvoiceUser_info
             ];
         });

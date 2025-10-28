@@ -23,4 +23,29 @@ class RipInvoiceUser extends Model
         return $this->hasMany(RipServiceProcedure::class);
     }
 
+    public function urgencies()
+    {
+        return $this->hasMany(RipServiceUrgency::class);
+    }
+
+    public function hospitalizations()
+    {
+        return $this->hasMany(RipServiceHospitalization::class);
+    }
+
+    public function newlyBorns()
+    {
+        return $this->hasMany(RipServiceNewlyBorn::class);
+    }
+
+    public function medicines()
+    {
+        return $this->hasMany(RipServiceMedicine::class);
+    }
+
+    public function otherServices()
+    {
+        return $this->hasMany(RipServiceOtherService::class);
+    }
+
 }

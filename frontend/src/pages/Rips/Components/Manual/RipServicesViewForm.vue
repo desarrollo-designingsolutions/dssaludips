@@ -49,6 +49,7 @@ const breadcrumbs = [
   {
     title: "Rips",
     disabled: false,
+    to: `/Rips/Index`,
   },
   {
     title: "Manual",
@@ -159,7 +160,7 @@ const breadcrumbs = [
           </VTab>
           <VTab>
             <span>Otros servicios</span>
-            <VBadge :content="servicesCount?.otrosServicios" :offset-x="-18" :offset-y="0" />
+            <VBadge :content="servicesCount?.otrosservicios" :offset-x="-18" :offset-y="0" />
           </VTab>
         </VTabs>
 
@@ -184,7 +185,7 @@ const breadcrumbs = [
             <MedicinesForm :key="keyComponent" :data-list="dataUser?.servicios?.medicamentos"></MedicinesForm>
           </VWindowItem>
           <VWindowItem>
-            <OtherServicesForm :key="keyComponent" :data-list="dataUser?.servicios?.otrosServicios"></OtherServicesForm>
+            <OtherServicesForm :key="keyComponent" :data-list="dataUser?.servicios?.otrosservicios"></OtherServicesForm>
           </VWindowItem>
         </VWindow>
       </VCardText>

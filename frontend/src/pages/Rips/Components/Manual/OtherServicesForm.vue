@@ -11,23 +11,7 @@ const router = useRouter()
 const { dataRip, dataUser, dataServicesRipUser, servicesCount } = storeToRefs(useRipStore())
 const {
   cupsRips_arrayInfo,
-  viaIngresoUsuario_arrayInfo,
-  modalidadAtencion_arrayInfo,
-  grupoServicio_arrayInfo,
-  servicio_arrayInfo,
-  ripsFinalidadConsultaVersion2_arrayInfo,
-  ripsCausaExternaVersion2_arrayInfo,
-  cie10_arrayInfo,
-  ripsTipoDiagnosticoPrincipalVersion2_arrayInfo,
   conceptoRecaudo_arrayInfo,
-  condicionyDestinoUsuarioEgreso_arrayInfo,
-  sexos_arrayInfo,
-  tipoMedicamentoPosVersion2_arrayInfo,
-  dci_arrayInfo,
-  umm_arrayInfo,
-  ffm_arrayInfo,
-  upr_arrayInfo,
-  codTecnologiaSaludables,
   tipoOtrosServicios_arrayInfo,
 } = storeToRefs(useRipManualStore())
 const refForm = ref<VForm>()
@@ -177,7 +161,7 @@ const openModalQuestionSave = () => {
   refModalQuestion.value.componentData.principalIcon = 'tabler-help'
   refModalQuestion.value.componentData.btnSuccessText = 'Sí'
   refModalQuestion.value.componentData.btnCancelText = 'No'
-  refModalQuestion.value.componentData.title = `¿Está seguro que desea guardar el registro?`
+  refModalQuestion.value.componentData.title = `¿Está seguro que desea guardar ${dataServices.value.length > 1 ? 'los registros' : 'el registro' }?`
 }
 
 //ModalQuestionDelete
@@ -191,35 +175,6 @@ const openModalQuestionDelete = (index: number) => {
   refModalQuestionDelete.value.componentData.btnCancelText = 'No'
   refModalQuestionDelete.value.componentData.title = `¿Está seguro que desea eliminar el registro?`
 }
-
-interface CodTecnologiaSaludablesSelect {
-  label: string;
-  url: string;
-  arrayInfo: string;
-  itemsData: any[];
-}
-
-const getCodTecnologiaSaludablesSelect = (medicine: any): CodTecnologiaSaludablesSelect => {
-  if (medicine?.codTecnologiaSaludable_type) {
-    return (
-      codTecnologiaSaludables.value.find(
-        (item) => item.value === medicine.codTecnologiaSaludable_type
-      ) || {
-        label: "",
-        url: "",
-        arrayInfo: "",
-        itemsData: [],
-      }
-    );
-  }
-
-  return {
-    label: "",
-    url: "",
-    arrayInfo: "",
-    itemsData: [],
-  };
-};
 
 </script>
 <template>

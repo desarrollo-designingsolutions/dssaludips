@@ -155,7 +155,7 @@ const openModalQuestionSave = () => {
   refModalQuestion.value.componentData.principalIcon = 'tabler-help'
   refModalQuestion.value.componentData.btnSuccessText = 'Sí'
   refModalQuestion.value.componentData.btnCancelText = 'No'
-  refModalQuestion.value.componentData.title = `¿Está seguro que desea guardar el registro?`
+  refModalQuestion.value.componentData.title = `¿Está seguro que desea guardar ${dataServices.value.length > 1 ? 'los registros' : 'el registro' }?`
 }
 
 //ModalQuestionDelete

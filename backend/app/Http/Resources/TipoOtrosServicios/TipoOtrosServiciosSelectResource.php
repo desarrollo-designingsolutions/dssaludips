@@ -15,6 +15,7 @@ class TipoOtrosServiciosSelectResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'codigo' => $this->codigo,
             'value' => $this->id,
             'title' => $this->codigo.' - '.$this->nombre,
         ];

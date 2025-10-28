@@ -237,6 +237,7 @@ const breadcrumbs = [
   {
     title: "Rips",
     disabled: false,
+    to: `/Rips/Index`,
   },
   {
     title: "Manual",
