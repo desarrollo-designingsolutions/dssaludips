@@ -9,7 +9,7 @@ const optionsTable = {
     rip_invoice_user_id: route.params?.ripInvoiceUser_id,
   },
   headers: [
-    { key: "consecutivo", title: 'Consecutivo', sortable: true },
+    // { key: "consecutivo", title: 'Consecutivo', sortable: true },
     { key: "fechaInicioAtencion", title: 'Fecha Inicio Atención', sortable: false, minWidth: "200px" },
     { key: "idMIPRES", title: 'id Mipres', sortable: false, minWidth: "200px" },
     { key: "numAutorizacion", title: 'No Autorización', sortable: false, minWidth: "200px" },

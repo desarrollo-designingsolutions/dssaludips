@@ -9,6 +9,7 @@ const optionsTable = {
     rip_invoice_user_id: route.params?.ripInvoiceUser_id,
   },
   headers: [
+    // { key: "consecutivo", title: 'Consecutivo', sortable: true },
     { key: "fechaInicioAtencion", title: 'Fecha Inicio Atención', sortable: false, minWidth: "200px" },
     { key: "causaMotivoAtencion", title: 'Causa Motivo Atención', sortable: false, minWidth: "350px" },
     { key: "codDiagnosticoPrincipal", title: 'Diagnostico Principal', sortable: false, minWidth: "350px" },

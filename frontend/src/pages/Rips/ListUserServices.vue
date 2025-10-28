@@ -68,6 +68,10 @@ const optionsFilter = ref({
 const refListQueries = ref()
 const refListProcedure = ref()
 const refListEmergencies = ref()
+const refListHospitalization = ref()
+const refListNewlyBorn = ref()
+const refListMedicines = ref()
+const refListOtherServices = ref()
 
 // Método para refrescar los datos
 const refreshAllTables = () => {
@@ -79,6 +83,18 @@ const refreshAllTables = () => {
   }
   if (refListEmergencies.value) {
     refListEmergencies.value.refreshTable(); // Forzamos la búsqueda
+  }
+  if (refListHospitalization.value) {
+    refListHospitalization.value.refreshTable(); // Forzamos la búsqueda
+  }
+  if (refListNewlyBorn.value) {
+    refListNewlyBorn.value.refreshTable(); // Forzamos la búsqueda
+  }
+  if (refListMedicines.value) {
+    refListMedicines.value.refreshTable(); // Forzamos la búsqueda
+  }
+  if (refListOtherServices.value) {
+    refListOtherServices.value.refreshTable(); // Forzamos la búsqueda
   }
 };
 </script>
@@ -163,16 +179,16 @@ const refreshAllTables = () => {
             <Emergencies ref="refListEmergencies"></Emergencies>
           </VWindowItem>
           <VWindowItem>
-            <!-- <Hospitalization :data-list="dataUser.servicios.hospitalizacion"></Hospitalization> -->
+            <Hospitalization ref="refListHospitalization"></Hospitalization>
           </VWindowItem>
           <VWindowItem>
-            <!-- <NewlyBorn :data-list="dataUser.servicios.recienNacidos"></NewlyBorn> -->
+            <NewlyBorn ref="refListNewlyBorn"></NewlyBorn>
           </VWindowItem>
           <VWindowItem>
-            <!-- <Medicines :data-list="dataUser.servicios.medicamentos"></Medicines> -->
+            <Medicines ref="refListMedicines"></Medicines>
           </VWindowItem>
           <VWindowItem>
-            <!-- <OtherServices :data-list="dataUser.servicios.otrosServicios"></OtherServices> -->
+            <OtherServices ref="refListOtherServices"></OtherServices>
           </VWindowItem>
         </VWindow>
       </VCardText>

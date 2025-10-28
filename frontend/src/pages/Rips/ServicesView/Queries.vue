@@ -9,8 +9,7 @@ const optionsTable = {
     rip_invoice_user_id: route.params?.ripInvoiceUser_id,
   },
   headers: [
-    { key: "actions", title: "Acciones", type: "actions", sortable: false, minWidth: "100px", fixed: true },
-    { key: "consecutivo", title: 'Consecutivo', sortable: true },
+    // { key: "consecutivo", title: 'Consecutivo', sortable: true },
     { key: "fechaInicioAtencion", title: 'Fecha Inicio Atención', sortable: false, minWidth: "200px" },
     { key: "numAutorizacion", title: 'No Autorización', sortable: false, minWidth: "200px" },
     { key: "codConsulta", title: 'Codigo de Consulta', sortable: false, minWidth: "350px" },

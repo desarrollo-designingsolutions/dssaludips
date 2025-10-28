@@ -1,47 +1,52 @@
 <script setup lang="ts">
-const { dataList } = defineProps({
-  dataList: {
-    type: Array<object>,
-    default: [],
+const route = useRoute();
+const refTableFull = ref()
+
+const optionsTable = {
+  showSelect: true,
+  url: "/ripInvoiceService/paginateNewlyBorns",
+  paramsGlobal: {
+    rip_invoice_user_id: route.params?.ripInvoiceUser_id,
+  },
+  headers: [
+    // { key: "consecutivo", title: 'Consecutivo', sortable: true },
+    { key: 'fechaNacimiento', title: 'Fecha de Nacimiento', sortable: false, minWidth: "200px" },
+    { key: 'edadGestacional', title: 'Edad Gestacional', sortable: false, minWidth: "200px" },
+    { key: 'numConsultasCPrenatal', title: 'No Consultas C. Prenatal', sortable: false, minWidth: "200px" },
+    { key: 'codSexoBiologico', title: 'Cod. Sexo Biologico', sortable: false, minWidth: "350px" },
+    { key: 'peso', title: 'Peso', sortable: false, minWidth: "200px" },
+    { key: 'codDiagnosticoPrincipal', title: 'Diagnostico Principal', sortable: false, minWidth: "350px" },
+    { key: 'condicionDestinoUsuarioEgreso', title: 'Condicion Destino Usuario Egreso', sortable: false, minWidth: "200px" },
+    { key: 'codDiagnosticoCausaMuerte', title: 'Diagnostico Causa de Muerte', sortable: false, minWidth: "350px" },
+    { key: 'fechaEgreso', title: 'Fecha De Egreso', sortable: false, minWidth: "200px" },
+  ],
+  actions: {
   }
-})
-//table 
-const inputsTableFilter = ref([
-  { key: 'fechaNacimiento', title: 'Fecha de Nacimiento', sortable: false, width: "200" },
-  { key: 'edadGestacional', title: 'Edad Gestacional', sortable: false, width: "200" },
-  { key: 'numConsultasCPrenatal', title: 'No Consultas C. Prenatal', sortable: false, width: "200" },
-  { key: 'codSexoBiologico', title: 'Cod. Sexo Biologico', sortable: false, width: "350" },
-  { key: 'peso', title: 'Peso', sortable: false, width: "200" },
-  { key: 'codDiagnosticoPrincipal', title: 'Diagnostico Principal', sortable: false, width: "350" },
-  { key: 'condicionDestino', title: 'Condicion Destino Usuario Egreso', sortable: false, width: "200" },
-  { key: 'condicionDestinoUsuarioEgreso', title: 'Diagnostico Causa de Muerte', sortable: false, width: "350" },
-  { key: 'codDiagnosticoCausaMuerte', title: 'codDiagnosticoCausaMuerte', sortable: false, width: "350" },
-  { key: 'fechaEgreso', title: 'Fecha De Egreso', sortable: false, width: "200" },
-  { key: 'actions', title: 'Acciones', type: 'actions', sortable: false, width: "200" },
+}
 
-])
+const tableLoading = ref(false); // Estado de carga de la tabla
 
-const options = ref({ page: 1, itemsPerPage: 10, sortBy: [''], sortDesc: [false] })
-const search = ref('')
+// Método para refrescar los datos
+const refreshTable = () => {
+  if (refTableFull.value) {
+    refTableFull.value.fetchTableData(null, false, true); // Forzamos la búsqueda
+  }
+};
 
 </script>
 <template>
   <div>
-    <VCard>
-      <VCardText>
-        <VCardText>
-          <VRow>
-            <VCol cols="12" offset-md="8" md="4">
-              <AppTextField v-model="search" density="compact" placeholder="Search ..."
-                append-inner-icon="tabler-search" single-line hide-details dense outlined clearable />
-            </VCol>
-          </VRow>
-        </VCardText>
-        <VDataTable :search="search" :headers="inputsTableFilter" :items="dataList"
-          :items-per-page="options.itemsPerPage" :page="options.page" :options="options">
+    <VCard class="mt-5">
+      <VCardText class=" mt-2">
+        <TableFull v-model:selected="invoicesIds" ref="refTableFull" :options="optionsTable"
+          @update:loading="tableLoading = $event" @dataFetched="echoChannel">
+          <template #no-data>
+            <v-alert :value="true" color="warning" icon="mdi-alert">
+              No hay recien nacidos disponibles
+            </v-alert>
+          </template>
 
-        </VDataTable>
-
+        </TableFull>
       </VCardText>
     </VCard>
   </div>

@@ -19,4 +19,12 @@ Route::middleware(['check.permission:rips.index'])->group(function () {
     Route::get('/ripInvoiceService/paginateProcedures', [RipInvoiceServiceController::class, 'paginateProcedures']);
 
     Route::get('/ripInvoiceService/paginateUrgencies', [RipInvoiceServiceController::class, 'paginateUrgencies']);
+
+    Route::get('/ripInvoiceService/paginateHospitalizations', [RipInvoiceServiceController::class, 'paginateHospitalizations']);
+
+    Route::get('/ripInvoiceService/paginateNewlyBorns', [RipInvoiceServiceController::class, 'paginateNewlyBorns']);
+
+    Route::get('/ripInvoiceService/paginateMedicines', [RipInvoiceServiceController::class, 'paginateMedicines']);
+
+    Route::get('/ripInvoiceService/paginateOtherServices', [RipInvoiceServiceController::class, 'paginateOtherServices']);
 });

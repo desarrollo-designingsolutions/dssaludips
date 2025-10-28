@@ -3,8 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\Rips\ServiceMapper;
+use App\Http\Resources\RipServiceHospitalization\RipServiceHospitalizationPaginateResource;
+use App\Http\Resources\RipServiceMedicine\RipServiceMedicinePaginateResource;
+use App\Http\Resources\RipServiceNewlyBorn\RipServiceNewlyBornPaginateResource;
+use App\Http\Resources\RipServiceOtherService\RipServiceOtherServicePaginateResource;
 use App\Http\Resources\RipServiceProcedure\RipServiceProcedurePaginateResource;
 use App\Http\Resources\RipServiceQuery\RipServiceQueryPaginateResource;
+use App\Http\Resources\RipServiceUrgency\RipServiceUrgencyPaginateResource;
 use App\Repositories\RipInvoiceServiceRepository;
 use App\Traits\HttpResponseTrait;
 use Illuminate\Http\Request;
@@ -81,17 +86,85 @@ class RipInvoiceServiceController extends Controller
     public function paginateUrgencies(Request $request)
     {
         return $this->execute(function () use ($request) {
-            // $data = $this->ripInvoiceServiceRepository->paginateUrgencies($request->all());
-            // $tableData = RipServiceProcedurePaginateResource::collection($data);
+            $data = $this->ripInvoiceServiceRepository->paginateUrgencies($request->all());
+            $tableData = RipServiceUrgencyPaginateResource::collection($data);
 
-            // return [
-            //     'code' => 200,
-            //     'tableData' => $tableData,
-            //     'lastPage' => $data->lastPage(),
-            //     'totalData' => $data->total(),
-            //     'totalPage' => $data->perPage(),
-            //     'currentPage' => $data->currentPage(),
-            // ];
+            return [
+                'code' => 200,
+                'tableData' => $tableData,
+                'lastPage' => $data->lastPage(),
+                'totalData' => $data->total(),
+                'totalPage' => $data->perPage(),
+                'currentPage' => $data->currentPage(),
+            ];
+        });
+    }
+
+    public function paginateHospitalizations(Request $request)
+    {
+        return $this->execute(function () use ($request) {
+            $data = $this->ripInvoiceServiceRepository->paginateHospitalizations($request->all());
+            $tableData = RipServiceHospitalizationPaginateResource::collection($data);
+
+            return [
+                'code' => 200,
+                'tableData' => $tableData,
+                'lastPage' => $data->lastPage(),
+                'totalData' => $data->total(),
+                'totalPage' => $data->perPage(),
+                'currentPage' => $data->currentPage(),
+            ];
+        });
+    }
+
+    public function paginateNewlyBorns(Request $request)
+    {
+        return $this->execute(function () use ($request) {
+            $data = $this->ripInvoiceServiceRepository->paginateNewlyBorns($request->all());
+            $tableData = RipServiceNewlyBornPaginateResource::collection($data);
+
+            return [
+                'code' => 200,
+                'tableData' => $tableData,
+                'lastPage' => $data->lastPage(),
+                'totalData' => $data->total(),
+                'totalPage' => $data->perPage(),
+                'currentPage' => $data->currentPage(),
+            ];
+        });
+    }
+
+    public function paginateMedicines(Request $request)
+    {
+        return $this->execute(function () use ($request) {
+            $data = $this->ripInvoiceServiceRepository->paginateMedicines($request->all());
+            $tableData = RipServiceMedicinePaginateResource::collection($data);
+
+            return [
+                'code' => 200,
+                'tableData' => $tableData,
+                'lastPage' => $data->lastPage(),
+                'totalData' => $data->total(),
+                'totalPage' => $data->perPage(),
+                'currentPage' => $data->currentPage(),
+            ];
+        });
+    }
+
+    public function paginateOtherServices(Request $request)
+    {
+        return $this->execute(function () use ($request) {
+            $data = $this->ripInvoiceServiceRepository->paginateOtherServices($request->all());
+            $tableData = RipServiceOtherServicePaginateResource::collection($data);
+
+            return [
+                'code' => 200,
+                'tableData' => $tableData,
+                'lastPage' => $data->lastPage(),
+                'totalData' => $data->total(),
+                'totalPage' => $data->perPage(),
+                'currentPage' => $data->currentPage(),
+            ];
         });
     }
 }

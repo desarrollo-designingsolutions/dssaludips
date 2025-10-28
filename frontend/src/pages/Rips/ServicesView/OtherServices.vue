@@ -1,53 +1,54 @@
 <script setup lang="ts">
-const { dataList } = defineProps({
-  dataList: {
-    type: Array<object>,
-    default: [],
+const route = useRoute();
+const refTableFull = ref()
+
+const optionsTable = {
+  showSelect: true,
+  url: "/ripInvoiceService/paginateOtherServices",
+  paramsGlobal: {
+    rip_invoice_user_id: route.params?.ripInvoiceUser_id,
+  },
+  headers: [
+    // { key: "consecutivo", title: 'Consecutivo', sortable: true },
+    { key: "numAutorizacion", title: 'No Autorización', sortable: false, minWidth: "200px" },
+    { key: "idMIPRES", title: 'id Mipres', sortable: false, minWidth: "200px" },
+    { key: "fechaSuministroTecnologia", title: 'Fecha Suministro Tecnología', sortable: false, minWidth: "200px" },
+    { key: "tipoOS", title: 'Tipo Otros Servicios', sortable: false, minWidth: "350px" },
+    { key: "codTecnologiaSalud", title: 'Cod Tecnologia Salud', sortable: false, minWidth: "200px" },
+    { key: "nomTecnologiaSalud", title: 'Nombre Tecnología Salud', sortable: false, minWidth: "200px" },
+    { key: "cantidadOS", title: 'Cantidad Otro Servicio', sortable: false, minWidth: "200px" },
+    { key: "vrUnitOS", title: 'Valor Unit. Servicio', sortable: false, minWidth: "200px" },
+    { key: "valorPagoModerador", title: 'Valor Pago Moderador', sortable: false, minWidth: "200px" },
+    { key: "vrServicio", title: 'Valor Servicio', sortable: false, minWidth: "200px" },
+    { key: "conceptoRecaudo", title: 'Concepto Recaudo', sortable: false, minWidth: "350px" },
+  ],
+  actions: {
   }
-})
-//table 
-const inputsTableFilter = ref([
-  { key: "numAutorizacion", title: 'No Autorización', sortable: false, width: "200" },
-  { key: "idMIPRES", title: 'id Mipres', sortable: false, width: "200" },
-  { key: "fechaSuministroTecnologia", title: 'Fecha Suministro Tecnología', sortable: false, width: "200" },
-  { key: "tipoOS", title: 'Tipo Otros Servicios', sortable: false, width: "350" },
-  { key: "codTecnologiaSalud", title: 'Cod Tecnologia Salud', sortable: false, width: "200" },
-  { key: "nomTecnologiaSalud", title: 'Nombre Tecnología Salud', sortable: false, width: "200" },
-  { key: "cantidadOS", title: 'Cantidad Otro Servicio', sortable: false, width: "200" },
-  { key: "vrUnitOS", title: 'Valor Unit. Servicio', sortable: false, width: "200" },
-  { key: "valorPagoModerador", title: 'Valor Pago Moderador', sortable: false, width: "200" },
-  { key: "vrServicio", title: 'Valor Servicio', sortable: false, width: "200" },
-  { key: "conceptoRecaudo", title: 'Concepto Recaudo', sortable: false, width: "350" },
-  { key: 'actions', title: 'Acciones', type: 'actions', sortable: false, width: "200" },
-])
+}
 
+const tableLoading = ref(false); // Estado de carga de la tabla
 
-
-const options = ref({ page: 1, itemsPerPage: 10, sortBy: [''], sortDesc: [false] })
-const search = ref('')
+// Método para refrescar los datos
+const refreshTable = () => {
+  if (refTableFull.value) {
+    refTableFull.value.fetchTableData(null, false, true); // Forzamos la búsqueda
+  }
+};
 
 </script>
 <template>
   <div>
-    <VCard>
-      <VCardText>
-        <VRow>
-          <VCol cols="12" offset-md="8" md="4">
-            <AppTextField v-model="search" density="compact" placeholder="Search ..." append-inner-icon="tabler-search"
-              single-line hide-details dense outlined clearable />
-          </VCol>
-        </VRow>
-      </VCardText>
-      <VCardText>
-        <VDataTable :search="search" :headers="inputsTableFilter" :items="dataList"
-          :items-per-page="options.itemsPerPage" :page="options.page" :options="options">
+    <VCard class="mt-5">
+      <VCardText class=" mt-2">
+        <TableFull v-model:selected="invoicesIds" ref="refTableFull" :options="optionsTable"
+          @update:loading="tableLoading = $event" @dataFetched="echoChannel">
+          <template #no-data>
+            <v-alert :value="true" color="warning" icon="mdi-alert">
+              No hay otros servicios disponibles
+            </v-alert>
+          </template>
 
-
-
-
-
-        </VDataTable>
-
+        </TableFull>
       </VCardText>
     </VCard>
   </div>
