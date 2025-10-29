@@ -215,7 +215,7 @@ const openModalQuestionDelete = (index: number) => {
 
             <template #item.fechaSuministroTecnologia="{ item, index }">
               <div class="text-center">
-                <AppDateTimePicker v-model="item.fechaSuministroTecnologia" :rules="[requiredValidator]"
+                <AppDateTimePicker v-model="item.fechaSuministroTecnologia"
                   :config="{ enableTime: true, dateFormat: 'Y-m-d H:i' }" />
               </div>
             </template>

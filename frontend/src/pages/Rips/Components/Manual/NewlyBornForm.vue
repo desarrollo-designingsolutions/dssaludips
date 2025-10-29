@@ -197,7 +197,7 @@ const openModalQuestionDelete = (index: number) => {
 
             <template #item.fechaNacimiento="{ item, index }">
               <div class="text-center">
-                <AppDateTimePicker v-model="item.fechaNacimiento" :rules="[requiredValidator]"
+                <AppDateTimePicker v-model="item.fechaNacimiento"
                   :config="{ enableTime: true, dateFormat: 'Y-m-d H:i' }" />
               </div>
             </template>
@@ -256,7 +256,7 @@ const openModalQuestionDelete = (index: number) => {
 
             <template #item.fechaEgreso="{ item, index }">
               <div class="text-center">
-                <AppDateTimePicker v-model="item.fechaEgreso" :rules="[requiredValidator]"
+                <AppDateTimePicker v-model="item.fechaEgreso"
                   :config="{ enableTime: true, dateFormat: 'Y-m-d H:i' }" />
               </div>
             </template>

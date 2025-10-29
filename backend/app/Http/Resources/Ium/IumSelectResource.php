@@ -16,6 +16,7 @@ class IumSelectResource extends JsonResource
     {
         return [
             'codigo' => $this->codigo,
+            'nombre' => $this->nombre,
             'value' => $this->id,
             'title' => $this->codigo.' - '.$this->nombre,
         ];

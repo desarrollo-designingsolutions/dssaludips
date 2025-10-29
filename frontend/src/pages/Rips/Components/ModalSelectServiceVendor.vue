@@ -83,7 +83,7 @@ const paramsSelectInfinite = {
       <VCardText class="d-flex justify-center gap-4 pb-6 px-6">
         <VRow>
           <VCol cols="12">
-            <AppSelectRemote label="Seleccionar prestador" :disabled="disabledFiledsView" v-model="form.service_vendor_id"
+            <AppSelectRemote label="Seleccionar prestador" :requiredField="true" :disabled="disabledFiledsView" v-model="form.service_vendor_id"
               url="/selectInfiniteServiceVendor" arrayInfo="serviceVendors" clearable :params="paramsSelectInfinite"
               :itemsData="serviceVendors_arrayInfo" :rules="[requiredValidator]"
               :error-messages="errorsBack.service_vendor_id" @input="errorsBack.service_vendor_id = ''">

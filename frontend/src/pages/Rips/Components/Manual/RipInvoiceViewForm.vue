@@ -83,7 +83,7 @@ const inputsTableFilter = ref([
     width: "200",
   },
   {
-    key: "TipoNota",
+    key: "tipoNota",
     title: "Tipo de Nota",
     type: "booleanYesAndNot",
     sortable: false,
@@ -129,7 +129,7 @@ const addData = async () => {
       numDocumentoIdObligado: dataRip.value.numDocumentoIdObligado,
       numFactura: null,
       numNota: null,
-      TipoNota: null,
+      tipoNota: null,
       usuarios: [],
       cantUsers: 0,
       sumVr: 0,
@@ -195,6 +195,20 @@ const saveData = async () => {
     );
     if (response.status === 200 && data) {
       dataRip.value = data.rip_info
+    }
+    if (response.status === 422 && data) {
+      const errors = response.data.errors;
+      const duplicateMessage = 'El número de factura debe ser único dentro del listado.';
+
+      const duplicateKeys = Object.keys(errors).filter(key => {
+        const arr = errors[key];
+        return Array.isArray(arr) && arr.includes(duplicateMessage);
+      });
+
+      if (duplicateKeys.length > 0) {
+        toast(`Hay ${duplicateKeys.length} facturas con número de factura repetido`, "", "warning");
+        return;
+      }
     }
     loading.table = false;
 
@@ -331,9 +345,9 @@ const paramsSelectInfinite = {
                   </div>
                 </template>
 
-                <template #item.TipoNota="{ item, index }">
+                <template #item.tipoNota="{ item, index }">
                   <div class="text-center">
-                    <AppSelectRemote v-model="item.TipoNota" url="/selectInfinitetipoNota" arrayInfo="tipoNotas"
+                    <AppSelectRemote v-model="item.tipoNota" url="/selectInfinitetipoNota" arrayInfo="tipoNotas"
                       clearable :params="paramsSelectInfinite" :itemsData="tipoNotas_arrayInfo" :firstFetch="false"
                       @click:clear="clearTipoNota(index)">
                     </AppSelectRemote>
@@ -342,7 +356,7 @@ const paramsSelectInfinite = {
 
                 <template #item.numNota="{ item }">
                   <div class="text-center">
-                    <AppTextField :disabled="!item.TipoNota" clearable v-model="item.numNota" />
+                    <AppTextField :disabled="!item.tipoNota" clearable v-model="item.numNota" />
                   </div>
                 </template>
 

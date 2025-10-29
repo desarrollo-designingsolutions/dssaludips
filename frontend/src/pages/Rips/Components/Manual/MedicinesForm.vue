@@ -272,7 +272,7 @@ const getCodTecnologiaSaludablesSelect = (medicine: any): CodTecnologiaSaludable
 
             <template #item.fechaDispensAdmon="{ item, index }">
               <div class="text-center">
-                <AppDateTimePicker v-model="item.fechaDispensAdmon" :rules="[requiredValidator]"
+                <AppDateTimePicker v-model="item.fechaDispensAdmon"
                   :config="{ enableTime: true, dateFormat: 'Y-m-d H:i' }" />
               </div>
             </template>
@@ -317,9 +317,7 @@ const getCodTecnologiaSaludablesSelect = (medicine: any): CodTecnologiaSaludable
 
             <template #item.nomTecnologiaSalud="{ item, index }">
               <div class="text-center">
-                <AppSelectRemote v-model="item.nomTecnologiaSalud" url="/selectInfiniteDci" arrayInfo="dci" clearable
-                  :params="paramsSelectInfinite" :itemsData="dci_arrayInfo" :firstFetch="false">
-                </AppSelectRemote>
+                <AppTextField disabled clearable v-model="item.nomTecnologiaSalud" :value="item.codTecnologiaSaludable_id?.nombre" />
               </div>
             </template>
 

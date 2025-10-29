@@ -220,7 +220,7 @@ const openModalQuestionDelete = (index: number) => {
 
             <template #item.fechaInicioAtencion="{ item, index }">
               <div class="text-center">
-                <AppDateTimePicker v-model="item.fechaInicioAtencion" :rules="[requiredValidator]"
+                <AppDateTimePicker v-model="item.fechaInicioAtencion"
                   :config="{ enableTime: true, dateFormat: 'Y-m-d H:i' }" />
               </div>
             </template>

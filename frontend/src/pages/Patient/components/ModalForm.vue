@@ -371,7 +371,7 @@ const documentRules = [
               </VCol>
 
               <VCol cols="12" sm="4">
-                <AppSelect v-model="form.incapacity" label="Incapacidad" :items="['SÍ', 'NO']" />
+                <AppSelect v-model="form.incapacity" label="Incapacidad" :items="['Si', 'No']" />
               </VCol>
 
               <VCol cols="12" sm="4">

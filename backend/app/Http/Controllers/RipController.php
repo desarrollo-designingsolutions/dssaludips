@@ -482,6 +482,7 @@ class RipController extends Controller
                     $tipoNota = null;
 
                     if ($value['tipoNota']) {
+                        logMessage($value['tipoNota']);
                         $tipoNota = TipoNota::where('codigo', $value['tipoNota'])->first();
                     }
 
@@ -490,7 +491,7 @@ class RipController extends Controller
                         'numDocumentoIdObligado' => $rip->nit,
                         'numFactura' => $value['invoice_number'],
                         'cantUsers' => $value['count_users'],
-                        'TipoNota' => $value['tipoNota'] ? new TipoNotaSelectResource($tipoNota) : null,
+                        'tipoNota' => $value['tipoNota'] && $tipoNota !== null ? new TipoNotaSelectResource($tipoNota) : null,
                         'numNota' => $value['numNota'],
                         'sumVr' => $value['sumVr'],
                         'status_name' => $value['status']->description(),
@@ -544,7 +545,7 @@ class RipController extends Controller
                 $deleteFlag = isset($value['delete']) ? intval($value['delete']) : 0;
                 $cantUsers = $value['cantUsers'] ?? 0;
                 $sumVr = $value['sumVr'] ?? 0;
-                $tipoNota = $value['TipoNota'] ?? null;
+                $tipoNota = $value['tipoNota'] ?? null;
                 $numNota = $value['numNota'] ?? null;
                 $invoice_id = $value['id'] ?? null;
 
@@ -588,7 +589,7 @@ class RipController extends Controller
                 $info = convertNullToEmptyString([
                     "numDocumentoIdObligado" => $value["numDocumentoIdObligado"] ?? $rip->nit,
                     "numFactura" => $numFactura,
-                    "TipoNota" => $tipoNota,
+                    "tipoNota" => $tipoNota,
                     "numNota" => $numNota,
                 ]);
 
@@ -784,17 +785,17 @@ class RipController extends Controller
 
                     $users[] = [
                         'id' => $value['id'],
-                        'tipoDocumentoIdentificacion' => $value['tipoDocumentoIdentificacion'] ? new TipoIdPisisSelectResource($tipoDoc) : null,
+                        'tipoDocumentoIdentificacion' => $value['tipoDocumentoIdentificacion'] && $tipoDoc !== null ? new TipoIdPisisSelectResource($tipoDoc) : null,
                         'numDocumentoIdentificacion' => $value['numDocumentoIdentificacion'],
-                        'tipoUsuario' => $value['tipoUsuario'] ? new RipsTipoUsuarioVersion2SelectResource($tipoUsuario) : null,
+                        'tipoUsuario' => $value['tipoUsuario'] && $tipoUsuario !== null ? new RipsTipoUsuarioVersion2SelectResource($tipoUsuario) : null,
                         'fechaNacimiento' => $value['fechaNacimiento'],
-                        'codSexo' => $value['codSexo'] ? new SexoSelectResource($codSexo) : null,
-                        'codPaisResidencia' => $value['codPaisResidencia'] ? new PaisSelectResource($codPaisResidencia) : null,
-                        'codMunicipioResidencia' => $value['codMunicipioResidencia'] ? new MunicipioSelectResource($codMunicipioResidencia) : null,
-                        'codZonaTerritorialResidencia' => $value['codZonaTerritorialResidencia'] ? new ZonaVersion2SelectResource($codZonaTerritorialResidencia) : null,
+                        'codSexo' => $value['codSexo'] && $codSexo !== null ? new SexoSelectResource($codSexo) : null,
+                        'codPaisResidencia' => $value['codPaisResidencia'] && $codPaisResidencia !== null ? new PaisSelectResource($codPaisResidencia) : null,
+                        'codMunicipioResidencia' => $value['codMunicipioResidencia'] && $codMunicipioResidencia !== null ? new MunicipioSelectResource($codMunicipioResidencia) : null,
+                        'codZonaTerritorialResidencia' => $value['codZonaTerritorialResidencia'] && $codZonaTerritorialResidencia !== null ? new ZonaVersion2SelectResource($codZonaTerritorialResidencia) : null,
                         'incapacidad' => $value['incapacidad'],
                         'consecutivo' => $value['consecutivo'],
-                        'codPaisOrigen' => $value['codPaisOrigen']  ? new PaisSelectResource($codPaisOrigen) : null,
+                        'codPaisOrigen' => $value['codPaisOrigen'] && $codPaisOrigen !== null ? new PaisSelectResource($codPaisOrigen) : null,
                     ];
                 }
             }
@@ -802,7 +803,7 @@ class RipController extends Controller
             $tipoNota = null;
             if ($ripInvoice->tipoNota) {
                 $tipoNota = TipoNota::where('codigo', $ripInvoice->tipoNota)->select('codigo', 'nombre')->first();
-                $tipoNota = $tipoNota->codigo . ' - ' . $tipoNota->nombre;
+                $tipoNota = $tipoNota?->codigo . ' - ' . $tipoNota?->nombre;
             }
 
             $ripInvoiceInfo = [

@@ -204,7 +204,7 @@ class RipsManual
         $infoJson = [
             'numDocumentoIdObligado' => $existingJson['numDocumentoIdObligado'] ?? $rip->nit ?? null,
             'numFactura' => $existingJson['numFactura'] ?? $invoiceModel->invoice_number ?? null,
-            'TipoNota' => $existingJson['TipoNota'] ?? $invoiceModel->tipoNota ?? null,
+            'tipoNota' => $existingJson['tipoNota'] ?? $invoiceModel->tipoNota ?? null,
             'numNota' => $existingJson['numNota'] ?? $invoiceModel->numNota ?? null,
             'usuarios' => $mappedUsers,
         ];
@@ -628,7 +628,7 @@ class RipsManual
         $infoJson = [
             'numDocumentoIdObligado' => $existingJson['numDocumentoIdObligado'] ?? $rip->nit ?? null,
             'numFactura' => $existingJson['numFactura'] ?? $invoiceModel->invoice_number ?? null,
-            'TipoNota' => $existingJson['TipoNota'] ?? $invoiceModel->tipoNota ?? null,
+            'tipoNota' => $existingJson['tipoNota'] ?? $invoiceModel->tipoNota ?? null,
             'numNota' => $existingJson['numNota'] ?? $invoiceModel->numNota ?? null,
             'usuarios' => $existingJson['usuarios'],
         ];

@@ -197,6 +197,20 @@ const saveData = async () => {
     if (response.status === 200 && data) {
       dataInvoice.value = data.ripInvoice_info
     }
+    if (response.status === 422 && data) {
+      const errors = response.data.errors;
+      const duplicateMessage = 'El número de documento debe ser único dentro del listado.';
+
+      const duplicateKeys = Object.keys(errors).filter(key => {
+        const arr = errors[key];
+        return Array.isArray(arr) && arr.includes(duplicateMessage);
+      });
+
+      if (duplicateKeys.length > 0) {
+        toast(`Hay ${duplicateKeys.length} usuarios con número de documento repetido`, "", "warning");
+        return;
+      }
+    }
     loading.table = false;
 
   } else {
@@ -381,7 +395,7 @@ const paramsSelectInfinite = {
 
                 <template #item.fechaNacimiento="{ item }">
                   <div class="text-center">
-                    <AppDateTimePicker v-model="item.fechaNacimiento" clearable :rules="[requiredValidator]" />
+                    <AppDateTimePicker v-model="item.fechaNacimiento" clearable />
                   </div>
                 </template>
 
@@ -421,7 +435,7 @@ const paramsSelectInfinite = {
 
                 <template #item.incapacidad="{ item, index }">
                   <div class="text-center">
-                      <AppSelect v-model="item.incapacidad" :items="['SÍ', 'NO']" clearable />
+                      <AppSelect v-model="item.incapacidad" :items="['Si', 'No']" clearable />
                   </div>
                 </template>
 
