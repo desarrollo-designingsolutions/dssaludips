@@ -22,14 +22,14 @@ class RipServiceOtherServicePaginateResource extends JsonResource
             'numAutorizacion' => $this->numAutorizacion,
             'idMIPRES' => $this->idMIPRES,
             'fechaSuministroTecnologia' => $this->fechaSuministroTecnologia,
-            'tipoOS' => $this->tipoOS ? $this->tipoOSRelation?->codigo.'-'.$this->tipoOSRelation?->nombre : '',
-            'codTecnologiaSalud' => $this->codTecnologiaSalud ? $this->tecnologiaSalud?->codigo.'-'.$this->tecnologiaSalud?->nombre : '',
+            'tipoOS' => $this->tipoOS ? $this->tipoOSRelation?->codigo.' - ' .$this->tipoOSRelation?->nombre : '',
+            'codTecnologiaSalud' => $this->codTecnologiaSalud ? $this->tecnologiaSalud?->codigo.' - ' .$this->tecnologiaSalud?->nombre : '',
             'nomTecnologiaSalud' => $this->nomTecnologiaSalud,
             'cantidadOS' => $this->cantidadOS,
             'vrUnitOS' => formatNumber($this->vrUnitOS),
             'valorPagoModerador' => formatNumber($this->valorPagoModerador),
             'vrServicio' => formatNumber($this->vrServicio),
-            'conceptoRecaudo' => $this->conceptoRecaudo ? $this->conceptoRecaudoRelation?->codigo.'-'.$this->conceptoRecaudoRelation?->nombre : '',
+            'conceptoRecaudo' => $this->conceptoRecaudo ? $this->conceptoRecaudoRelation?->codigo.' - ' .$this->conceptoRecaudoRelation?->nombre : '',
         ];
     }
 }
