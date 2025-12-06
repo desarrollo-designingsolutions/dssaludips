@@ -7,9 +7,16 @@ use App\Http\Requests\Entity\EntityStoreRequest;
 use App\Http\Resources\Entity\EntityFormResource;
 use App\Http\Resources\Entity\EntityListResource;
 use App\Http\Resources\TypeEntity\TypeEntitySelectResource;
+use App\Models\CompanyLicense;
+use App\Models\CompanyLicenseModule;
+use App\Models\Entity;
+use App\Models\LicenseUsageLog;
 use App\Repositories\EntityRepository;
 use App\Repositories\TypeEntityRepository;
+use App\Services\LicenseService;
+use App\Services\LicenseValidator;
 use App\Traits\HttpResponseTrait;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -56,7 +63,26 @@ class EntityController extends Controller
     public function store(EntityStoreRequest $request)
     {
         return $this->runTransaction(function () use ($request) {
+
+            $company_id = $request->input('company_id');
+            $user_id = "01997821-d544-703e-8203-8c1db5e6fb21";
+
+
             $entity = $this->entityRepository->store($request->all());
+
+
+            // Registrar en auditoría
+            LicenseUsageLog::create([
+                'company_license_id' => CompanyLicense::activeForCompany($company_id)->first()->id,
+                'module_name' => 'entity',
+                'action' => 'create',
+                'record_id' => $entity->id,
+                'record_type' => Entity::class,
+                'user_id' => $user_id,
+            ]);
+
+            // Incrementar contador
+            LicenseValidator::incrementUsage('entity', $company_id);
 
             return [
                 'code' => 200,

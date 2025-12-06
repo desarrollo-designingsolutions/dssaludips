@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router } from '@/plugins/1.router';
-// import logo_designing_solutions_dark from '@images/logo_designing_solutions_dark.png';
-// import logo_designing_solutions_light from '@images/logo_designing_solutions_light.png';
+import logo_designing_solutions_dark from '@images/logo_designing_solutions_dark.png';
+import logo_designing_solutions_light from '@images/logo_designing_solutions_light.png';
 import authV1BottomShape from '@images/svg/auth-v1-bottom-shape.svg?raw';
 import authV1TopShape from '@images/svg/auth-v1-top-shape.svg?raw';
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer';
@@ -51,8 +51,8 @@ const sendLink = async () => {
       <!-- 👉 Auth card -->
       <VCard class="auth-card" max-width="460" :class="$vuetify.display.smAndUp ? 'pa-6' : 'pa-0'">
         <div class="d-flex justify-center">
-          <!-- <VImg max-width="260"
-            :src="$vuetify.theme.current.dark ? logo_designing_solutions_light : logo_designing_solutions_dark" /> -->
+          <VImg max-width="260"
+            :src="$vuetify.theme.current.dark ? logo_designing_solutions_light : logo_designing_solutions_dark" />
         </div>
 
         <VCardText>
@@ -69,8 +69,8 @@ const sendLink = async () => {
             <VRow>
               <!-- email -->
               <VCol cols="12">
-                <AppTextField :requiredField="true" clearable v-model="form.email" label="Correo electrónico"
-                  type="email" placeholder="johndoe@email.com" :rules="[requiredValidator, emailValidator]" />
+                <AppTextField :requiredField="true" v-model="form.email" autofocus label="Correo electrónico" type="email"
+                  placeholder="johndoe@email.com" :rules="[requiredValidator, emailValidator]" />
               </VCol>
 
               <!-- reset password -->

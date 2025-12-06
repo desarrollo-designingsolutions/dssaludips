@@ -8,6 +8,7 @@ use App\Http\Resources\ServiceVendor\ServiceVendorFormResource;
 use App\Http\Resources\ServiceVendor\ServiceVendorPaginateResource;
 use App\Repositories\ServiceVendorRepository;
 use App\Repositories\TypeVendorRepository;
+use App\Services\LicenseValidator;
 use App\Traits\HttpResponseTrait;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;

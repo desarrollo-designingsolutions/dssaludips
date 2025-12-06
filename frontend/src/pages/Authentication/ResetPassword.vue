@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { router } from '@/plugins/1.router';
+import logo_designing_solutions_dark from '@images/logo_designing_solutions_dark.png';
+import logo_designing_solutions_light from '@images/logo_designing_solutions_light.png';
 import authV1BottomShape from '@images/svg/auth-v1-bottom-shape.svg?raw';
 import authV1TopShape from '@images/svg/auth-v1-top-shape.svg?raw';
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer';
 import { themeConfig } from '@themeConfig';
 import type { VForm } from "vuetify/components";
-import IErrorsBack from "@/interfaces/Axios/IErrorsBack";
-
-const errorsBack = ref<IErrorsBack>({});
 
 definePage({
   name: "ResetPassword",
@@ -19,7 +17,6 @@ definePage({
 })
 
 const form = ref({
-  token: '',
   email: '',
   password: '',
   password_confirmation: '',
@@ -32,7 +29,7 @@ const loading = ref<boolean>(false)
 const route = useRoute()
 const rulesFieldConfirmedPassword = [
   value => requiredValidator(value),
-  value => confirmedValidator(form.value.password, value),
+  value => confirmedValidator(form.value.password_confirmation, value),
 ]
 
 
@@ -43,15 +40,11 @@ const resetPassword = async () => {
     form.value.token = route.params.token
 
     loading.value = true;
-    const { data, response } = await useAxios(`/password/reset`).post(form.value);
-
-    if (response.status == 200 && data) {
-      router.push({ name: "Login" })
-    }
-
-    errorsBack.value = data.value.errors ?? {}
-
+    const { data, response } = await useApi(`/password/reset`).post(form.value);
     loading.value = false;
+
+    if (response.value?.ok && data.value) {
+    }
   }
 }
 
@@ -70,18 +63,10 @@ const resetPassword = async () => {
 
       <!-- 👉 Auth Card -->
       <VCard class="auth-card" max-width="460" :class="$vuetify.display.smAndUp ? 'pa-6' : 'pa-2'">
-        <VCardItem class="justify-center">
-          <VCardTitle>
-            <RouterLink to="/">
-              <div class="app-logo">
-                <VNodeRenderer :nodes="themeConfig.app.logo" />
-                <h1 class="app-logo-title">
-                  {{ themeConfig.app.title }}
-                </h1>
-              </div>
-            </RouterLink>
-          </VCardTitle>
-        </VCardItem>
+        <div class="d-flex justify-center">
+          <VImg max-width="260"
+            :src="$vuetify.theme.current.dark ? logo_designing_solutions_light : logo_designing_solutions_dark" />
+        </div>
 
         <VCardText>
           <h4 class="text-h4 mb-1">
@@ -97,22 +82,20 @@ const resetPassword = async () => {
             <VRow>
               <!-- password -->
               <VCol cols="12">
-                <AppTextField :requiredField="true" v-model="form.password" autofocus label="Nueva contraseña"
-                  placeholder="············" :type="isPasswordVisible ? 'text' : 'password'"
+                <AppTextField v-model="form.password" autofocus label="Nueva contraseña" placeholder="············"
+                  :type="isPasswordVisible ? 'text' : 'password'"
                   :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
                   @click:append-inner="isPasswordVisible = !isPasswordVisible"
-                  :rules="[requiredValidator, passwordValidator]" :error-messages="errorsBack.password"
-                  @input="errorsBack.password = ''" />
+                  :rules="[requiredValidator, passwordValidator]" />
               </VCol>
 
               <!-- Confirm Password -->
               <VCol cols="12">
-                <AppTextField :requiredField="true" v-model="form.password_confirmation" label="Confirmar contraseña"
+                <AppTextField v-model="form.password_confirmation" label="Confirmar contraseña"
                   placeholder="············" :type="isConfirmPasswordVisible ? 'text' : 'password'"
                   :append-inner-icon="isConfirmPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
                   @click:append-inner="isConfirmPasswordVisible = !isConfirmPasswordVisible"
-                  :rules="rulesFieldConfirmedPassword" :error-messages="errorsBack.password_confirmation"
-                  @input="errorsBack.password_confirmation = ''" />
+                  :rules="rulesFieldConfirmedPassword" />
               </VCol>
 
               <VCol cols="12">

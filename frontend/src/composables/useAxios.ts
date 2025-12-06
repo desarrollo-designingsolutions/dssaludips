@@ -32,6 +32,10 @@ export const useAxios = (url, config = {}) => {
       response.value = result;
       data.value = result.data;
 
+      console.log("result",result);
+      console.log("data.value",data.value);
+      
+
       if (data.value?.message && data.value?.code === 200) {
         toast('Éxito', data.value.message, 'success');
       }

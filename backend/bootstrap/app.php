@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'check.permission' => \App\Http\Middleware\CheckPermission::class,
+            'license.limit' => \App\Http\Middleware\CheckLicenseLimit::class,
         ]);
         // $middleware->append(\App\Http\Middleware\LogResponseTime::class);
     })
