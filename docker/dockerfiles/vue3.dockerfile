@@ -2,19 +2,21 @@ FROM node:24-alpine
 
 WORKDIR /var/www/html
 
-# Copiar package.json y package-lock.json
-COPY frontend/package.json ./
-COPY frontend .
+# Copy package files for caching
+COPY frontend/package*.json ./
 
-# Instalar dependencias con npm
-RUN npm i --force
+# Install all dependencies (including dev dependencies)
+RUN npm install --legacy-peer-deps
 
-RUN npm install --save-dev laravel-echo pusher-js --force
-RUN npm i @tinymce/tinymce-vue --force
+# Install additional packages
+RUN npm install --save-dev laravel-echo pusher-js --legacy-peer-deps
+RUN npm install @tinymce/tinymce-vue --legacy-peer-deps
 
-# Iniciar la aplicación en modo desarrollo
-# CMD npm run dev -- --host
-CMD node -v && tail -f /dev/null
+# Copy application source
+COPY frontend/ ./
 
+# Expose Vite dev server port
+EXPOSE 5173
 
-
+# Start development server with hot reload
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

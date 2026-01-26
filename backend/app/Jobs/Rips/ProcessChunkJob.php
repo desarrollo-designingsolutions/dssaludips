@@ -103,7 +103,7 @@ class ProcessChunkJob implements ShouldQueue
             ));
 
 
-            if ($processedRows == (int)$redis->get("rip_batch:{$this->batchId}:total_rows")) {
+            if ($processedRows == (int) $redis->get("rip_batch:{$this->batchId}:total_rows")) {
                 event(new ImportProgressEvent(
                     $this->batchId,
                     (string) $processedRows,
