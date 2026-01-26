@@ -155,32 +155,32 @@ class PassportAuthController extends Controller
                 }
             }
 
-            // Reglas de headings a insertar antes de ciertos IDs
-            $headingsToInsert = [
-                'Principal' => [1],
-                'Gestión' => [5, 6],
-            ];
+            // // Reglas de headings a insertar antes de ciertos IDs
+            // $headingsToInsert = [
+            //     'Principal' => [1],
+            //     'Gestión' => [5, 6],
+            // ];
 
-            $inserted = [];
-            $resultMenu = []; // nuevo array resultante
+            // $inserted = [];
+            // $resultMenu = []; // nuevo array resultante
 
-            foreach ($arrayMenu as $item) {
-                // Verifica si hay que insertar algún heading antes de este ítem
-                foreach ($headingsToInsert as $heading => $ids) {
-                    if (
-                        isset($item['id']) &&
-                        in_array($item['id'], $ids) &&
-                        ! in_array($heading, $inserted)
-                    ) {
-                        $resultMenu[] = ['heading' => $heading, 'to' => ['name' => '']];
-                        $inserted[] = $heading;
-                    }
-                }
+            // foreach ($arrayMenu as $item) {
+            //     // Verifica si hay que insertar algún heading antes de este ítem
+            //     foreach ($headingsToInsert as $heading => $ids) {
+            //         if (
+            //             isset($item['id']) &&
+            //             in_array($item['id'], $ids) &&
+            //             ! in_array($heading, $inserted)
+            //         ) {
+            //             $resultMenu[] = ['heading' => $heading, 'to' => ['name' => '']];
+            //             $inserted[] = $heading;
+            //         }
+            //     }
 
-                $resultMenu[] = $item; // luego insertamos el ítem real
-            }
+            //     $resultMenu[] = $item; // luego insertamos el ítem real
+            // }
 
-            $arrayMenu = $resultMenu; // actualizar el menú final
+            // $arrayMenu = $resultMenu; // actualizar el menú final
 
             $access_token = $user->createToken('authToken');
 
