@@ -67,8 +67,6 @@ echo "🚀 Iniciando contenedor PHP..."
 set -e
    
  
-# Iniciar PHP-FPM
-echo "🎯 Iniciando PHP-FPM..."
-exec php-fpm
-
-echo "🎯 Finalizado..."
+# Iniciar Apache
+echo "🎯 Iniciando Apache..."
+exec apache2-foreground
